@@ -53,6 +53,22 @@ export const events = pgTable("events", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(),
+  content: text("content").notNull(),
+  author: text("author").notNull().default("Аноним"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCommentSchema = createInsertSchema(comments).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+
 export const insertEventSchema = createInsertSchema(events).omit({ 
   id: true, 
   createdAt: true, 

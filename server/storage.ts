@@ -1,10 +1,13 @@
 import { db } from "./db";
 import {
   events,
+  comments,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
   type StatusSummary,
+  type Comment,
+  type InsertComment,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
@@ -26,6 +29,9 @@ export interface IStorage {
     byImplementationStatus: Record<string, number>;
     byValidationStatus: Record<string, number>;
   }>;
+  // Comment operations
+  getComments(eventId: number): Promise<Comment[]>;
+  createComment(comment: InsertComment): Promise<Comment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -101,6 +107,16 @@ export class DatabaseStorage implements IStorage {
       byImplementationStatus,
       byValidationStatus
     };
+  }
+
+  // Comment operations
+  async getComments(eventId: number): Promise<Comment[]> {
+    return await db.select().from(comments).where(eq(comments.eventId, eventId)).orderBy(desc(comments.createdAt));
+  }
+
+  async createComment(comment: InsertComment): Promise<Comment> {
+    const [newComment] = await db.insert(comments).values(comment).returning();
+    return newComment;
   }
 }
 

@@ -88,6 +88,21 @@ export async function registerRoutes(
     res.json(stats);
   });
 
+  app.get("/api/events/:id/comments", async (req, res) => {
+    const comments = await storage.getComments(Number(req.params.id));
+    res.json(comments);
+  });
+
+  app.post("/api/events/:id/comments", async (req, res) => {
+    const eventId = Number(req.params.id);
+    const comment = await storage.createComment({
+      eventId,
+      content: req.body.content,
+      author: req.body.author || "Аноним"
+    });
+    res.status(201).json(comment);
+  });
+
   // Initial seed data
   await seedDatabase();
 

@@ -1,15 +1,21 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
 import { useEvents, useDeleteEvent } from "@/hooks/use-events";
-import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,26 +49,200 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/StatusBadge";
-import { EventForm } from "@/components/EventForm";
 import { 
   Search, 
-  MoreHorizontal, 
   Filter, 
   Plus, 
-  Smartphone, 
-  Globe, 
+  MoreHorizontal, 
+  Edit, 
+  Trash2,
+  Globe,
+  Smartphone,
+  Layout,
   Server,
+  Monitor,
+  MessageSquare,
+  Send,
+  Calendar,
   Code
 } from "lucide-react";
+import { EventForm } from "@/components/EventForm";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Sidebar } from "@/components/Sidebar";
 import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, type Event } from "@shared/schema";
+
+function EventDetailsModal({ event }: { event: any }) {
+  const queryClient = useQueryClient();
+  const [comment, setComment] = useState("");
+
+  const { data: comments = [] } = useQuery({
+    queryKey: ["/api/events", event.id, "comments"],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${event.id}/comments`);
+      return res.json();
+    }
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch(`/api/events/${event.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, author: "Пользователь" })
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", event.id, "comments"] });
+      setComment("");
+    }
+  });
+
+  return (
+    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="text-2xl flex items-center gap-2">
+          {event.action}
+          <Badge variant="outline">{event.category}</Badge>
+        </DialogTitle>
+      </DialogHeader>
+
+      <div className="space-y-6 pt-4">
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Описание действия</h4>
+              <p className="text-sm text-blue-600 dark:text-blue-400 italic">
+                {event.actionDescription || "Нет описания"}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
+              <p className="text-sm font-mono bg-muted p-2 rounded">{event.name || "-"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Значение (Value)</h4>
+              <p className="text-sm italic">{event.valueDescription || "Не указано"}</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Платформы</h4>
+              <div className="flex flex-wrap gap-1">
+                {event.platforms?.map((p: string) => (
+                  <Badge key={p} variant="secondary" className="uppercase text-[10px]">
+                    {p}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Внедрение</h4>
+                <StatusBadge status={event.implementationStatus} />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Валидация</h4>
+                <StatusBadge status={event.validationStatus} />
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Ответственный</h4>
+              <p className="text-sm">{event.owner || "Не назначен"}</p>
+            </div>
+          </div>
+        </div>
+
+        {event.properties && event.properties.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold mb-2">Свойства (Properties)</h4>
+            <div className="border rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="h-8 text-xs">Название</TableHead>
+                    <TableHead className="h-8 text-xs">Тип</TableHead>
+                    <TableHead className="h-8 text-xs">Описание</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {event.properties.map((prop: any, i: number) => (
+                    <TableRow key={i}>
+                      <TableCell className="py-2 text-xs font-mono">{prop.name}</TableCell>
+                      <TableCell className="py-2 text-xs">{prop.type}</TableCell>
+                      <TableCell className="py-2 text-xs text-muted-foreground">{prop.description}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+
+        {event.notes && (
+          <div>
+            <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Заметки</h4>
+            <p className="text-xs font-mono bg-muted/50 p-3 rounded border">{event.notes}</p>
+          </div>
+        )}
+
+        <div className="border-t pt-6">
+          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            Комментарии ({comments.length})
+          </h4>
+          
+          <div className="space-y-4 mb-6">
+            {comments.map((c: any) => (
+              <div key={c.id} className="bg-muted/30 p-3 rounded-lg border border-border/50">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold">{c.author}</span>
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {format(new Date(c.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
+                  </span>
+                </div>
+                <p className="text-sm text-foreground/90">{c.content}</p>
+              </div>
+            ))}
+            {comments.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Нет комментариев. Будьте первым!</p>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Textarea 
+              placeholder="Оставьте комментарий к событию..." 
+              className="min-h-[80px] text-sm"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
+            <Button 
+              size="icon" 
+              className="self-end" 
+              disabled={!comment.trim() || commentMutation.isPending}
+              onClick={() => commentMutation.mutate(comment)}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </DialogContent>
+  );
+}
 
 export default function EventsList() {
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
   
   // Sheet state for creating/editing
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -71,7 +251,7 @@ export default function EventsList() {
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { data: events, isLoading } = useEvents({ 
+    const { data: events, isLoading } = useEvents({ 
     search, 
     platform: platform === "all" ? undefined : platform,
     status: status === "all" ? undefined : status 
@@ -220,15 +400,20 @@ export default function EventsList() {
                         {event.category}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium">{event.action}</span>
-                        {event.actionDescription && (
-                          <span className="text-xs text-blue-600 dark:text-blue-400 line-clamp-2 italic">
-                            {event.actionDescription}
-                          </span>
-                        )}
-                      </div>
+                    <TableCell className="cursor-pointer hover:bg-muted/50 transition-colors group" onClick={() => setSelectedEvent(event)}>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-medium group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">{event.action}</span>
+                            {event.actionDescription && (
+                              <span className="text-xs text-blue-600 dark:text-blue-400 line-clamp-2 italic">
+                                {event.actionDescription}
+                              </span>
+                            )}
+                          </div>
+                        </DialogTrigger>
+                        {selectedEvent && <EventDetailsModal event={selectedEvent} />}
+                      </Dialog>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1 opacity-70">
