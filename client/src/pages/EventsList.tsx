@@ -477,7 +477,7 @@ export default function EventsList() {
 
         {/* Create/Edit Sheet */}
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetContent className="sm:max-w-xl w-full flex flex-col h-full">
+          <SheetContent className="sm:max-w-2xl w-full flex flex-col h-full">
             <SheetHeader className="mb-6 px-1">
               <SheetTitle>{editingEvent ? "Редактировать событие" : "Создать новое событие"}</SheetTitle>
               <SheetDescription>
