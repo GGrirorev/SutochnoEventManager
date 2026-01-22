@@ -27,11 +27,11 @@ export const PLATFORMS = [
 
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(), 
-  action: text("action").notNull().default(""), // Event Action
-  value: integer("value").default(0), // Event Value (numeric)
+  category: text("category").notNull(), // Event Category (Required)
+  action: text("action").notNull(), // Event Action (Required)
+  name: text("name"), // Event Name (Optional)
+  value: integer("value").default(0), // Event Value (Numeric, but description can be text)
   description: text("description").notNull(),
-  category: text("category").notNull(), 
   
   owner: text("owner"), 
   platform: text("platform", { enum: PLATFORMS }).notNull().default("все"),

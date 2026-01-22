@@ -173,9 +173,9 @@ export default function EventsList() {
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow>
-                <TableHead className="w-[200px]">Event Name</TableHead>
-                <TableHead>Event Action</TableHead>
                 <TableHead>Event Category</TableHead>
+                <TableHead>Event Action</TableHead>
+                <TableHead className="w-[200px]">Event Name</TableHead>
                 <TableHead>Event Value</TableHead>
                 <TableHead>Платформа</TableHead>
                 <TableHead>Внедрение</TableHead>
@@ -188,9 +188,9 @@ export default function EventsList() {
                 // Loading Skeleton
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
+                    <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-32 bg-muted/50 rounded animate-pulse" /></TableCell>
-                    <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
-                    <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-16 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-20 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
@@ -216,20 +216,20 @@ export default function EventsList() {
                 events?.map((event) => (
                   <TableRow key={event.id} className="group hover:bg-muted/30 transition-colors">
                     <TableCell>
+                      <Badge variant="outline" className="font-normal">
+                        {event.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {event.action}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex flex-col gap-1">
-                        <span className="font-mono text-sm font-semibold text-primary">{event.name}</span>
+                        <span className="font-mono text-sm font-semibold text-primary">{event.name || '-'}</span>
                         {event.description && (
                           <span className="text-xs text-muted-foreground line-clamp-1">{event.description}</span>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {event.action || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-normal">
-                        {event.category}
-                      </Badge>
                     </TableCell>
                     <TableCell className="text-sm font-mono">
                       {event.value ?? 0}

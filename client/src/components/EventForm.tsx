@@ -74,14 +74,14 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Event Name</FormLabel>
+                    <FormLabel>Event Category *</FormLabel>
                     <FormControl>
-                      <Input placeholder="например, checkout_completed" className="font-mono text-sm" {...field} />
+                      <Input placeholder="например, Авторизация" {...field} />
                     </FormControl>
-                    <FormDescription>Название события в системе.</FormDescription>
+                    <FormDescription>Верхнеуровневая категория событий.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -92,11 +92,11 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 name="action"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Event Action</FormLabel>
+                    <FormLabel>Event Action *</FormLabel>
                     <FormControl>
                       <Input placeholder="например, click" {...field} />
                     </FormControl>
-                    <FormDescription>Действие, совершаемое пользователем.</FormDescription>
+                    <FormDescription>Основное действие конкретного события.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -106,13 +106,14 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="category"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Event Category</FormLabel>
+                    <FormLabel>Event Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="например, Авторизация" {...field} />
+                      <Input placeholder="например, checkout_completed" className="font-mono text-sm" {...field} value={field.value || ""} />
                     </FormControl>
+                    <FormDescription>Дополнительный контекст к действию.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -127,12 +128,13 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                     <FormControl>
                       <Input 
                         type="number" 
-                        placeholder="0" 
+                        placeholder="Сумма оплаты" 
                         {...field} 
                         onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        value={field.value || 0}
                       />
                     </FormControl>
-                    <FormDescription>Числовое значение события.</FormDescription>
+                    <FormDescription>Только числовое значение (например, сумма).</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
