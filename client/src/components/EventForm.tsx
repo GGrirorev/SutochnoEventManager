@@ -73,8 +73,8 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 h-full flex flex-col">
-        <div className="flex-1 pr-1">
-          <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto pr-1 -mr-1">
+          <div className="space-y-6 pb-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
