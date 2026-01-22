@@ -478,13 +478,13 @@ export default function EventsList() {
         {/* Create/Edit Sheet */}
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetContent className="sm:max-w-xl w-full flex flex-col h-full">
-            <SheetHeader className="mb-6">
+            <SheetHeader className="mb-6 px-1">
               <SheetTitle>{editingEvent ? "Редактировать событие" : "Создать новое событие"}</SheetTitle>
               <SheetDescription>
                 Определите схему и свойства вашего аналитического события.
               </SheetDescription>
             </SheetHeader>
-            <div className="flex-1 overflow-hidden -mx-6 px-6">
+            <div className="flex-1 overflow-hidden -mx-6 px-7">
               <EventForm 
                 mode={editingEvent ? "edit" : "create"}
                 initialData={editingEvent || undefined}
