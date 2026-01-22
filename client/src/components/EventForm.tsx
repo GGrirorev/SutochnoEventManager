@@ -41,9 +41,9 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
       name: "",
       description: "",
       category: "",
-      platform: "all",
-      implementationStatus: "specified",
-      validationStatus: "pending",
+      platform: "все",
+      implementationStatus: "черновик",
+      validationStatus: "ожидает_проверки",
       owner: "",
       notes: "",
       properties: [],
@@ -77,11 +77,11 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Event Name</FormLabel>
+                    <FormLabel>Название события</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. checkout_completed" className="font-mono text-sm" {...field} />
+                      <Input placeholder="например, checkout_completed" className="font-mono text-sm" {...field} />
                     </FormControl>
-                    <FormDescription>Snake_case identifier used in code.</FormDescription>
+                    <FormDescription>Идентификатор в формате snake_case, используемый в коде.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -92,9 +92,9 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>Категория</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Authentication" {...field} />
+                      <Input placeholder="например, Авторизация" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -107,10 +107,10 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Описание</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="What triggers this event and what is it tracking?" 
+                      placeholder="Что триггерит это событие и что оно отслеживает?" 
                       className="resize-none h-20"
                       {...field} 
                     />
@@ -126,16 +126,16 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 name="platform"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Platform</FormLabel>
+                    <FormLabel>Платформа</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select platform" />
+                          <SelectValue placeholder="Выберите платформу" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {PLATFORMS.map(p => (
-                          <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
+                          <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -149,9 +149,9 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 name="owner"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Owner</FormLabel>
+                    <FormLabel>Ответственный</FormLabel>
                     <FormControl>
-                      <Input placeholder="Team or Person" {...field} value={field.value || ""} />
+                      <Input placeholder="Команда или человек" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -165,11 +165,11 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 name="implementationStatus"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Implementation</FormLabel>
+                    <FormLabel>Внедрение</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Status" />
+                          <SelectValue placeholder="Статус" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -188,16 +188,16 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 name="validationStatus"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Validation</FormLabel>
+                    <FormLabel>Валидация</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Status" />
+                          <SelectValue placeholder="Статус" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {VALIDATION_STATUS.map(s => (
-                          <SelectItem key={s} value={s}>{s.toUpperCase()}</SelectItem>
+                          <SelectItem key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -210,7 +210,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
             {/* Properties Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <FormLabel className="text-base font-semibold">Event Properties</FormLabel>
+                <FormLabel className="text-base font-semibold">Свойства события</FormLabel>
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -219,14 +219,14 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                   className="h-8"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Property
+                  Добавить свойство
                 </Button>
               </div>
               
               <ScrollArea className="h-[200px] rounded-md border p-4 bg-muted/10">
                 {fields.length === 0 ? (
                   <div className="text-center text-sm text-muted-foreground py-8">
-                    No properties defined. Click add to define schema.
+                    Свойства не определены. Нажмите добавить, чтобы определить схему.
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -235,7 +235,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                         <div className="col-span-4">
                           <Input 
                             {...form.register(`properties.${index}.name` as const)} 
-                            placeholder="prop_name" 
+                            placeholder="название_свойства" 
                             className="h-8 text-xs font-mono"
                           />
                         </div>
@@ -245,7 +245,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                             defaultValue={field.type}
                           >
                             <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Type" />
+                              <SelectValue placeholder="Тип" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="string">String</SelectItem>
@@ -259,7 +259,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                         <div className="col-span-4">
                           <Input 
                             {...form.register(`properties.${index}.description` as const)} 
-                            placeholder="Description..." 
+                            placeholder="Описание..." 
                             className="h-8 text-xs"
                           />
                         </div>
@@ -279,7 +279,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                              checked={form.watch(`properties.${index}.required` as any)}
                              onCheckedChange={(checked) => form.setValue(`properties.${index}.required` as any, checked)}
                           />
-                          <span className="text-xs text-muted-foreground">Required</span>
+                          <span className="text-xs text-muted-foreground">Обязательно</span>
                         </div>
                       </div>
                     ))}
@@ -293,10 +293,10 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Technical Notes</FormLabel>
+                  <FormLabel>Технические заметки</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Any implementation details or gotchas..." 
+                      placeholder="Любые детали реализации или особенности..." 
                       className="resize-none h-20 font-mono text-xs"
                       {...field}
                       value={field.value || ""} 
@@ -310,9 +310,9 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
         </div>
 
         <div className="pt-4 border-t flex justify-end gap-3 sticky bottom-0 bg-background py-2">
-          <Button type="submit" disabled={isPending} className="w-32">
+          <Button type="submit" disabled={isPending} className="w-48">
             {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {mode === "create" ? "Create Event" : "Save Changes"}
+            {mode === "create" ? "Создать событие" : "Сохранить изменения"}
           </Button>
         </div>
       </form>

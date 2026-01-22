@@ -43,9 +43,9 @@ export default function Dashboard() {
 
   const getStatusColor = (name: string) => {
     const n = name.toLowerCase();
-    if (n.includes('valid') || n.includes('implemented')) return COLORS.green;
-    if (n.includes('error') || n.includes('deprecated')) return COLORS.red;
-    if (n.includes('warn') || n.includes('develop')) return COLORS.amber;
+    if (n.includes('корректно') || n.includes('внедрено')) return COLORS.green;
+    if (n.includes('ошибка') || n.includes('архив')) return COLORS.red;
+    if (n.includes('предупреждение') || n.includes('разработк')) return COLORS.amber;
     return COLORS.blue;
   };
 
@@ -56,15 +56,15 @@ export default function Dashboard() {
         
         {/* Header */}
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your event tracking implementation health.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Дашборд</h1>
+          <p className="text-muted-foreground">Обзор состояния внедрения системы отслеживания событий.</p>
         </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Total Events</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Всего событий</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -76,12 +76,12 @@ export default function Dashboard() {
 
           <Card className="border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-all">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Implemented</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Внедрено</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-4xl font-bold text-emerald-600">
-                  {stats?.byImplementationStatus.implemented || 0}
+                  {stats?.byImplementationStatus.внедрено || 0}
                 </div>
                 <CheckCircle2 className="w-8 h-8 text-emerald-500/20" />
               </div>
@@ -90,12 +90,12 @@ export default function Dashboard() {
 
           <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">In Development</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">В разработке</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-4xl font-bold text-amber-600">
-                  {stats?.byImplementationStatus.in_development || 0}
+                  {stats?.byImplementationStatus.в_разработке || 0}
                 </div>
                 <Activity className="w-8 h-8 text-amber-500/20" />
               </div>
@@ -104,12 +104,12 @@ export default function Dashboard() {
 
           <Card className="border-l-4 border-l-rose-500 shadow-sm hover:shadow-md transition-all">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Errors</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Ошибки</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div className="text-4xl font-bold text-rose-600">
-                  {stats?.byValidationStatus.error || 0}
+                  {stats?.byValidationStatus.ошибка || 0}
                 </div>
                 <AlertTriangle className="w-8 h-8 text-rose-500/20" />
               </div>
@@ -121,8 +121,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Implementation Progress</CardTitle>
-              <CardDescription>Status breakdown of all tracked events</CardDescription>
+              <CardTitle>Прогресс внедрения</CardTitle>
+              <CardDescription>Разбивка всех отслеживаемых событий по статусу</CardDescription>
             </CardHeader>
             <CardContent className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -145,8 +145,8 @@ export default function Dashboard() {
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Data Validation Health</CardTitle>
-              <CardDescription>Quality check results from recent ingestions</CardDescription>
+              <CardTitle>Здоровье данных</CardTitle>
+              <CardDescription>Результаты проверки качества последних событий</CardDescription>
             </CardHeader>
             <CardContent className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">

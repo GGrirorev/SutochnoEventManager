@@ -114,12 +114,12 @@ export default function EventsList() {
         {/* Header Area */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Event Schema</h1>
-            <p className="text-muted-foreground mt-1">Manage your product analytics event definitions.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Схема событий</h1>
+            <p className="text-muted-foreground mt-1">Управление определениями аналитических событий продукта.</p>
           </div>
           <Button onClick={handleCreate} className="shadow-md hover:shadow-lg transition-all">
             <Plus className="w-4 h-4 mr-2" />
-            New Event
+            Новое событие
           </Button>
         </div>
 
@@ -128,7 +128,7 @@ export default function EventsList() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by event name or category..." 
+              placeholder="Поиск по названию или категории..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 border-none bg-muted/50 focus-visible:ring-1"
@@ -137,29 +137,29 @@ export default function EventsList() {
           
           <div className="flex gap-3">
             <Select value={platform} onValueChange={setPlatform}>
-              <SelectTrigger className="w-[140px] border-none bg-muted/50">
+              <SelectTrigger className="w-[180px] border-none bg-muted/50">
                 <div className="flex items-center gap-2 text-muted-foreground">
                    <Smartphone className="w-4 h-4" />
                    <SelectValue />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Platforms</SelectItem>
+                <SelectItem value="all">Все платформы</SelectItem>
                 {PLATFORMS.map(p => (
-                  <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
+                  <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-[140px] border-none bg-muted/50">
+              <SelectTrigger className="w-[180px] border-none bg-muted/50">
                 <div className="flex items-center gap-2 text-muted-foreground">
                    <Filter className="w-4 h-4" />
-                   <SelectValue placeholder="Status" />
+                   <SelectValue placeholder="Статус" />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="all">Все статусы</SelectItem>
                 {IMPLEMENTATION_STATUS.map(s => (
                   <SelectItem key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</SelectItem>
                 ))}
@@ -173,12 +173,12 @@ export default function EventsList() {
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow>
-                <TableHead className="w-[300px]">Event Name</TableHead>
-                <TableHead>Platform</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Validation</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Owner</TableHead>
+                <TableHead className="w-[300px]">Название события</TableHead>
+                <TableHead>Платформа</TableHead>
+                <TableHead>Внедрение</TableHead>
+                <TableHead>Валидация</TableHead>
+                <TableHead>Категория</TableHead>
+                <TableHead>Ответственный</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -204,8 +204,8 @@ export default function EventsList() {
                       <div className="p-4 rounded-full bg-muted mb-3">
                         <Filter className="w-6 h-6" />
                       </div>
-                      <p className="font-medium">No events found</p>
-                      <p className="text-sm mt-1">Try adjusting your filters or create a new event.</p>
+                      <p className="font-medium">События не найдены</p>
+                      <p className="text-sm mt-1">Попробуйте изменить фильтры или создать новое событие.</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -249,17 +249,17 @@ export default function EventsList() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEdit(event)}>Edit Details</DropdownMenuItem>
+                          <DropdownMenuLabel>Действия</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleEdit(event)}>Редактировать</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigator.clipboard.writeText(JSON.stringify(event, null, 2))}>
-                            Copy JSON
+                            Копировать JSON
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"
                             onClick={() => setDeleteId(event.id)}
                           >
-                            Delete
+                            Удалить
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -275,9 +275,9 @@ export default function EventsList() {
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetContent className="sm:max-w-xl w-full flex flex-col h-full">
             <SheetHeader className="mb-6">
-              <SheetTitle>{editingEvent ? "Edit Event" : "Create New Event"}</SheetTitle>
+              <SheetTitle>{editingEvent ? "Редактировать событие" : "Создать новое событие"}</SheetTitle>
               <SheetDescription>
-                Define the schema and properties for your tracking event.
+                Определите схему и свойства вашего аналитического события.
               </SheetDescription>
             </SheetHeader>
             <div className="flex-1 overflow-hidden -mx-6 px-6">
@@ -294,16 +294,16 @@ export default function EventsList() {
         <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogTitle>Вы абсолютно уверены?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the event definition
-                from your tracking plan.
+                Это действие нельзя отменить. Это навсегда удалит определение события
+                из вашего плана отслеживания.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-                Delete Event
+                Удалить событие
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
