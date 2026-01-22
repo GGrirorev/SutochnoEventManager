@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, boolean, varchar, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean, varchar, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -28,6 +28,8 @@ export const PLATFORMS = [
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(), 
+  action: text("action").notNull().default(""), // Event Action
+  value: integer("value").default(0), // Event Value (numeric)
   description: text("description").notNull(),
   category: text("category").notNull(), 
   

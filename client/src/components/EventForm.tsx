@@ -77,11 +77,11 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Название события</FormLabel>
+                    <FormLabel>Event Name</FormLabel>
                     <FormControl>
                       <Input placeholder="например, checkout_completed" className="font-mono text-sm" {...field} />
                     </FormControl>
-                    <FormDescription>Идентификатор в формате snake_case, используемый в коде.</FormDescription>
+                    <FormDescription>Название события в системе.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -89,13 +89,50 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
 
               <FormField
                 control={form.control}
+                name="action"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Action</FormLabel>
+                    <FormControl>
+                      <Input placeholder="например, click" {...field} />
+                    </FormControl>
+                    <FormDescription>Действие, совершаемое пользователем.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Категория</FormLabel>
+                    <FormLabel>Event Category</FormLabel>
                     <FormControl>
                       <Input placeholder="например, Авторизация" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Value</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="0" 
+                        {...field} 
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormDescription>Числовое значение события.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

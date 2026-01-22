@@ -101,6 +101,8 @@ async function seedDatabase() {
   const sampleEvents = [
     {
       name: "signup_completed",
+      action: "finish_signup",
+      value: 1,
       description: "Пользователь успешно завершил процесс регистрации",
       category: "Авторизация",
       platform: "все",
@@ -115,6 +117,8 @@ async function seedDatabase() {
     },
     {
       name: "checkout_started",
+      action: "click_checkout",
+      value: 100,
       description: "Пользователь нажал кнопку оформления заказа",
       category: "E-commerce",
       platform: "web",
@@ -128,6 +132,8 @@ async function seedDatabase() {
     },
     {
       name: "app_crashed",
+      action: "crash",
+      value: -1,
       description: "Критическая ошибка, приведшая к падению приложения",
       category: "Стабильность",
       platform: "ios",
@@ -142,6 +148,8 @@ async function seedDatabase() {
     },
     {
       name: "search_performed",
+      action: "execute_search",
+      value: 0,
       description: "Пользователь выполнил поисковый запрос",
       category: "Поиск",
       platform: "все",

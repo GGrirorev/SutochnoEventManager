@@ -173,12 +173,13 @@ export default function EventsList() {
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow>
-                <TableHead className="w-[300px]">Название события</TableHead>
+                <TableHead className="w-[200px]">Event Name</TableHead>
+                <TableHead>Event Action</TableHead>
+                <TableHead>Event Category</TableHead>
+                <TableHead>Event Value</TableHead>
                 <TableHead>Платформа</TableHead>
                 <TableHead>Внедрение</TableHead>
                 <TableHead>Валидация</TableHead>
-                <TableHead>Категория</TableHead>
-                <TableHead>Ответственный</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -187,11 +188,12 @@ export default function EventsList() {
                 // Loading Skeleton
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell><div className="h-5 w-40 bg-muted/50 rounded animate-pulse" /></TableCell>
-                    <TableCell><div className="h-5 w-20 bg-muted/50 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-5 w-32 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-5 w-16 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-20 bg-muted/50 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell />
                   </TableRow>
@@ -199,7 +201,7 @@ export default function EventsList() {
               ) : events?.length === 0 ? (
                 // Empty State
                 <TableRow>
-                  <TableCell colSpan={7} className="h-64 text-center">
+                  <TableCell colSpan={8} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <div className="p-4 rounded-full bg-muted mb-3">
                         <Filter className="w-6 h-6" />
@@ -221,6 +223,17 @@ export default function EventsList() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-sm">
+                      {event.action || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-normal">
+                        {event.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm font-mono">
+                      {event.value ?? 0}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5">
                         {getPlatformIcon(event.platform)}
@@ -232,14 +245,6 @@ export default function EventsList() {
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={event.validationStatus} />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-normal">
-                        {event.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {event.owner || '-'}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
