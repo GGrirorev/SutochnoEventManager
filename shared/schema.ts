@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { pgTable, text, serial, timestamp, boolean, varchar, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -35,7 +36,7 @@ export const events = pgTable("events", {
   valueDescription: text("value_description").default(""), // Event Value Description (Text)
   
   owner: text("owner"), 
-  platform: text("platform", { enum: PLATFORMS }).notNull().default("все"),
+  platforms: text("platforms").array().notNull().default(sql`ARRAY['все']::text[]`), 
   
   implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("черновик"),
   validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("ожидает_проверки"),

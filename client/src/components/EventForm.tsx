@@ -5,6 +5,7 @@ import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -38,10 +39,13 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
     defaultValues: initialData || {
-      name: "",
-      description: "",
       category: "",
-      platform: "все",
+      action: "",
+      actionDescription: "",
+      name: "",
+      value: 0,
+      valueDescription: "",
+      platforms: ["все"],
       implementationStatus: "черновик",
       validationStatus: "ожидает_проверки",
       owner: "",
@@ -180,22 +184,34 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="platform"
+                name="platforms"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Платформа</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите платформу" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {PLATFORMS.map(p => (
-                          <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Платформы</FormLabel>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {PLATFORMS.map((p) => (
+                        <div key={p} className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-md">
+                          <Checkbox
+                            id={`platform-${p}`}
+                            checked={field.value?.includes(p)}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, p]);
+                              } else {
+                                field.onChange(current.filter((v: string) => v !== p));
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={`platform-${p}`}
+                            className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 uppercase"
+                          >
+                            {p}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -44,7 +44,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(events.category, filters.category));
     }
     if (filters?.platform) {
-      conditions.push(eq(events.platform, filters.platform));
+      conditions.push(sql`${events.platforms} @> ARRAY[${filters.platform}]::text[]`);
     }
     if (filters?.status) {
       conditions.push(eq(events.implementationStatus, filters.status));

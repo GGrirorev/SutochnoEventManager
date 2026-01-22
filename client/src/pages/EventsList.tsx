@@ -246,10 +246,14 @@ export default function EventsList() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5">
-                        {getPlatformIcon(event.platform)}
-                        {event.platform}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {event.platforms?.map((p) => (
+                          <Badge key={p} variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px]">
+                            {getPlatformIcon(p)}
+                            {p}
+                          </Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={event.implementationStatus} />
