@@ -100,11 +100,12 @@ async function seedDatabase() {
 
   const sampleEvents = [
     {
-      name: "signup_completed",
-      action: "finish_signup",
-      value: 1,
-      description: "Пользователь успешно завершил процесс регистрации",
       category: "Авторизация",
+      action: "finish_signup",
+      actionDescription: "Пользователь успешно завершил процесс регистрации, заполнив все поля",
+      name: "signup_completed",
+      value: 1,
+      valueDescription: "Количество успешных регистраций",
       platform: "все",
       implementationStatus: "внедрено",
       validationStatus: "корректно",
@@ -116,11 +117,12 @@ async function seedDatabase() {
       ]
     },
     {
-      name: "checkout_started",
-      action: "click_checkout",
-      value: 100,
-      description: "Пользователь нажал кнопку оформления заказа",
       category: "E-commerce",
+      action: "click_checkout",
+      actionDescription: "Нажатие на кнопку оформления заказа в корзине",
+      name: "checkout_started",
+      value: 100,
+      valueDescription: "Предварительная стоимость корзины",
       platform: "web",
       implementationStatus: "в_разработке",
       validationStatus: "ожидает_проверки",
@@ -131,11 +133,12 @@ async function seedDatabase() {
       ]
     },
     {
-      name: "app_crashed",
-      action: "crash",
-      value: -1,
-      description: "Критическая ошибка, приведшая к падению приложения",
       category: "Стабильность",
+      action: "crash",
+      actionDescription: "Автоматическое событие при возникновении критического исключения",
+      name: "app_crashed",
+      value: -1,
+      valueDescription: "Код ошибки",
       platform: "ios",
       implementationStatus: "внедрено",
       validationStatus: "ошибка",
@@ -144,21 +147,6 @@ async function seedDatabase() {
       properties: [
         { name: "screen", type: "string", required: true, description: "Экран, где произошло падение" },
         { name: "version", type: "string", required: true, description: "Версия приложения" }
-      ]
-    },
-    {
-      name: "search_performed",
-      action: "execute_search",
-      value: 0,
-      description: "Пользователь выполнил поисковый запрос",
-      category: "Поиск",
-      platform: "все",
-      implementationStatus: "черновик",
-      validationStatus: "ожидает_проверки",
-      owner: "Команда Поиска",
-      properties: [
-        { name: "query", type: "string", required: true, description: "Поисковый запрос" },
-        { name: "filters", type: "json", required: false, description: "Примененные фильтры" }
       ]
     }
   ];

@@ -103,15 +103,33 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="actionDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-blue-600 dark:text-blue-400">Описание действия *</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Что триггерит это действие?" 
+                      className="resize-none h-20 border-blue-200 focus-visible:ring-blue-500"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Event Name</FormLabel>
+                    <FormLabel className="text-muted-foreground">Event Name (Вторичное)</FormLabel>
                     <FormControl>
-                      <Input placeholder="например, checkout_completed" className="font-mono text-sm" {...field} value={field.value || ""} />
+                      <Input placeholder="например, checkout_completed" className="font-mono text-sm bg-muted/30" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormDescription>Дополнительный контекст к действию.</FormDescription>
                     <FormMessage />
@@ -121,20 +139,18 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
 
               <FormField
                 control={form.control}
-                name="value"
+                name="valueDescription"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Event Value</FormLabel>
+                    <FormLabel>Event Value (Описание)</FormLabel>
                     <FormControl>
                       <Input 
-                        type="number" 
-                        placeholder="Сумма оплаты" 
+                        placeholder="например, Сумма оплаты" 
                         {...field} 
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        value={field.value || 0}
+                        value={field.value || ""}
                       />
                     </FormControl>
-                    <FormDescription>Только числовое значение (например, сумма).</FormDescription>
+                    <FormDescription>Текстовое описание передаваемого значения.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -143,15 +159,17 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
 
             <FormField
               control={form.control}
-              name="description"
+              name="value"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Описание</FormLabel>
+                  <FormLabel>Event Value (Числовое значение)</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Что триггерит это событие и что оно отслеживает?" 
-                      className="resize-none h-20"
+                    <Input 
+                      type="number" 
+                      placeholder="0" 
                       {...field} 
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      value={field.value || 0}
                     />
                   </FormControl>
                   <FormMessage />

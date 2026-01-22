@@ -220,19 +220,30 @@ export default function EventsList() {
                         {event.category}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {event.action}
-                    </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        <span className="font-mono text-sm font-semibold text-primary">{event.name || '-'}</span>
-                        {event.description && (
-                          <span className="text-xs text-muted-foreground line-clamp-1">{event.description}</span>
+                        <span className="text-sm font-medium">{event.action}</span>
+                        {event.actionDescription && (
+                          <span className="text-xs text-blue-600 dark:text-blue-400 line-clamp-2 italic">
+                            {event.actionDescription}
+                          </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm font-mono">
-                      {event.value ?? 0}
+                    <TableCell>
+                      <div className="flex flex-col gap-1 opacity-70">
+                        <span className="font-mono text-xs text-muted-foreground">{event.name || '-'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-mono">{event.value ?? 0}</span>
+                        {event.valueDescription && (
+                          <span className="text-[10px] text-muted-foreground italic">
+                            ({event.valueDescription})
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5">
