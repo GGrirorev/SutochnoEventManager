@@ -237,10 +237,9 @@ export default function EventsList() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm font-mono">{event.value ?? 0}</span>
                         {event.valueDescription && (
-                          <span className="text-[10px] text-muted-foreground italic">
-                            ({event.valueDescription})
+                          <span className="text-sm italic text-muted-foreground">
+                            {event.valueDescription}
                           </span>
                         )}
                       </div>

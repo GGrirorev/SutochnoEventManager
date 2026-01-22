@@ -43,7 +43,6 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
       action: "",
       actionDescription: "",
       name: "",
-      value: 0,
       valueDescription: "",
       platforms: ["все"],
       implementationStatus: "черновик",
@@ -149,37 +148,17 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                     <FormLabel>Event Value (Описание)</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="например, Сумма оплаты" 
+                        placeholder="например, Сумма оплаты или ID товара" 
                         {...field} 
                         value={field.value || ""}
                       />
                     </FormControl>
-                    <FormDescription>Текстовое описание передаваемого значения.</FormDescription>
+                    <FormDescription>Описание передаваемого значения события.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="value"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Event Value (Числовое значение)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="0" 
-                      {...field} 
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      value={field.value || 0}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

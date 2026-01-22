@@ -32,7 +32,6 @@ export const events = pgTable("events", {
   action: text("action").notNull(), // Event Action (Required)
   actionDescription: text("action_description").notNull().default(""), // Description for Event Action
   name: text("name"), // Event Name (Optional)
-  value: integer("value").default(0), // Event Value (Numeric data)
   valueDescription: text("value_description").default(""), // Event Value Description (Text)
   
   owner: text("owner"), 
