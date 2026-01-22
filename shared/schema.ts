@@ -4,17 +4,17 @@ import { z } from "zod";
 
 // Enums for status tracking
 export const IMPLEMENTATION_STATUS = [
-  "specified",
-  "in_development", 
-  "implemented", 
-  "deprecated"
+  "черновик",
+  "в_разработке", 
+  "внедрено", 
+  "архив"
 ] as const;
 
 export const VALIDATION_STATUS = [
-  "pending",
-  "valid",
-  "error",
-  "warning"
+  "ожидает_проверки",
+  "корректно",
+  "ошибка",
+  "предупреждение"
 ] as const;
 
 export const PLATFORMS = [
@@ -22,24 +22,21 @@ export const PLATFORMS = [
   "ios",
   "android",
   "backend",
-  "all"
+  "все"
 ] as const;
 
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(), // e.g., "button_clicked", "page_viewed"
+  name: text("name").notNull(), 
   description: text("description").notNull(),
-  category: text("category").notNull(), // e.g., "Auth", "Navigation", "Checkout"
+  category: text("category").notNull(), 
   
-  // Tracking plan details
-  owner: text("owner"), // PM or Dev responsible
-  platform: text("platform", { enum: PLATFORMS }).notNull().default("all"),
+  owner: text("owner"), 
+  platform: text("platform", { enum: PLATFORMS }).notNull().default("все"),
   
-  // Status flags
-  implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("specified"),
-  validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("pending"),
+  implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("черновик"),
+  validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("ожидает_проверки"),
   
-  // Technical details
   properties: jsonb("properties").$type<{
     name: string;
     type: string;
@@ -47,7 +44,7 @@ export const events = pgTable("events", {
     description: string;
   }[]>().default([]),
   
-  notes: text("notes"), // For specific implementation details or error logs
+  notes: text("notes"), 
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -62,11 +59,9 @@ export const insertEventSchema = createInsertSchema(events).omit({
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 
-// API Types
 export type CreateEventRequest = InsertEvent;
 export type UpdateEventRequest = Partial<InsertEvent>;
 
-// Analytics/Summary types
 export type StatusSummary = {
   status: string;
   count: number;

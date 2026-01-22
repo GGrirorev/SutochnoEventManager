@@ -101,76 +101,62 @@ async function seedDatabase() {
   const sampleEvents = [
     {
       name: "signup_completed",
-      description: "User successfully completes the signup flow",
-      category: "Auth",
-      platform: "all",
-      implementationStatus: "implemented",
-      validationStatus: "valid",
-      owner: "Auth Team",
+      description: "Пользователь успешно завершил процесс регистрации",
+      category: "Авторизация",
+      platform: "все",
+      implementationStatus: "внедрено",
+      validationStatus: "корректно",
+      owner: "Команда Авторизации",
       properties: [
-        { name: "userId", type: "string", required: true, description: "Unique user identifier" },
-        { name: "method", type: "string", required: true, description: "email, google, or apple" },
-        { name: "platform", type: "string", required: true, description: "web, ios, or android" }
+        { name: "userId", type: "string", required: true, description: "Уникальный идентификатор пользователя" },
+        { name: "method", type: "string", required: true, description: "email, google или apple" },
+        { name: "platform", type: "string", required: true, description: "web, ios или android" }
       ]
     },
     {
       name: "checkout_started",
-      description: "User clicks the checkout button",
+      description: "Пользователь нажал кнопку оформления заказа",
       category: "E-commerce",
       platform: "web",
-      implementationStatus: "in_development",
-      validationStatus: "pending",
-      owner: "Checkout Squad",
+      implementationStatus: "в_разработке",
+      validationStatus: "ожидает_проверки",
+      owner: "Команда Оформления",
       properties: [
-        { name: "cartValue", type: "number", required: true, description: "Total value of items in cart" },
-        { name: "itemCount", type: "number", required: true, description: "Number of items" }
+        { name: "cartValue", type: "number", required: true, description: "Общая стоимость корзины" },
+        { name: "itemCount", type: "number", required: true, description: "Количество товаров" }
       ]
     },
     {
       name: "app_crashed",
-      description: "Critical error causing app crash",
-      category: "Stability",
+      description: "Критическая ошибка, приведшая к падению приложения",
+      category: "Стабильность",
       platform: "ios",
-      implementationStatus: "implemented",
-      validationStatus: "error",
-      owner: "Platform Team",
-      notes: "Currently missing stack trace property in prod",
+      implementationStatus: "внедрено",
+      validationStatus: "ошибка",
+      owner: "Платформенная команда",
+      notes: "В данный момент отсутствует свойство stack trace в продакшене",
       properties: [
-        { name: "screen", type: "string", required: true, description: "Screen where crash happened" },
-        { name: "version", type: "string", required: true, description: "App version" }
+        { name: "screen", type: "string", required: true, description: "Экран, где произошло падение" },
+        { name: "version", type: "string", required: true, description: "Версия приложения" }
       ]
     },
     {
       name: "search_performed",
-      description: "User executes a search query",
-      category: "Discovery",
-      platform: "all",
-      implementationStatus: "specified",
-      validationStatus: "pending",
-      owner: "Search Team",
+      description: "Пользователь выполнил поисковый запрос",
+      category: "Поиск",
+      platform: "все",
+      implementationStatus: "черновик",
+      validationStatus: "ожидает_проверки",
+      owner: "Команда Поиска",
       properties: [
-        { name: "query", type: "string", required: true, description: "Search term" },
-        { name: "filters", type: "json", required: false, description: "Applied filters" }
-      ]
-    },
-    {
-      name: "video_played",
-      description: "User starts playing a video",
-      category: "Content",
-      platform: "android",
-      implementationStatus: "deprecated",
-      validationStatus: "warning",
-      owner: "Media Team",
-      notes: "Replacing with media_interaction event",
-      properties: [
-        { name: "videoId", type: "string", required: true, description: "ID of the video" },
-        { name: "duration", type: "number", required: true, description: "Video duration in seconds" }
+        { name: "query", type: "string", required: true, description: "Поисковый запрос" },
+        { name: "filters", type: "json", required: false, description: "Примененные фильтры" }
       ]
     }
   ];
 
   for (const event of sampleEvents) {
-    // @ts-ignore - types are compatible but strict null checks might complain about literals
+    // @ts-ignore
     await storage.createEvent(event);
   }
 }
