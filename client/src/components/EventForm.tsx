@@ -1,11 +1,20 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEventSchema, IMPLEMENTATION_STATUS, PLATFORMS, VALIDATION_STATUS, type InsertEvent } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { insertEventSchema, IMPLEMENTATION_STATUS, PLATFORMS, VALIDATION_STATUS, type InsertEvent, type PropertyTemplate } from "@shared/schema";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Form,
   FormControl,
@@ -23,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Loader2 } from "lucide-react";
+import { Trash2, Plus, Loader2, Library } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EventFormProps {
@@ -32,9 +41,27 @@ interface EventFormProps {
   mode: "create" | "edit";
 }
 
+const storageFormatToType: Record<string, string> = {
+  "текст": "string",
+  "целое_число": "number",
+  "дробное_число": "number",
+  "дата_и_время": "string",
+  "булево": "boolean",
+  "массив": "array",
+  "объект": "object"
+};
+
 export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
+
+  const { data: propertyTemplates = [] } = useQuery<PropertyTemplate[]>({
+    queryKey: ["/api/property-templates"],
+    queryFn: async () => {
+      const res = await fetch("/api/property-templates");
+      return res.json();
+    }
+  });
   
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -261,18 +288,53 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
 
             {/* Properties Section */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <FormLabel className="text-base font-semibold">Свойства события</FormLabel>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => append({ name: "", type: "string", required: true, description: "" })}
-                  className="h-8"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Добавить свойство
-                </Button>
+                <div className="flex gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline" size="sm" className="h-8">
+                        <Library className="w-4 h-4 mr-2" />
+                        Из библиотеки
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
+                      <DropdownMenuLabel>Выберите свойство</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {propertyTemplates.length === 0 ? (
+                        <DropdownMenuItem disabled>Библиотека пуста</DropdownMenuItem>
+                      ) : (
+                        propertyTemplates.map((template) => (
+                          <DropdownMenuItem
+                            key={template.id}
+                            onClick={() => append({
+                              name: template.name,
+                              type: storageFormatToType[template.storageFormat] || "string",
+                              required: true,
+                              description: template.description || ""
+                            })}
+                            className="flex flex-col items-start"
+                          >
+                            <span className="font-medium">{template.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              D{template.dimension} • {template.storageFormat}
+                            </span>
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => append({ name: "", type: "string", required: true, description: "" })}
+                    className="h-8"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Новое
+                  </Button>
+                </div>
               </div>
               
               <ScrollArea className="h-[200px] rounded-md border p-4 bg-muted/10">

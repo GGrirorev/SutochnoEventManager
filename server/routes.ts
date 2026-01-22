@@ -103,6 +103,49 @@ export async function registerRoutes(
     res.status(201).json(comment);
   });
 
+  // Property Templates API
+  app.get("/api/property-templates", async (req, res) => {
+    const category = req.query.category as string | undefined;
+    const templates = await storage.getPropertyTemplates(category);
+    res.json(templates);
+  });
+
+  app.get("/api/property-templates/next-dimension", async (req, res) => {
+    const nextDimension = await storage.getNextDimension();
+    res.json({ nextDimension });
+  });
+
+  app.get("/api/property-templates/:id", async (req, res) => {
+    const template = await storage.getPropertyTemplate(Number(req.params.id));
+    if (!template) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    res.json(template);
+  });
+
+  app.post("/api/property-templates", async (req, res) => {
+    try {
+      const template = await storage.createPropertyTemplate(req.body);
+      res.status(201).json(template);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to create template" });
+    }
+  });
+
+  app.patch("/api/property-templates/:id", async (req, res) => {
+    try {
+      const template = await storage.updatePropertyTemplate(Number(req.params.id), req.body);
+      res.json(template);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to update template" });
+    }
+  });
+
+  app.delete("/api/property-templates/:id", async (req, res) => {
+    await storage.deletePropertyTemplate(Number(req.params.id));
+    res.status(204).send();
+  });
+
   // Initial seed data
   await seedDatabase();
 

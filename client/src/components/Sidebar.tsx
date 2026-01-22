@@ -13,6 +13,7 @@ import logoHeader from "@assets/logo-header_1769085215107.png";
 const NAV_ITEMS = [
   { label: "Обзор", icon: LayoutDashboard, href: "/" },
   { label: "Схема событий", icon: List, href: "/events" },
+  { label: "Свойства событий", icon: Database, href: "/properties" },
   { label: "Валидация", icon: Activity, href: "/validation" },
   { label: "Интеграция", icon: GitGraph, href: "/integration" },
 ];

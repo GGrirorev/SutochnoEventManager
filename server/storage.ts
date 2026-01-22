@@ -2,12 +2,15 @@ import { db } from "./db";
 import {
   events,
   comments,
+  propertyTemplates,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
   type StatusSummary,
   type Comment,
   type InsertComment,
+  type PropertyTemplate,
+  type InsertPropertyTemplate,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
@@ -32,6 +35,14 @@ export interface IStorage {
   // Comment operations
   getComments(eventId: number): Promise<Comment[]>;
   createComment(comment: InsertComment): Promise<Comment>;
+  
+  // Property template operations
+  getPropertyTemplates(category?: string): Promise<PropertyTemplate[]>;
+  getPropertyTemplate(id: number): Promise<PropertyTemplate | undefined>;
+  createPropertyTemplate(template: InsertPropertyTemplate): Promise<PropertyTemplate>;
+  updatePropertyTemplate(id: number, updates: Partial<InsertPropertyTemplate>): Promise<PropertyTemplate>;
+  deletePropertyTemplate(id: number): Promise<void>;
+  getNextDimension(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -117,6 +128,43 @@ export class DatabaseStorage implements IStorage {
   async createComment(comment: InsertComment): Promise<Comment> {
     const [newComment] = await db.insert(comments).values(comment).returning();
     return newComment;
+  }
+
+  // Property template operations
+  async getPropertyTemplates(category?: string): Promise<PropertyTemplate[]> {
+    if (category) {
+      return await db.select().from(propertyTemplates)
+        .where(eq(propertyTemplates.category, category))
+        .orderBy(propertyTemplates.dimension);
+    }
+    return await db.select().from(propertyTemplates).orderBy(propertyTemplates.dimension);
+  }
+
+  async getPropertyTemplate(id: number): Promise<PropertyTemplate | undefined> {
+    const [template] = await db.select().from(propertyTemplates).where(eq(propertyTemplates.id, id));
+    return template;
+  }
+
+  async createPropertyTemplate(template: InsertPropertyTemplate): Promise<PropertyTemplate> {
+    const [newTemplate] = await db.insert(propertyTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updatePropertyTemplate(id: number, updates: Partial<InsertPropertyTemplate>): Promise<PropertyTemplate> {
+    const [template] = await db.update(propertyTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(propertyTemplates.id, id))
+      .returning();
+    return template;
+  }
+
+  async deletePropertyTemplate(id: number): Promise<void> {
+    await db.delete(propertyTemplates).where(eq(propertyTemplates.id, id));
+  }
+
+  async getNextDimension(): Promise<number> {
+    const result = await db.select().from(propertyTemplates).orderBy(desc(propertyTemplates.dimension)).limit(1);
+    return result.length > 0 ? result[0].dimension + 1 : 1;
   }
 }
 

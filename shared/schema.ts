@@ -69,6 +69,47 @@ export const insertCommentSchema = createInsertSchema(comments).omit({
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 
+// Property categories
+export const PROPERTY_CATEGORIES = [
+  "посещения",
+  "действия",
+  "пользователь",
+  "устройство",
+  "другое"
+] as const;
+
+export const PROPERTY_TYPES = [
+  "текст",
+  "целое_число",
+  "дробное_число",
+  "дата_и_время",
+  "булево",
+  "массив",
+  "объект"
+] as const;
+
+// Global property templates library
+export const propertyTemplates = pgTable("property_templates", {
+  id: serial("id").primaryKey(),
+  dimension: integer("dimension").notNull().unique(), // Unique dimension number
+  name: text("name").notNull(), // Property name (e.g., "User Type")
+  description: text("description"), // Description of the property
+  exampleData: text("example_data"), // Example values (e.g., "Guest, Super_Guest, Host, Admin")
+  storageFormat: text("storage_format", { enum: PROPERTY_TYPES }).notNull().default("текст"),
+  category: text("category", { enum: PROPERTY_CATEGORIES }).notNull().default("другое"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertyTemplateSchema = createInsertSchema(propertyTemplates).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true 
+});
+
+export type PropertyTemplate = typeof propertyTemplates.$inferSelect;
+export type InsertPropertyTemplate = z.infer<typeof insertPropertyTemplateSchema>;
+
 export const insertEventSchema = createInsertSchema(events).omit({ 
   id: true, 
   createdAt: true, 
