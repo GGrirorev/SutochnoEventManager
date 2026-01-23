@@ -260,19 +260,7 @@ export async function registerRoutes(
         validationStatus: validated.validationStatus
       });
       
-      // Create initial history entries
-      await storage.createStatusHistory({
-        eventPlatformStatusId: status.id,
-        statusType: "implementation",
-        oldStatus: null,
-        newStatus: status.implementationStatus
-      });
-      await storage.createStatusHistory({
-        eventPlatformStatusId: status.id,
-        statusType: "validation",
-        oldStatus: null,
-        newStatus: status.validationStatus
-      });
+      // No initial history entries - history starts when user actually changes status
       
       // Sync to legacy JSONB field for backwards compatibility
       const event = await storage.getEvent(eventId);

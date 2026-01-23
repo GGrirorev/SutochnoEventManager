@@ -258,6 +258,7 @@ export class DatabaseStorage implements IStorage {
     
     for (const platform of platforms) {
       // Create status record with default values for new version
+      // No initial history entries - history starts when user actually changes status
       const [status] = await db.insert(eventPlatformStatuses).values({
         eventId,
         versionNumber,
@@ -265,22 +266,6 @@ export class DatabaseStorage implements IStorage {
         implementationStatus: "черновик",
         validationStatus: "ожидает_проверки"
       }).returning();
-      
-      // Create initial history entries
-      await db.insert(statusHistory).values({
-        eventPlatformStatusId: status.id,
-        statusType: "implementation",
-        oldStatus: null,
-        newStatus: "черновик",
-        changedBy: "Система"
-      });
-      await db.insert(statusHistory).values({
-        eventPlatformStatusId: status.id,
-        statusType: "validation",
-        oldStatus: null,
-        newStatus: "ожидает_проверки",
-        changedBy: "Система"
-      });
       
       createdStatuses.push(status);
     }
