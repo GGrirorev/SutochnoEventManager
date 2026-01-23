@@ -101,7 +101,7 @@ export async function registerRoutes(
         return res.status(404).json({ message: 'Event not found' });
       }
 
-      const { changeDescription, ...updateData } = req.body;
+      const { changeDescription, createdBy, ...updateData } = req.body;
       const input = api.events.update.input.parse(updateData);
       
       // Increment version
@@ -130,6 +130,7 @@ export async function registerRoutes(
         properties: event.properties || [],
         notes: event.notes,
         changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
+        createdBy: createdBy || "Админ",
       });
       
       // Create new platform statuses for the new version with default values

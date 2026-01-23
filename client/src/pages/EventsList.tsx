@@ -309,11 +309,21 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                       onClick={() => setSelectedVersion(v.version)}
                       className={selectedVersion === v.version ? "bg-accent" : ""}
                     >
-                      <div className="flex flex-col">
-                        <span>v{v.version}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">v{v.version}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {v.createdAt && format(new Date(v.createdAt), "dd.MM.yyyy HH:mm", { locale: ru })}
+                          </span>
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {v.changeDescription || `Версия ${v.version}`}
                         </span>
+                        {v.createdBy && (
+                          <span className="text-[10px] text-muted-foreground/70">
+                            Автор: {v.createdBy}
+                          </span>
+                        )}
                       </div>
                     </DropdownMenuItem>
                   ))}
@@ -322,9 +332,22 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
             )}
           </div>
         </div>
-        {selectedVersion && (
+        {selectedVersion && displayedVersion && (
           <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-sm text-amber-700 dark:text-amber-300">
-            Просмотр версии v{selectedVersion}. <button className="underline" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>Просмотр версии v{selectedVersion}</span>
+              {displayedVersion.createdAt && (
+                <span className="text-xs opacity-80">
+                  от {format(new Date(displayedVersion.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
+                </span>
+              )}
+              {displayedVersion.createdBy && (
+                <span className="text-xs opacity-80">
+                  • Автор: {displayedVersion.createdBy}
+                </span>
+              )}
+              <button className="underline ml-auto" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
+            </div>
           </div>
         )}
       </DialogHeader>

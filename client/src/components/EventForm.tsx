@@ -157,11 +157,12 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
     let eventId: number;
     
     if (mode === "edit" && initialData?.id) {
-      // Include change description for versioning
+      // Include change description and author for versioning
       await updateMutation.mutateAsync({ 
         id: initialData.id, 
         ...data,
-        changeDescription: description || "Обновление события"
+        changeDescription: description || "Обновление события",
+        createdBy: "Админ" // TODO: Replace with actual user when auth is implemented
       });
       eventId = initialData.id;
       
