@@ -38,6 +38,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -148,192 +149,207 @@ function EventDetailsModal({ event }: { event: any }) {
         </DialogTitle>
       </DialogHeader>
 
-      <div className="space-y-6 pt-4">
-        <div className="grid grid-cols-2 gap-6">
+      <Tabs defaultValue="description" className="pt-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="description">Описание</TabsTrigger>
+          <TabsTrigger value="health">Здоровье</TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Описание */}
+        <TabsContent value="description" className="space-y-6 pt-4">
           <div className="space-y-4">
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-1">Описание действия</h4>
-              <p className="text-sm text-blue-600 dark:text-blue-400 italic">
+              <p className="text-sm">
                 {event.actionDescription || "Нет описания"}
               </p>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
-              <p className="text-sm font-mono bg-muted p-2 rounded">{event.name || "-"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Значение (Value)</h4>
-              <p className="text-sm italic">{event.valueDescription || "Не указано"}</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Платформы и статусы</h4>
-              <div className="space-y-3">
-                {(platformStatuses.length > 0 ? platformStatuses : event.platforms?.map((p: string) => ({ platform: p, ...event.platformStatuses?.[p] }))).map((ps: any) => {
-                  const p = ps.platform;
-                  const jiraLink = ps.jiraLink || event.platformJiraLinks?.[p];
-                  return (
-                    <div key={p} className="p-3 bg-muted/30 rounded-lg border">
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant="secondary" className="uppercase text-[10px]">
-                          {p}
-                        </Badge>
-                        {jiraLink && (
-                          <a
-                            href={jiraLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline flex items-center gap-1"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            Jira
-                          </a>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <span className="text-xs text-muted-foreground">Внедрение:</span>
-                            <div className="mt-1">
-                              <StatusBadge status={ps.implementationStatus || "черновик"} />
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <span className="text-xs text-muted-foreground">Валидация:</span>
-                            <div className="mt-1">
-                              <StatusBadge status={ps.validationStatus || "ожидает_проверки"} />
-                            </div>
-                          </div>
-                        </div>
-                        {ps.history && ps.history.length > 0 && (
-                          <details className="text-xs">
-                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              История изменений ({ps.history.length})
-                            </summary>
-                            <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
-                              {ps.history.slice().reverse().map((h: any, i: number) => (
-                                <div key={`hist-${i}`} className="flex items-center gap-2 text-muted-foreground py-1">
-                                  {h.statusType === 'implementation' ? (
-                                    <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                                  ) : (
-                                    <ShieldCheck className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                                  )}
-                                  <span className="font-medium text-foreground">
-                                    {h.statusType === 'implementation' ? 'Внедрение:' : 'Валидация:'}
-                                  </span>
-                                  <span className={getStatusColor(h.oldStatus)}>
-                                    {h.oldStatus?.replace(/_/g, ' ') || '-'}
-                                  </span>
-                                  <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                                  <span className={getStatusColor(h.newStatus)}>
-                                    {h.newStatus?.replace(/_/g, ' ')}
-                                  </span>
-                                  <span className="ml-auto opacity-70 whitespace-nowrap">
-                                    {h.createdAt ? new Date(h.createdAt).toLocaleDateString('ru-RU') : ''}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        )}
-                        </div>
-                    </div>
-                  );
-                })}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
+                <p className="text-sm font-mono bg-muted p-2 rounded">{event.name || "-"}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Значение (Value)</h4>
+                <p className="text-sm bg-muted p-2 rounded">{event.valueDescription || "-"}</p>
               </div>
             </div>
+            {event.block && (
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Блок</h4>
+                <p className="text-sm">{event.block}</p>
+              </div>
+            )}
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-1">Ответственный</h4>
               <p className="text-sm">{event.owner || "Не назначен"}</p>
             </div>
           </div>
-        </div>
 
-        {/* Analytics Chart */}
-        <AnalyticsChart 
-          eventAction={event.action} 
-          eventCategory={event.category}
-          platforms={event.platforms || []}
-        />
-
-        {event.properties && event.properties.length > 0 && (
-          <div>
-            <h4 className="text-sm font-semibold mb-2">Свойства (Properties)</h4>
-            <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="h-8 text-xs">Название</TableHead>
-                    <TableHead className="h-8 text-xs">Тип</TableHead>
-                    <TableHead className="h-8 text-xs">Описание</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {event.properties.map((prop: any, i: number) => (
-                    <TableRow key={i}>
-                      <TableCell className="py-2 text-xs font-mono">{prop.name}</TableCell>
-                      <TableCell className="py-2 text-xs">{prop.type}</TableCell>
-                      <TableCell className="py-2 text-xs text-muted-foreground">{prop.description}</TableCell>
+          {event.properties && event.properties.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Свойства (Properties)</h4>
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="h-8 text-xs">Название</TableHead>
+                      <TableHead className="h-8 text-xs">Тип</TableHead>
+                      <TableHead className="h-8 text-xs">Описание</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {event.properties.map((prop: any, i: number) => (
+                      <TableRow key={i}>
+                        <TableCell className="py-2 text-xs font-mono">{prop.name}</TableCell>
+                        <TableCell className="py-2 text-xs">{prop.type}</TableCell>
+                        <TableCell className="py-2 text-xs text-muted-foreground">{prop.description}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {event.notes && (
+            <div>
+              <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Заметки</h4>
+              <p className="text-xs font-mono bg-muted/50 p-3 rounded border">{event.notes}</p>
+            </div>
+          )}
+
+          <div className="border-t pt-6">
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Комментарии ({comments.length})
+            </h4>
+            
+            <div className="space-y-4 mb-6">
+              {comments.map((c: any) => (
+                <div key={c.id} className="bg-muted/30 p-3 rounded-lg border border-border/50">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-semibold">{c.author}</span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {format(new Date(c.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground/90">{c.content}</p>
+                </div>
+              ))}
+              {comments.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Нет комментариев. Будьте первым!</p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Textarea 
+                placeholder="Оставьте комментарий к событию..." 
+                className="min-h-[80px] text-sm"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+              <Button 
+                size="icon" 
+                className="self-end" 
+                disabled={!comment.trim() || commentMutation.isPending}
+                onClick={() => commentMutation.mutate(comment)}
+              >
+                <Send className="w-4 h-4" />
+              </Button>
             </div>
           </div>
-        )}
+        </TabsContent>
 
-        {event.notes && (
+        {/* Tab 2: Здоровье */}
+        <TabsContent value="health" className="space-y-6 pt-4">
           <div>
-            <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Заметки</h4>
-            <p className="text-xs font-mono bg-muted/50 p-3 rounded border">{event.notes}</p>
+            <h4 className="text-sm font-semibold text-muted-foreground mb-3">Платформы и статусы</h4>
+            <div className="space-y-3">
+              {(platformStatuses.length > 0 ? platformStatuses : event.platforms?.map((p: string) => ({ platform: p, ...event.platformStatuses?.[p] }))).map((ps: any) => {
+                const p = ps.platform;
+                const jiraLink = ps.jiraLink || event.platformJiraLinks?.[p];
+                return (
+                  <div key={p} className="p-3 bg-muted/30 rounded-lg border">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="secondary" className="uppercase text-[10px]">
+                        {p}
+                      </Badge>
+                      {jiraLink && (
+                        <a
+                          href={jiraLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Jira
+                        </a>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <span className="text-xs text-muted-foreground">Внедрение:</span>
+                          <div className="mt-1">
+                            <StatusBadge status={ps.implementationStatus || "черновик"} />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-xs text-muted-foreground">Валидация:</span>
+                          <div className="mt-1">
+                            <StatusBadge status={ps.validationStatus || "ожидает_проверки"} />
+                          </div>
+                        </div>
+                      </div>
+                      {ps.history && ps.history.length > 0 && (
+                        <details className="text-xs">
+                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            История изменений ({ps.history.length})
+                          </summary>
+                          <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
+                            {ps.history.slice().reverse().map((h: any, i: number) => (
+                              <div key={`hist-${i}`} className="flex items-center gap-2 text-muted-foreground py-1">
+                                {h.statusType === 'implementation' ? (
+                                  <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                ) : (
+                                  <ShieldCheck className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                                )}
+                                <span className="font-medium text-foreground">
+                                  {h.statusType === 'implementation' ? 'Внедрение:' : 'Валидация:'}
+                                </span>
+                                <span className={getStatusColor(h.oldStatus)}>
+                                  {h.oldStatus?.replace(/_/g, ' ') || '-'}
+                                </span>
+                                <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                                <span className={getStatusColor(h.newStatus)}>
+                                  {h.newStatus?.replace(/_/g, ' ')}
+                                </span>
+                                <span className="ml-auto opacity-70 whitespace-nowrap">
+                                  {h.createdAt ? new Date(h.createdAt).toLocaleDateString('ru-RU') : ''}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        )}
 
-        <div className="border-t pt-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <MessageSquare className="w-5 h-5" />
-            Комментарии ({comments.length})
-          </h4>
-          
-          <div className="space-y-4 mb-6">
-            {comments.map((c: any) => (
-              <div key={c.id} className="bg-muted/30 p-3 rounded-lg border border-border/50">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs font-semibold">{c.author}</span>
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {format(new Date(c.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
-                  </span>
-                </div>
-                <p className="text-sm text-foreground/90">{c.content}</p>
-              </div>
-            ))}
-            {comments.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">Нет комментариев. Будьте первым!</p>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Textarea 
-              placeholder="Оставьте комментарий к событию..." 
-              className="min-h-[80px] text-sm"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-            <Button 
-              size="icon" 
-              className="self-end" 
-              disabled={!comment.trim() || commentMutation.isPending}
-              onClick={() => commentMutation.mutate(comment)}
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
+          {/* Analytics Chart */}
+          <AnalyticsChart 
+            eventAction={event.action} 
+            eventCategory={event.category}
+            platforms={event.platforms || []}
+          />
+        </TabsContent>
+      </Tabs>
     </DialogContent>
   );
 }
