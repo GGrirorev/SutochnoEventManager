@@ -22,8 +22,7 @@ export const PLATFORMS = [
   "web",
   "ios",
   "android",
-  "backend",
-  "все"
+  "backend"
 ] as const;
 
 // Type for status history entry
