@@ -101,6 +101,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
     resolver: zodResolver(insertEventSchema),
     defaultValues: initialData || {
       category: "",
+      block: "",
       action: "",
       actionDescription: "",
       name: "",
@@ -221,6 +222,21 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                       <Input placeholder="например, Авторизация" {...field} />
                     </FormControl>
                     <FormDescription>Верхнеуровневая категория событий.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="block"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Блок</FormLabel>
+                    <FormControl>
+                      <Input placeholder="например, Шапка" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormDescription>В каком блоке на странице происходит событие.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -47,6 +47,7 @@ export type PlatformStatuses = Record<string, PlatformStatus>;
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   category: text("category").notNull(), // Event Category (Required)
+  block: text("block").default(""), // Block - where on the page the event occurs
   action: text("action").notNull(), // Event Action (Required)
   actionDescription: text("action_description").notNull().default(""), // Description for Event Action
   name: text("name"), // Event Name (Optional)

@@ -454,6 +454,7 @@ export default function EventsList() {
             <TableHeader className="bg-muted/30">
               <TableRow>
                 <TableHead>Event Category</TableHead>
+                <TableHead>Блок</TableHead>
                 <TableHead>Event Action</TableHead>
                 <TableHead className="w-[200px]">Event Name</TableHead>
                 <TableHead>Event Value</TableHead>
@@ -467,6 +468,7 @@ export default function EventsList() {
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-5 w-20 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-32 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-16 bg-muted/50 rounded animate-pulse" /></TableCell>
@@ -477,7 +479,7 @@ export default function EventsList() {
               ) : events?.length === 0 ? (
                 // Empty State
                 <TableRow>
-                  <TableCell colSpan={6} className="h-64 text-center">
+                  <TableCell colSpan={7} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <div className="p-4 rounded-full bg-muted mb-3">
                         <Filter className="w-6 h-6" />
@@ -496,6 +498,9 @@ export default function EventsList() {
                         {event.category}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground/80">{event.block || '-'}</span>
+                    </TableCell>
                     <TableCell className="cursor-pointer hover:bg-muted/50 transition-colors group" onClick={() => setSelectedEvent(event)}>
                       <Dialog>
                         <DialogTrigger asChild>
@@ -512,18 +517,10 @@ export default function EventsList() {
                       </Dialog>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1 opacity-70">
-                        <span className="font-mono text-xs text-muted-foreground">{event.name || '-'}</span>
-                      </div>
+                      <span className="text-sm text-muted-foreground/80">{event.name || '-'}</span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {event.valueDescription && (
-                          <span className="text-sm italic text-muted-foreground">
-                            {event.valueDescription}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-sm text-muted-foreground/80">{event.valueDescription || '-'}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
