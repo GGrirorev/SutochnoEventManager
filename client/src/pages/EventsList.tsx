@@ -68,7 +68,10 @@ import {
   Send,
   Calendar,
   Code,
-  ExternalLink
+  ExternalLink,
+  Rocket,
+  ShieldCheck,
+  ArrowRight
 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -113,8 +116,30 @@ function EventDetailsModal({ event }: { event: any }) {
     }
   });
 
+  // Helper function to get status color class
+  const getStatusColor = (status: string | null) => {
+    if (!status) return "text-muted-foreground";
+    const normalized = status.toLowerCase().replace(/ /g, '_');
+    switch (normalized) {
+      case 'внедрено':
+      case 'корректно':
+        return "text-emerald-600 dark:text-emerald-400 font-medium";
+      case 'в_разработке':
+      case 'предупреждение':
+        return "text-amber-600 dark:text-amber-400 font-medium";
+      case 'черновик':
+        return "text-blue-600 dark:text-blue-400 font-medium";
+      case 'ошибка':
+        return "text-rose-600 dark:text-rose-400 font-medium";
+      case 'архив':
+      case 'ожидает_проверки':
+      default:
+        return "text-slate-600 dark:text-slate-400";
+    }
+  };
+
   return (
-    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="text-2xl flex items-center gap-2">
           {event.action}
@@ -187,18 +212,32 @@ function EventDetailsModal({ event }: { event: any }) {
                               <Calendar className="w-3 h-3" />
                               История изменений ({ps.history.length})
                             </summary>
-                            <div className="mt-2 space-y-1 pl-4 border-l-2 border-muted">
+                            <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
                               {ps.history.slice().reverse().map((h: any, i: number) => (
-                                <div key={`hist-${i}`} className="text-muted-foreground">
-                                  <span className="font-medium">{h.statusType === 'implementation' ? 'Внедрение' : 'Валидация'}:</span> {h.oldStatus?.replace('_', ' ') || '-'} → {h.newStatus?.replace('_', ' ')} 
-                                    <span className="ml-1 opacity-70">
-                                      ({h.createdAt ? new Date(h.createdAt).toLocaleDateString('ru-RU') : ''})
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </details>
-                          )}
+                                <div key={`hist-${i}`} className="flex items-center gap-2 text-muted-foreground py-1">
+                                  {h.statusType === 'implementation' ? (
+                                    <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                  ) : (
+                                    <ShieldCheck className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                                  )}
+                                  <span className="font-medium text-foreground">
+                                    {h.statusType === 'implementation' ? 'Внедрение:' : 'Валидация:'}
+                                  </span>
+                                  <span className={getStatusColor(h.oldStatus)}>
+                                    {h.oldStatus?.replace(/_/g, ' ') || '-'}
+                                  </span>
+                                  <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                                  <span className={getStatusColor(h.newStatus)}>
+                                    {h.newStatus?.replace(/_/g, ' ')}
+                                  </span>
+                                  <span className="ml-auto opacity-70 whitespace-nowrap">
+                                    {h.createdAt ? new Date(h.createdAt).toLocaleDateString('ru-RU') : ''}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
                         </div>
                     </div>
                   );
