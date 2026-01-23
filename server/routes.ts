@@ -67,13 +67,19 @@ export async function registerRoutes(
         owner: event.owner,
         platforms: event.platforms || [],
         platformJiraLinks: event.platformJiraLinks || {},
-        platformStatuses: event.platformStatuses || {},
-        implementationStatus: event.implementationStatus,
-        validationStatus: event.validationStatus,
+        platformStatuses: {},
+        implementationStatus: "черновик",
+        validationStatus: "ожидает_проверки",
         properties: event.properties || [],
         notes: event.notes,
         changeDescription: "Начальная версия",
       });
+      
+      // Create platform statuses for version 1
+      const platforms = event.platforms || [];
+      if (platforms.length > 0) {
+        await storage.createVersionPlatformStatuses(event.id, 1, platforms);
+      }
       
       res.status(201).json(event);
     } catch (err) {
@@ -118,13 +124,19 @@ export async function registerRoutes(
         owner: event.owner,
         platforms: event.platforms || [],
         platformJiraLinks: event.platformJiraLinks || {},
-        platformStatuses: event.platformStatuses || {},
-        implementationStatus: event.implementationStatus,
-        validationStatus: event.validationStatus,
+        platformStatuses: {}, // New version starts with empty/fresh statuses
+        implementationStatus: "черновик", // Default for new version
+        validationStatus: "ожидает_проверки", // Default for new version
         properties: event.properties || [],
         notes: event.notes,
         changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
       });
+      
+      // Create new platform statuses for the new version with default values
+      const platforms = event.platforms || [];
+      if (platforms.length > 0) {
+        await storage.createVersionPlatformStatuses(event.id, newVersion, platforms);
+      }
       
       res.json(event);
     } catch (err) {
@@ -211,10 +223,12 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  // Event Platform Statuses API
+  // Event Platform Statuses API (version-aware)
   app.get("/api/events/:eventId/platform-statuses", async (req, res) => {
     const eventId = Number(req.params.eventId);
-    const statuses = await storage.getEventPlatformStatuses(eventId);
+    const versionNumber = req.query.version ? Number(req.query.version) : undefined;
+    
+    const statuses = await storage.getEventPlatformStatuses(eventId, versionNumber);
     
     // Also fetch history for each status
     const statusesWithHistory = await Promise.all(statuses.map(async (status) => {
@@ -293,13 +307,21 @@ export async function registerRoutes(
     try {
       const eventId = Number(req.params.eventId);
       const platform = req.params.platform;
+      const versionNumber = req.body.versionNumber ? Number(req.body.versionNumber) : undefined;
       
       // Validate input with Zod
       const validated = updatePlatformStatusSchema.parse(req.body);
       
-      const existing = await storage.getEventPlatformStatus(eventId, platform);
+      // Get current event to determine default version
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      const targetVersion = versionNumber || event.currentVersion;
+      const existing = await storage.getEventPlatformStatus(eventId, platform, targetVersion);
       if (!existing) {
-        return res.status(404).json({ message: "Platform status not found" });
+        return res.status(404).json({ message: "Platform status not found for this version" });
       }
       
       // Track status changes in history
