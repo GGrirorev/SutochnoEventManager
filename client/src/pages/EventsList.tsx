@@ -443,7 +443,7 @@ function EventDetailsModal({ event }: { event: any }) {
 
 export default function EventsList() {
   const [search, setSearch] = useState("");
-  const [platform, setPlatform] = useState<string>("all");
+  const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
   const [status, setStatus] = useState<string>("all");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   
@@ -456,7 +456,7 @@ export default function EventsList() {
 
     const { data: events, isLoading } = useEvents({ 
     search, 
-    platform: platform === "all" ? undefined : platform,
+    platform: platform,
     status: status === "all" ? undefined : status 
   });
   
@@ -527,7 +527,6 @@ export default function EventsList() {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все платформы</SelectItem>
                 {PLATFORMS.map(p => (
                   <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>
                 ))}
