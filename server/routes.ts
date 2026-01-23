@@ -366,6 +366,73 @@ export async function registerRoutes(
     res.json(history);
   });
 
+  // Analytics API - proxy to Matomo/Piwik analytics
+  const analyticsQuerySchema = z.object({
+    label: z.string().min(1, "Label parameter is required"),
+    platform: z.enum(["web", "ios", "android"]).optional(),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  });
+
+  app.get("/api/analytics/events", async (req, res) => {
+    try {
+      const validated = analyticsQuerySchema.safeParse(req.query);
+      if (!validated.success) {
+        return res.status(400).json({ message: validated.error.errors[0]?.message || "Invalid parameters" });
+      }
+      
+      const { label, platform, startDate, endDate } = validated.data;
+      
+      // Map platform name to idSite
+      const platformToSiteId: Record<string, number> = {
+        "web": 1,
+        "ios": 2,
+        "android": 3
+      };
+      
+      const idSite = platform ? platformToSiteId[platform] : 1;
+      const dateRange = `${startDate || '2025-11-24'},${endDate || new Date().toISOString().split('T')[0]}`;
+      
+      const token = process.env.ANALYTICS_API_TOKEN;
+      if (!token) {
+        return res.status(500).json({ message: "Analytics API token not configured" });
+      }
+      
+      const url = new URL("https://analytics.sutochno.ru/index.php");
+      url.searchParams.set("module", "API");
+      url.searchParams.set("format", "JSON");
+      url.searchParams.set("idSite", String(idSite));
+      url.searchParams.set("period", "day");
+      url.searchParams.set("date", dateRange);
+      url.searchParams.set("method", "Events.getCategory");
+      url.searchParams.set("label", label);
+      url.searchParams.set("filter_limit", "100");
+      url.searchParams.set("format_metrics", "1");
+      url.searchParams.set("fetch_archive_state", "1");
+      url.searchParams.set("expanded", "1");
+      url.searchParams.set("showMetadata", "0");
+      url.searchParams.set("token_auth", token);
+      
+      const response = await fetch(url.toString());
+      
+      if (!response.ok) {
+        return res.status(502).json({ message: "Analytics API returned an error" });
+      }
+      
+      const data = await response.json();
+      
+      // Check if Matomo returned an error
+      if (data && typeof data === 'object' && data.result === 'error') {
+        return res.status(502).json({ message: data.message || "Analytics API error" });
+      }
+      
+      res.json(data);
+    } catch (error: any) {
+      console.error("Analytics API error:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch analytics data" });
+    }
+  });
+
   // Initial seed data
   await seedDatabase();
 

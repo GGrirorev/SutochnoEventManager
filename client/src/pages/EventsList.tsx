@@ -76,6 +76,7 @@ import {
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Sidebar } from "@/components/Sidebar";
+import { AnalyticsChart } from "@/components/AnalyticsChart";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, type Event } from "@shared/schema";
@@ -250,6 +251,13 @@ function EventDetailsModal({ event }: { event: any }) {
             </div>
           </div>
         </div>
+
+        {/* Analytics Chart */}
+        <AnalyticsChart 
+          eventAction={event.action} 
+          eventCategory={event.category}
+          platforms={event.platforms || []}
+        />
 
         {event.properties && event.properties.length > 0 && (
           <div>
