@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Loader2, Library } from "lucide-react";
+import { Trash2, Plus, Loader2, Library, Link2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EventFormProps {
@@ -72,6 +72,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
       name: "",
       valueDescription: "",
       platforms: ["все"],
+      platformJiraLinks: {},
       implementationStatus: "черновик",
       validationStatus: "ожидает_проверки",
       owner: "",
@@ -187,56 +188,80 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="platforms"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Платформы</FormLabel>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {PLATFORMS.map((p) => (
-                        <div key={p} className="flex items-center space-x-2 bg-muted/50 px-3 py-2 rounded-md">
-                          <Checkbox
-                            id={`platform-${p}`}
-                            checked={field.value?.includes(p)}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, p]);
-                              } else {
-                                field.onChange(current.filter((v: string) => v !== p));
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor={`platform-${p}`}
-                            className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 uppercase"
-                          >
-                            {p}
-                          </label>
+            <FormField
+              control={form.control}
+              name="platforms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Платформы и ссылки на задачи Jira</FormLabel>
+                  <div className="space-y-3 pt-1">
+                    {PLATFORMS.map((p) => {
+                      const isSelected = field.value?.includes(p);
+                      return (
+                        <div key={p} className={`p-3 rounded-lg border transition-colors ${isSelected ? 'bg-primary/5 border-primary/30' : 'bg-muted/30 border-transparent'}`}>
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              id={`platform-${p}`}
+                              checked={isSelected}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, p]);
+                                } else {
+                                  field.onChange(current.filter((v: string) => v !== p));
+                                  // Remove Jira link when platform is unchecked
+                                  const currentLinks = form.getValues("platformJiraLinks") || {};
+                                  const { [p]: removed, ...rest } = currentLinks;
+                                  form.setValue("platformJiraLinks", rest);
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor={`platform-${p}`}
+                              className="text-sm font-medium leading-none cursor-pointer uppercase flex-shrink-0"
+                            >
+                              {p}
+                            </label>
+                            {isSelected && (
+                              <div className="flex-1 flex items-center gap-2">
+                                <Link2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <Input
+                                  placeholder="Ссылка на задачу Jira (опционально)"
+                                  className="h-8 text-xs"
+                                  value={form.watch("platformJiraLinks")?.[p] || ""}
+                                  onChange={(e) => {
+                                    const currentLinks = form.getValues("platformJiraLinks") || {};
+                                    form.setValue("platformJiraLinks", {
+                                      ...currentLinks,
+                                      [p]: e.target.value
+                                    });
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      );
+                    })}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="owner"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ответственный</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Команда или человек" {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="owner"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ответственный</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Команда или человек" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50">
               <FormField

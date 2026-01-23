@@ -67,7 +67,8 @@ import {
   MessageSquare,
   Send,
   Calendar,
-  Code
+  Code,
+  ExternalLink
 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -134,12 +135,28 @@ function EventDetailsModal({ event }: { event: any }) {
           <div className="space-y-4">
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-1">Платформы</h4>
-              <div className="flex flex-wrap gap-1">
-                {event.platforms?.map((p: string) => (
-                  <Badge key={p} variant="secondary" className="uppercase text-[10px]">
-                    {p}
-                  </Badge>
-                ))}
+              <div className="space-y-2">
+                {event.platforms?.map((p: string) => {
+                  const jiraLink = event.platformJiraLinks?.[p];
+                  return (
+                    <div key={p} className="flex items-center gap-2">
+                      <Badge variant="secondary" className="uppercase text-[10px]">
+                        {p}
+                      </Badge>
+                      {jiraLink && (
+                        <a
+                          href={jiraLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Jira
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
