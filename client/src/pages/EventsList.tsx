@@ -192,7 +192,7 @@ function EventDetailsModal({ event }: { event: any }) {
                                 <div key={`hist-${i}`} className="text-muted-foreground">
                                   <span className="font-medium">{h.statusType === 'implementation' ? 'Внедрение' : 'Валидация'}:</span> {h.oldStatus?.replace('_', ' ') || '-'} → {h.newStatus?.replace('_', ' ')} 
                                     <span className="ml-1 opacity-70">
-                                      ({new Date(h.timestamp).toLocaleDateString('ru-RU')})
+                                      ({h.createdAt ? new Date(h.createdAt).toLocaleDateString('ru-RU') : ''})
                                     </span>
                                   </div>
                                 ))}
