@@ -53,13 +53,14 @@ export interface IStorage {
   deletePropertyTemplate(id: number): Promise<void>;
   getNextDimension(): Promise<number>;
   
-  // Event platform status operations
-  getEventPlatformStatuses(eventId: number): Promise<EventPlatformStatus[]>;
-  getEventPlatformStatus(eventId: number, platform: string): Promise<EventPlatformStatus | undefined>;
+  // Event platform status operations (version-aware)
+  getEventPlatformStatuses(eventId: number, versionNumber?: number): Promise<EventPlatformStatus[]>;
+  getEventPlatformStatus(eventId: number, platform: string, versionNumber: number): Promise<EventPlatformStatus | undefined>;
   createEventPlatformStatus(status: InsertEventPlatformStatus): Promise<EventPlatformStatus>;
   updateEventPlatformStatus(id: number, updates: Partial<InsertEventPlatformStatus>): Promise<EventPlatformStatus>;
   deletePlatformStatus(id: number): Promise<void>;
   deleteEventPlatformStatuses(eventId: number): Promise<void>;
+  createVersionPlatformStatuses(eventId: number, versionNumber: number, platforms: string[]): Promise<EventPlatformStatus[]>;
   
   // Status history operations
   getStatusHistory(eventPlatformStatusId: number): Promise<StatusHistory[]>;
@@ -193,20 +194,31 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0].dimension + 1 : 1;
   }
 
-  // Event platform status operations
-  async getEventPlatformStatuses(eventId: number): Promise<EventPlatformStatus[]> {
+  // Event platform status operations (version-aware)
+  async getEventPlatformStatuses(eventId: number, versionNumber?: number): Promise<EventPlatformStatus[]> {
+    if (versionNumber !== undefined) {
+      return await db.select()
+        .from(eventPlatformStatuses)
+        .where(and(
+          eq(eventPlatformStatuses.eventId, eventId),
+          eq(eventPlatformStatuses.versionNumber, versionNumber)
+        ))
+        .orderBy(eventPlatformStatuses.platform);
+    }
+    // If no version specified, return all
     return await db.select()
       .from(eventPlatformStatuses)
       .where(eq(eventPlatformStatuses.eventId, eventId))
       .orderBy(eventPlatformStatuses.platform);
   }
 
-  async getEventPlatformStatus(eventId: number, platform: string): Promise<EventPlatformStatus | undefined> {
+  async getEventPlatformStatus(eventId: number, platform: string, versionNumber: number): Promise<EventPlatformStatus | undefined> {
     const [status] = await db.select()
       .from(eventPlatformStatuses)
       .where(and(
         eq(eventPlatformStatuses.eventId, eventId),
-        eq(eventPlatformStatuses.platform, platform)
+        eq(eventPlatformStatuses.platform, platform),
+        eq(eventPlatformStatuses.versionNumber, versionNumber)
       ));
     return status;
   }
@@ -239,6 +251,41 @@ export class DatabaseStorage implements IStorage {
     }
     // Then delete platform statuses
     await db.delete(eventPlatformStatuses).where(eq(eventPlatformStatuses.eventId, eventId));
+  }
+
+  async createVersionPlatformStatuses(eventId: number, versionNumber: number, platforms: string[]): Promise<EventPlatformStatus[]> {
+    const createdStatuses: EventPlatformStatus[] = [];
+    
+    for (const platform of platforms) {
+      // Create status record with default values for new version
+      const [status] = await db.insert(eventPlatformStatuses).values({
+        eventId,
+        versionNumber,
+        platform: platform as any,
+        implementationStatus: "черновик",
+        validationStatus: "ожидает_проверки"
+      }).returning();
+      
+      // Create initial history entries
+      await db.insert(statusHistory).values({
+        eventPlatformStatusId: status.id,
+        statusType: "implementation",
+        oldStatus: null,
+        newStatus: "черновик",
+        changedBy: "Система"
+      });
+      await db.insert(statusHistory).values({
+        eventPlatformStatusId: status.id,
+        statusType: "validation",
+        oldStatus: null,
+        newStatus: "ожидает_проверки",
+        changedBy: "Система"
+      });
+      
+      createdStatuses.push(status);
+    }
+    
+    return createdStatuses;
   }
 
   // Status history operations

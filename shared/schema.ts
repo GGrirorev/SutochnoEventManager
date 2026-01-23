@@ -93,10 +93,11 @@ export const insertCommentSchema = createInsertSchema(comments).omit({
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 
-// Event Platform Statuses - stores per-platform status for each event
+// Event Platform Statuses - stores per-platform status for each VERSION of an event
 export const eventPlatformStatuses = pgTable("event_platform_statuses", {
   id: serial("id").primaryKey(),
   eventId: integer("event_id").notNull(),
+  versionNumber: integer("version_number").notNull().default(1), // Which version these statuses belong to
   platform: text("platform", { enum: PLATFORMS }).notNull(),
   jiraLink: text("jira_link"),
   implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("черновик"),
