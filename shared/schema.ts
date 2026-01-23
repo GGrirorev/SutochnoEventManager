@@ -26,6 +26,24 @@ export const PLATFORMS = [
   "все"
 ] as const;
 
+// Type for status history entry
+export type StatusHistoryEntry = {
+  status: string;
+  timestamp: string;
+  changedBy?: string;
+};
+
+// Type for per-platform status with history
+export type PlatformStatus = {
+  implementationStatus: typeof IMPLEMENTATION_STATUS[number];
+  validationStatus: typeof VALIDATION_STATUS[number];
+  implementationHistory: StatusHistoryEntry[];
+  validationHistory: StatusHistoryEntry[];
+};
+
+// Type for platform statuses object
+export type PlatformStatuses = Record<string, PlatformStatus>;
+
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   category: text("category").notNull(), // Event Category (Required)
@@ -37,7 +55,9 @@ export const events = pgTable("events", {
   owner: text("owner"), 
   platforms: text("platforms").array().notNull().default(sql`ARRAY['все']::text[]`),
   platformJiraLinks: jsonb("platform_jira_links").$type<Record<string, string>>().default({}), // Platform -> Jira link mapping
+  platformStatuses: jsonb("platform_statuses").$type<PlatformStatuses>().default({}), // Per-platform statuses with history
   
+  // Legacy global statuses (kept for backwards compatibility)
   implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("черновик"),
   validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("ожидает_проверки"),
   

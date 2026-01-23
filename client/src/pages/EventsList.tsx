@@ -134,39 +134,92 @@ function EventDetailsModal({ event }: { event: any }) {
 
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Платформы</h4>
-              <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">Платформы и статусы</h4>
+              <div className="space-y-3">
                 {event.platforms?.map((p: string) => {
                   const jiraLink = event.platformJiraLinks?.[p];
+                  const platformStatus = event.platformStatuses?.[p];
                   return (
-                    <div key={p} className="flex items-center gap-2">
-                      <Badge variant="secondary" className="uppercase text-[10px]">
-                        {p}
-                      </Badge>
-                      {jiraLink && (
-                        <a
-                          href={jiraLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline flex items-center gap-1"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          Jira
-                        </a>
+                    <div key={p} className="p-3 bg-muted/30 rounded-lg border">
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge variant="secondary" className="uppercase text-[10px]">
+                          {p}
+                        </Badge>
+                        {jiraLink && (
+                          <a
+                            href={jiraLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Jira
+                          </a>
+                        )}
+                      </div>
+                      {platformStatus && (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <span className="text-xs text-muted-foreground">Внедрение:</span>
+                              <div className="mt-1">
+                                <StatusBadge status={platformStatus.implementationStatus} />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <span className="text-xs text-muted-foreground">Валидация:</span>
+                              <div className="mt-1">
+                                <StatusBadge status={platformStatus.validationStatus} />
+                              </div>
+                            </div>
+                          </div>
+                          {(platformStatus.implementationHistory?.length > 1 || platformStatus.validationHistory?.length > 1) && (
+                            <details className="text-xs">
+                              <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                История изменений
+                              </summary>
+                              <div className="mt-2 space-y-1 pl-4 border-l-2 border-muted">
+                                {platformStatus.implementationHistory?.slice().reverse().map((h: any, i: number) => (
+                                  <div key={`impl-${i}`} className="text-muted-foreground">
+                                    <span className="font-medium">Внедрение:</span> {h.status.replace('_', ' ')} 
+                                    <span className="ml-1 opacity-70">
+                                      ({new Date(h.timestamp).toLocaleDateString('ru-RU')})
+                                    </span>
+                                  </div>
+                                ))}
+                                {platformStatus.validationHistory?.slice().reverse().map((h: any, i: number) => (
+                                  <div key={`val-${i}`} className="text-muted-foreground">
+                                    <span className="font-medium">Валидация:</span> {h.status.replace('_', ' ')}
+                                    <span className="ml-1 opacity-70">
+                                      ({new Date(h.timestamp).toLocaleDateString('ru-RU')})
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          )}
+                        </div>
+                      )}
+                      {!platformStatus && (
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <span className="text-xs text-muted-foreground">Внедрение:</span>
+                            <div className="mt-1">
+                              <StatusBadge status={event.implementationStatus} />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <span className="text-xs text-muted-foreground">Валидация:</span>
+                            <div className="mt-1">
+                              <StatusBadge status={event.validationStatus} />
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   );
                 })}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Внедрение</h4>
-                <StatusBadge status={event.implementationStatus} />
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Валидация</h4>
-                <StatusBadge status={event.validationStatus} />
               </div>
             </div>
             <div>
@@ -374,9 +427,7 @@ export default function EventsList() {
                 <TableHead>Event Action</TableHead>
                 <TableHead className="w-[200px]">Event Name</TableHead>
                 <TableHead>Event Value</TableHead>
-                <TableHead>Платформа</TableHead>
-                <TableHead>Внедрение</TableHead>
-                <TableHead>Валидация</TableHead>
+                <TableHead>Платформы и статусы</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -389,16 +440,14 @@ export default function EventsList() {
                     <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-32 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-16 bg-muted/50 rounded animate-pulse" /></TableCell>
-                    <TableCell><div className="h-5 w-20 bg-muted/50 rounded animate-pulse" /></TableCell>
-                    <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
-                    <TableCell><div className="h-5 w-24 bg-muted/50 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-5 w-32 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell />
                   </TableRow>
                 ))
               ) : events?.length === 0 ? (
                 // Empty State
                 <TableRow>
-                  <TableCell colSpan={8} className="h-64 text-center">
+                  <TableCell colSpan={6} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <div className="p-4 rounded-full bg-muted mb-3">
                         <Filter className="w-6 h-6" />
@@ -448,19 +497,24 @@ export default function EventsList() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {event.platforms?.map((p) => (
-                          <Badge key={p} variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px]">
-                            {getPlatformIcon(p)}
-                            {p}
-                          </Badge>
-                        ))}
+                        {event.platforms?.map((p) => {
+                          const platformStatus = event.platformStatuses?.[p];
+                          return (
+                            <div key={p} className="flex items-center gap-1">
+                              <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px]">
+                                {getPlatformIcon(p)}
+                                {p}
+                              </Badge>
+                              {platformStatus && (
+                                <div className="flex gap-0.5">
+                                  <StatusBadge status={platformStatus.implementationStatus} size="sm" />
+                                  <StatusBadge status={platformStatus.validationStatus} size="sm" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={event.implementationStatus} />
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={event.validationStatus} />
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
