@@ -146,8 +146,8 @@ function EventDetailsModal({ event }: { event: any }) {
     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="text-2xl flex items-center gap-2">
-          {event.action}
-          <Badge variant="outline">{event.category}</Badge>
+          {event.category}
+          <Badge variant="outline">{event.action}</Badge>
         </DialogTitle>
       </DialogHeader>
 
