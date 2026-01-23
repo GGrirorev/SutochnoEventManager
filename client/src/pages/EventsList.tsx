@@ -266,7 +266,8 @@ function EventDetailsModal({ event }: { event: any }) {
                   >
                     Текущая (v{event.currentVersion || 1})
                   </DropdownMenuItem>
-                  {versions.map((v: any) => (
+                  {/* Filter out current version to avoid duplicate */}
+                  {versions.filter((v: any) => v.version !== (event.currentVersion || 1)).map((v: any) => (
                     <DropdownMenuItem 
                       key={v.version}
                       onClick={() => setSelectedVersion(v.version)}
