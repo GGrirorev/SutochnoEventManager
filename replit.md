@@ -65,6 +65,14 @@ Events have two status dimensions:
 - Both "Описание" (Description) and "Здоровье" (Health) tabs show version-specific data when viewing old versions
 - Current version data comes from live database; historical versions come from snapshots
 
+### Version-Specific Platform Statuses
+- Each version has its own independent platform statuses (implementation & validation)
+- When a new version is created, default statuses are set: "черновик" / "ожидает_проверки"
+- Old versions can be edited (their statuses can be changed) since they may be supported in parallel
+- API: GET /api/events/:id/platform-statuses?version=N returns statuses for specific version
+- API: PATCH includes versionNumber to update the correct version's status
+- Status history is tracked separately per version
+
 ### API Design
 Routes are defined declaratively in `shared/routes.ts` with Zod schemas for input/output validation. This provides type safety across the full stack. The pattern uses:
 - Method and path definitions
