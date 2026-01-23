@@ -53,7 +53,7 @@ export const events = pgTable("events", {
   valueDescription: text("value_description").default(""), // Event Value Description (Text)
   
   owner: text("owner"), 
-  platforms: text("platforms").array().notNull().default(sql`ARRAY['все']::text[]`),
+  platforms: text("platforms").array().notNull().default(sql`ARRAY[]::text[]`),
   platformJiraLinks: jsonb("platform_jira_links").$type<Record<string, string>>().default({}), // Platform -> Jira link mapping
   platformStatuses: jsonb("platform_statuses").$type<PlatformStatuses>().default({}), // Per-platform statuses with history
   
@@ -69,6 +69,9 @@ export const events = pgTable("events", {
   }[]>().default([]),
   
   notes: text("notes"), 
+  
+  // Versioning
+  currentVersion: integer("current_version").notNull().default(1),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -171,6 +174,46 @@ export const insertPropertyTemplateSchema = createInsertSchema(propertyTemplates
 export type PropertyTemplate = typeof propertyTemplates.$inferSelect;
 export type InsertPropertyTemplate = z.infer<typeof insertPropertyTemplateSchema>;
 
+// Event Versions - stores snapshots of events at each version
+export const eventVersions = pgTable("event_versions", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(),
+  version: integer("version").notNull(), // v1, v2, v3...
+  
+  // Snapshot of event data at this version
+  category: text("category").notNull(),
+  block: text("block").default(""),
+  action: text("action").notNull(),
+  actionDescription: text("action_description").notNull().default(""),
+  name: text("name"),
+  valueDescription: text("value_description").default(""),
+  owner: text("owner"),
+  platforms: text("platforms").array().notNull().default(sql`ARRAY[]::text[]`),
+  platformJiraLinks: jsonb("platform_jira_links").$type<Record<string, string>>().default({}),
+  platformStatuses: jsonb("platform_statuses").$type<PlatformStatuses>().default({}),
+  implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("черновик"),
+  validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("ожидает_проверки"),
+  properties: jsonb("properties").$type<{
+    name: string;
+    type: string;
+    required: boolean;
+    description: string;
+  }[]>().default([]),
+  notes: text("notes"),
+  
+  changeDescription: text("change_description"), // What changed in this version
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEventVersionSchema = createInsertSchema(eventVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type EventVersion = typeof eventVersions.$inferSelect;
+export type InsertEventVersion = z.infer<typeof insertEventVersionSchema>;
+
 export const insertEventSchema = createInsertSchema(events).omit({ 
   id: true, 
   createdAt: true, 
@@ -181,7 +224,7 @@ export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 
 export type CreateEventRequest = InsertEvent;
-export type UpdateEventRequest = Partial<InsertEvent>;
+export type UpdateEventRequest = Partial<InsertEvent> & { changeDescription?: string };
 
 export type StatusSummary = {
   status: string;

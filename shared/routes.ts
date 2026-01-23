@@ -49,7 +49,9 @@ export const api = {
     update: {
       method: 'PATCH' as const,
       path: '/api/events/:id',
-      input: insertEventSchema.partial(),
+      input: insertEventSchema.partial().extend({
+        changeDescription: z.string().optional(),
+      }),
       responses: {
         200: z.custom<typeof events.$inferSelect>(),
         400: errorSchemas.validation,

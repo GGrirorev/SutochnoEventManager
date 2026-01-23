@@ -5,6 +5,7 @@ import {
   propertyTemplates,
   eventPlatformStatuses,
   statusHistory,
+  eventVersions,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
@@ -17,6 +18,8 @@ import {
   type InsertEventPlatformStatus,
   type StatusHistory,
   type InsertStatusHistory,
+  type EventVersion,
+  type InsertEventVersion,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
@@ -61,6 +64,11 @@ export interface IStorage {
   // Status history operations
   getStatusHistory(eventPlatformStatusId: number): Promise<StatusHistory[]>;
   createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory>;
+  
+  // Event version operations
+  getEventVersions(eventId: number): Promise<EventVersion[]>;
+  getEventVersion(eventId: number, version: number): Promise<EventVersion | undefined>;
+  createEventVersion(version: InsertEventVersion): Promise<EventVersion>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -244,6 +252,29 @@ export class DatabaseStorage implements IStorage {
   async createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory> {
     const [newHistory] = await db.insert(statusHistory).values(history).returning();
     return newHistory;
+  }
+
+  // Event version operations
+  async getEventVersions(eventId: number): Promise<EventVersion[]> {
+    return await db.select()
+      .from(eventVersions)
+      .where(eq(eventVersions.eventId, eventId))
+      .orderBy(desc(eventVersions.version));
+  }
+
+  async getEventVersion(eventId: number, version: number): Promise<EventVersion | undefined> {
+    const [eventVersion] = await db.select()
+      .from(eventVersions)
+      .where(and(
+        eq(eventVersions.eventId, eventId),
+        eq(eventVersions.version, version)
+      ));
+    return eventVersion;
+  }
+
+  async createEventVersion(version: InsertEventVersion): Promise<EventVersion> {
+    const [newVersion] = await db.insert(eventVersions).values(version).returning();
+    return newVersion;
   }
 }
 

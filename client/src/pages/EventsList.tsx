@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEvents, useDeleteEvent } from "@/hooks/use-events";
+import { useEvents, useDeleteEvent, useEventVersions } from "@/hooks/use-events";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
@@ -76,7 +76,9 @@ import {
   FileText,
   Activity,
   Copy,
-  Check
+  Check,
+  History,
+  ChevronDown
 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -163,6 +165,7 @@ TrackHelper.track().event("${category}", "${action}")${name ? `.name("${name}")`
 function EventDetailsModal({ event }: { event: any }) {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
 
   const { data: comments = [] } = useQuery({
     queryKey: ["/api/events", event.id, "comments"],
@@ -180,6 +183,18 @@ function EventDetailsModal({ event }: { event: any }) {
       return res.json();
     }
   });
+
+  // Fetch event versions
+  const { data: versions = [] } = useEventVersions(event.id);
+  
+  // Get the currently displayed version data
+  const currentVersionNumber = selectedVersion || event.currentVersion || 1;
+  const displayedVersion = selectedVersion 
+    ? versions.find((v: any) => v.version === selectedVersion) 
+    : null;
+  
+  // Use version data if viewing an old version, otherwise use current event data
+  const displayData = displayedVersion || event;
 
   const commentMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -221,10 +236,60 @@ function EventDetailsModal({ event }: { event: any }) {
   return (
     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <DialogTitle className="text-2xl flex items-center gap-2">
-          {event.category}
-          <Badge variant="outline">{event.action}</Badge>
-        </DialogTitle>
+        <div className="flex items-center justify-between">
+          <DialogTitle className="text-2xl flex items-center gap-2">
+            {displayData.category}
+            <Badge variant="outline">{displayData.action}</Badge>
+          </DialogTitle>
+          <div className="flex items-center gap-2">
+            {/* Version Badge */}
+            <Badge variant="secondary" className="text-xs">
+              v{event.currentVersion || 1}
+            </Badge>
+            
+            {/* Version Selector */}
+            {versions.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 gap-1">
+                    <History className="w-3 h-3" />
+                    {selectedVersion ? `v${selectedVersion}` : 'История'}
+                    <ChevronDown className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Версии</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => setSelectedVersion(null)}
+                    className={!selectedVersion ? "bg-accent" : ""}
+                  >
+                    Текущая (v{event.currentVersion || 1})
+                  </DropdownMenuItem>
+                  {versions.map((v: any) => (
+                    <DropdownMenuItem 
+                      key={v.version}
+                      onClick={() => setSelectedVersion(v.version)}
+                      className={selectedVersion === v.version ? "bg-accent" : ""}
+                    >
+                      <div className="flex flex-col">
+                        <span>v{v.version}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {v.changeDescription || `Версия ${v.version}`}
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+        {selectedVersion && (
+          <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-sm text-amber-700 dark:text-amber-300">
+            Просмотр версии v{selectedVersion}. <button className="underline" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
+          </div>
+        )}
       </DialogHeader>
 
       <Tabs defaultValue="description" className="pt-4">
@@ -245,32 +310,32 @@ function EventDetailsModal({ event }: { event: any }) {
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-1">Описание действия</h4>
               <p className="text-sm">
-                {event.actionDescription || "Нет описания"}
+                {displayData.actionDescription || "Нет описания"}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
-                <p className="text-sm font-mono bg-muted p-2 rounded">{event.name || "-"}</p>
+                <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.name || "-"}</p>
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Значение (Value)</h4>
-                <p className="text-sm bg-muted p-2 rounded">{event.valueDescription || "-"}</p>
+                <p className="text-sm bg-muted p-2 rounded">{displayData.valueDescription || "-"}</p>
               </div>
             </div>
-            {event.block && (
+            {displayData.block && (
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Блок</h4>
-                <p className="text-sm">{event.block}</p>
+                <p className="text-sm">{displayData.block}</p>
               </div>
             )}
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-1">Ответственный</h4>
-              <p className="text-sm">{event.owner || "Не назначен"}</p>
+              <p className="text-sm">{displayData.owner || "Не назначен"}</p>
             </div>
           </div>
 
-          {event.properties && event.properties.length > 0 && (
+          {displayData.properties && displayData.properties.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold mb-2">Свойства (Properties)</h4>
               <div className="border rounded-md overflow-hidden">
@@ -283,7 +348,7 @@ function EventDetailsModal({ event }: { event: any }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {event.properties.map((prop: any, i: number) => (
+                    {displayData.properties.map((prop: any, i: number) => (
                       <TableRow key={i}>
                         <TableCell className="py-2 text-xs font-mono">{prop.name}</TableCell>
                         <TableCell className="py-2 text-xs">{prop.type}</TableCell>
@@ -296,15 +361,15 @@ function EventDetailsModal({ event }: { event: any }) {
             </div>
           )}
 
-          {event.notes && (
+          {displayData.notes && (
             <div>
               <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Заметки</h4>
-              <p className="text-xs font-mono bg-muted/50 p-3 rounded border">{event.notes}</p>
+              <p className="text-xs font-mono bg-muted/50 p-3 rounded border">{displayData.notes}</p>
             </div>
           )}
 
           {/* Matomo Code Generator */}
-          <MatomoCodeGenerator event={event} />
+          <MatomoCodeGenerator event={displayData} />
 
           <div className="border-t pt-6">
             <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -354,9 +419,24 @@ function EventDetailsModal({ event }: { event: any }) {
           <div>
             <h4 className="text-sm font-semibold text-muted-foreground mb-3">Платформы и статусы</h4>
             <div className="space-y-3">
-              {(platformStatuses.length > 0 ? platformStatuses : event.platforms?.map((p: string) => ({ platform: p, ...event.platformStatuses?.[p] }))).map((ps: any) => {
+              {/* Use displayData for version-aware platform display */}
+              {(() => {
+                // When viewing an old version, use version snapshot data
+                // When viewing current, use live platform statuses API data
+                const platformsSource = selectedVersion 
+                  ? (displayData.platforms || []).map((p: string) => ({
+                      platform: p,
+                      implementationStatus: displayData.platformStatuses?.[p]?.implementationStatus || "черновик",
+                      validationStatus: displayData.platformStatuses?.[p]?.validationStatus || "ожидает_проверки",
+                      jiraLink: displayData.platformJiraLinks?.[p],
+                    }))
+                  : (platformStatuses.length > 0 
+                      ? platformStatuses 
+                      : event.platforms?.map((p: string) => ({ platform: p, ...event.platformStatuses?.[p] })));
+                return platformsSource;
+              })().map((ps: any) => {
                 const p = ps.platform;
-                const jiraLink = ps.jiraLink || event.platformJiraLinks?.[p];
+                const jiraLink = ps.jiraLink || displayData.platformJiraLinks?.[p];
                 return (
                   <div key={p} className="p-3 bg-muted/30 rounded-lg border">
                     <div className="flex items-center justify-between mb-2">

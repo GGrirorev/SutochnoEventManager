@@ -49,12 +49,21 @@ Preferred communication style: Simple, everyday language.
 ### Data Model
 The application tracks:
 - **Events**: Analytics events with category, action, name, description, and properties
+- **Event Versions**: Snapshots of event state at each edit, enabling full version history
+- **Event Platform Statuses**: Per-platform implementation and validation statuses with history
 - **Property Templates**: Reusable property definitions that can be applied to events
 - **Comments**: Discussion threads attached to events
 
 Events have two status dimensions:
 - **Implementation Status**: черновик (draft), в_разработке (in development), внедрено (implemented), архив (archived)
 - **Validation Status**: ожидает_проверки (pending), корректно (correct), ошибка (error), предупреждение (warning)
+
+### Versioning System
+- Events start at v1 when created
+- Each edit creates a new version (v2, v3, etc.) with change description
+- Version selector dropdown in event details modal allows viewing historical snapshots
+- Both "Описание" (Description) and "Здоровье" (Health) tabs show version-specific data when viewing old versions
+- Current version data comes from live database; historical versions come from snapshots
 
 ### API Design
 Routes are defined declaratively in `shared/routes.ts` with Zod schemas for input/output validation. This provides type safety across the full stack. The pattern uses:

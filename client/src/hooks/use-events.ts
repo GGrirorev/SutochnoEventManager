@@ -269,3 +269,31 @@ export function useDeletePlatformStatus() {
     }
   });
 }
+
+// ============================================
+// EVENT VERSION HOOKS
+// ============================================
+
+export function useEventVersions(eventId: number) {
+  return useQuery({
+    queryKey: ["/api/events", eventId, "versions"],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${eventId}/versions`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch event versions");
+      return res.json();
+    },
+    enabled: !!eventId,
+  });
+}
+
+export function useEventVersion(eventId: number, version: number) {
+  return useQuery({
+    queryKey: ["/api/events", eventId, "versions", version],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${eventId}/versions/${version}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch event version");
+      return res.json();
+    },
+    enabled: !!eventId && !!version,
+  });
+}

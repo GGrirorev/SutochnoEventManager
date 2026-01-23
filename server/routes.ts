@@ -53,6 +53,28 @@ export async function registerRoutes(
     try {
       const input = api.events.create.input.parse(req.body);
       const event = await storage.createEvent(input);
+      
+      // Create initial version (v1)
+      await storage.createEventVersion({
+        eventId: event.id,
+        version: 1,
+        category: event.category,
+        block: event.block || "",
+        action: event.action,
+        actionDescription: event.actionDescription || "",
+        name: event.name,
+        valueDescription: event.valueDescription || "",
+        owner: event.owner,
+        platforms: event.platforms || [],
+        platformJiraLinks: event.platformJiraLinks || {},
+        platformStatuses: event.platformStatuses || {},
+        implementationStatus: event.implementationStatus,
+        validationStatus: event.validationStatus,
+        properties: event.properties || [],
+        notes: event.notes,
+        changeDescription: "Начальная версия",
+      });
+      
       res.status(201).json(event);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -73,8 +95,37 @@ export async function registerRoutes(
         return res.status(404).json({ message: 'Event not found' });
       }
 
-      const input = api.events.update.input.parse(req.body);
-      const event = await storage.updateEvent(id, input);
+      const { changeDescription, ...updateData } = req.body;
+      const input = api.events.update.input.parse(updateData);
+      
+      // Increment version
+      const newVersion = (existing.currentVersion || 1) + 1;
+      const event = await storage.updateEvent(id, { 
+        ...input, 
+        currentVersion: newVersion 
+      });
+      
+      // Create new version snapshot
+      await storage.createEventVersion({
+        eventId: event.id,
+        version: newVersion,
+        category: event.category,
+        block: event.block || "",
+        action: event.action,
+        actionDescription: event.actionDescription || "",
+        name: event.name,
+        valueDescription: event.valueDescription || "",
+        owner: event.owner,
+        platforms: event.platforms || [],
+        platformJiraLinks: event.platformJiraLinks || {},
+        platformStatuses: event.platformStatuses || {},
+        implementationStatus: event.implementationStatus,
+        validationStatus: event.validationStatus,
+        properties: event.properties || [],
+        notes: event.notes,
+        changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
+      });
+      
       res.json(event);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -364,6 +415,23 @@ export async function registerRoutes(
     const statusId = Number(req.params.statusId);
     const history = await storage.getStatusHistory(statusId);
     res.json(history);
+  });
+
+  // Event Versions API
+  app.get("/api/events/:eventId/versions", async (req, res) => {
+    const eventId = Number(req.params.eventId);
+    const versions = await storage.getEventVersions(eventId);
+    res.json(versions);
+  });
+
+  app.get("/api/events/:eventId/versions/:version", async (req, res) => {
+    const eventId = Number(req.params.eventId);
+    const version = Number(req.params.version);
+    const eventVersion = await storage.getEventVersion(eventId, version);
+    if (!eventVersion) {
+      return res.status(404).json({ message: "Version not found" });
+    }
+    res.json(eventVersion);
   });
 
   // Analytics API - proxy to Matomo/Piwik analytics

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,6 +97,11 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
   const updatePlatformStatusMutation = useUpdatePlatformStatus();
   const deletePlatformStatusMutation = useDeletePlatformStatus();
   
+  // State for version confirmation dialog
+  const [showVersionConfirm, setShowVersionConfirm] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<InsertEvent | null>(null);
+  const [changeDescription, setChangeDescription] = useState("");
+  
   // Fetch existing platform statuses when editing
   const { data: existingPlatformStatuses = [], refetch: refetchPlatformStatuses } = useEventPlatformStatuses(initialData?.id || 0);
 
@@ -106,7 +122,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
       actionDescription: "",
       name: "",
       valueDescription: "",
-      platforms: ["все"],
+      platforms: [],
       platformJiraLinks: {},
       platformStatuses: {},
       implementationStatus: "черновик",
@@ -124,11 +140,29 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
 
   const isPending = createMutation.isPending || updateMutation.isPending || createPlatformStatusMutation.isPending || updatePlatformStatusMutation.isPending || deletePlatformStatusMutation.isPending;
 
+  // Handler that's triggered by form submission
   const onSubmit = async (data: InsertEvent) => {
+    // In edit mode, show confirmation dialog first
+    if (mode === "edit" && initialData?.id) {
+      setPendingFormData(data);
+      setShowVersionConfirm(true);
+      return;
+    }
+    // In create mode, proceed directly
+    await performSubmit(data);
+  };
+
+  // Actual submit function that performs the update
+  const performSubmit = async (data: InsertEvent, description?: string) => {
     let eventId: number;
     
     if (mode === "edit" && initialData?.id) {
-      await updateMutation.mutateAsync({ id: initialData.id, ...data });
+      // Include change description for versioning
+      await updateMutation.mutateAsync({ 
+        id: initialData.id, 
+        ...data,
+        changeDescription: description || "Обновление события"
+      });
       eventId = initialData.id;
       
       // Refetch platform statuses to get latest data before diffing
@@ -599,6 +633,50 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
           </Button>
         </div>
       </form>
+
+      {/* Version Confirmation Dialog */}
+      <AlertDialog open={showVersionConfirm} onOpenChange={setShowVersionConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Создание новой версии</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Вы сохраняете изменения события. Это создаст новую версию (v{(initialData as any)?.currentVersion + 1 || 2}).
+              </p>
+              <div className="mt-4">
+                <label className="text-sm font-medium text-foreground">
+                  Описание изменений (опционально)
+                </label>
+                <Textarea 
+                  placeholder="Что изменилось в этой версии?"
+                  className="mt-2"
+                  value={changeDescription}
+                  onChange={(e) => setChangeDescription(e.target.value)}
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowVersionConfirm(false);
+              setPendingFormData(null);
+              setChangeDescription("");
+            }}>
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              if (pendingFormData) {
+                await performSubmit(pendingFormData, changeDescription || undefined);
+                setShowVersionConfirm(false);
+                setPendingFormData(null);
+                setChangeDescription("");
+              }
+            }}>
+              Сохранить версию
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Form>
   );
 }
