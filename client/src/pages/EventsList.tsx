@@ -507,7 +507,7 @@ export default function EventsList() {
                           <div className="flex flex-col gap-1">
                             <span className="text-sm font-medium group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">{event.action}</span>
                             {event.actionDescription && (
-                              <span className="text-xs text-blue-600 dark:text-blue-400 line-clamp-2 italic">
+                              <span className="text-sm text-muted-foreground/80 line-clamp-2">
                                 {event.actionDescription}
                               </span>
                             )}
