@@ -684,7 +684,7 @@ export default function EventsList() {
                 Определите схему и свойства вашего аналитического события.
               </SheetDescription>
             </SheetHeader>
-            <div className="flex-1 overflow-hidden -mx-6 px-7">
+            <div className="flex-1 overflow-y-auto overflow-x-visible -mx-6 px-7 py-1">
               <EventForm 
                 mode={editingEvent ? "edit" : "create"}
                 initialData={editingEvent || undefined}
