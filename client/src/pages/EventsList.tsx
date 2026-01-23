@@ -74,7 +74,9 @@ import {
   ShieldCheck,
   ArrowRight,
   FileText,
-  Activity
+  Activity,
+  Copy,
+  Check
 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -83,6 +85,80 @@ import { AnalyticsChart } from "@/components/AnalyticsChart";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, type Event } from "@shared/schema";
+
+function MatomoCodeGenerator({ event }: { event: any }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  
+  const generateMatomoCode = (platform: string) => {
+    const category = event.category || 'Category';
+    const action = event.action || 'Action';
+    const name = event.name || '';
+    
+    // Generate properties string if there are properties
+    const propsComment = event.properties?.length > 0 
+      ? `\n// Properties: ${event.properties.map((p: any) => p.name).join(', ')}`
+      : '';
+    
+    if (platform === 'web') {
+      return `// ${action}${propsComment}
+_paq.push(['trackEvent', '${category}', '${action}'${name ? `, '${name}'` : ''}]);`;
+    } else if (platform === 'ios') {
+      return `// ${action}${propsComment}
+MatomoTracker.shared.track(eventWithCategory: "${category}", action: "${action}"${name ? `, name: "${name}"` : ''})`;
+    } else if (platform === 'android') {
+      return `// ${action}${propsComment}
+TrackHelper.track().event("${category}", "${action}")${name ? `.name("${name}")` : ''}.with(tracker)`;
+    }
+    return '';
+  };
+
+  const copyToClipboard = async (code: string, platform: string) => {
+    await navigator.clipboard.writeText(code);
+    setCopied(platform);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const platforms = event.platforms || ['web'];
+
+  return (
+    <div className="border-t pt-4">
+      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+        <Code className="w-4 h-4" />
+        Код для Matomo
+      </h4>
+      <div className="space-y-3">
+        {platforms.map((platform: string) => {
+          const code = generateMatomoCode(platform);
+          return (
+            <div key={platform} className="relative">
+              <div className="flex items-center justify-between mb-1">
+                <Badge variant="secondary" className="uppercase text-[10px]">
+                  {platform}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => copyToClipboard(code, platform)}
+                >
+                  {copied === platform ? (
+                    <Check className="w-3 h-3 text-green-500" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                  <span className="ml-1">{copied === platform ? 'Скопировано' : 'Копировать'}</span>
+                </Button>
+              </div>
+              <pre className="text-xs font-mono bg-muted p-3 rounded border overflow-x-auto">
+                <code>{code}</code>
+              </pre>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function EventDetailsModal({ event }: { event: any }) {
   const queryClient = useQueryClient();
@@ -226,6 +302,9 @@ function EventDetailsModal({ event }: { event: any }) {
               <p className="text-xs font-mono bg-muted/50 p-3 rounded border">{event.notes}</p>
             </div>
           )}
+
+          {/* Matomo Code Generator */}
+          <MatomoCodeGenerator event={event} />
 
           <div className="border-t pt-6">
             <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
