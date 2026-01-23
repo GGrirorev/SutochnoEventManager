@@ -526,12 +526,12 @@ export default function EventsList() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-col gap-1">
                         {event.platforms?.map((p) => {
                           const platformStatus = event.platformStatuses?.[p];
                           return (
                             <div key={p} className="flex items-center gap-1">
-                              <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px]">
+                              <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px] min-w-[70px]">
                                 {getPlatformIcon(p)}
                                 {p}
                               </Badge>
