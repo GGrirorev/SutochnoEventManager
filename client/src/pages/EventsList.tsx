@@ -184,11 +184,14 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
     }
   });
 
-  // Fetch platform statuses from the new table
+  // Determine the version to display
+  const displayVersion = selectedVersion || event.currentVersion || 1;
+
+  // Fetch platform statuses for the selected version
   const { data: platformStatuses = [] } = useQuery({
-    queryKey: ["/api/events", event.id, "platform-statuses"],
+    queryKey: ["/api/events", event.id, "platform-statuses", displayVersion],
     queryFn: async () => {
-      const res = await fetch(`/api/events/${event.id}/platform-statuses`);
+      const res = await fetch(`/api/events/${event.id}/platform-statuses?version=${displayVersion}`);
       return res.json();
     }
   });
@@ -222,22 +225,23 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
 
   // Mutation for updating platform status (without creating new version)
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ platform, implementationStatus, validationStatus }: { 
+    mutationFn: async ({ platform, implementationStatus, validationStatus, versionNumber }: { 
       platform: string; 
       implementationStatus?: string; 
-      validationStatus?: string 
+      validationStatus?: string;
+      versionNumber: number;
     }) => {
       const res = await fetch(`/api/events/${event.id}/platform-statuses/${platform}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ implementationStatus, validationStatus })
+        body: JSON.stringify({ implementationStatus, validationStatus, versionNumber })
       });
       if (!res.ok) throw new Error("Failed to update status");
       return res.json();
     },
     onSuccess: () => {
       // Invalidate all relevant queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ["/api/events", event.id, "platform-statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events", event.id, "platform-statuses", displayVersion] });
       queryClient.invalidateQueries({ queryKey: ["/api/events", event.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
     }
@@ -452,22 +456,15 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
           <div>
             <h4 className="text-sm font-semibold text-muted-foreground mb-3">Платформы и статусы</h4>
             <div className="space-y-3">
-              {/* Use displayData for version-aware platform display */}
-              {(() => {
-                // When viewing an old version, use version snapshot data
-                // When viewing current, use live platform statuses API data
-                const platformsSource = selectedVersion 
-                  ? (displayData.platforms || []).map((p: string) => ({
-                      platform: p,
-                      implementationStatus: displayData.platformStatuses?.[p]?.implementationStatus || "черновик",
-                      validationStatus: displayData.platformStatuses?.[p]?.validationStatus || "ожидает_проверки",
-                      jiraLink: displayData.platformJiraLinks?.[p],
-                    }))
-                  : (platformStatuses.length > 0 
-                      ? platformStatuses 
-                      : event.platforms?.map((p: string) => ({ platform: p, ...event.platformStatuses?.[p] })));
-                return platformsSource;
-              })().map((ps: any) => {
+              {/* Use version-specific platform statuses from API */}
+              {(platformStatuses.length > 0 
+                ? platformStatuses 
+                : (displayData.platforms || []).map((p: string) => ({
+                    platform: p,
+                    implementationStatus: "черновик",
+                    validationStatus: "ожидает_проверки"
+                  }))
+              ).map((ps: any) => {
                 const p = ps.platform;
                 const jiraLink = ps.jiraLink || displayData.platformJiraLinks?.[p];
                 return (
@@ -493,61 +490,55 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                         <div className="flex-1">
                           <span className="text-xs text-muted-foreground">Внедрение:</span>
                           <div className="mt-1">
-                            {selectedVersion ? (
-                              <StatusBadge status={ps.implementationStatus || "черновик"} />
-                            ) : (
-                              <Select
-                                value={ps.implementationStatus || "черновик"}
-                                onValueChange={(value) => 
-                                  updateStatusMutation.mutate({ 
-                                    platform: p, 
-                                    implementationStatus: value 
-                                  })
-                                }
-                                disabled={updateStatusMutation.isPending}
-                              >
-                                <SelectTrigger className="h-7 text-xs" data-testid={`select-implementation-${p}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {IMPLEMENTATION_STATUS.map((s) => (
-                                    <SelectItem key={s} value={s} className="text-xs">
-                                      {s.replace(/_/g, ' ')}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
+                            <Select
+                              value={ps.implementationStatus || "черновик"}
+                              onValueChange={(value) => 
+                                updateStatusMutation.mutate({ 
+                                  platform: p, 
+                                  implementationStatus: value,
+                                  versionNumber: displayVersion
+                                })
+                              }
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              <SelectTrigger className="h-7 text-xs" data-testid={`select-implementation-${p}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {IMPLEMENTATION_STATUS.map((s) => (
+                                  <SelectItem key={s} value={s} className="text-xs">
+                                    {s.replace(/_/g, ' ')}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                         <div className="flex-1">
                           <span className="text-xs text-muted-foreground">Валидация:</span>
                           <div className="mt-1">
-                            {selectedVersion ? (
-                              <StatusBadge status={ps.validationStatus || "ожидает_проверки"} />
-                            ) : (
-                              <Select
-                                value={ps.validationStatus || "ожидает_проверки"}
-                                onValueChange={(value) => 
-                                  updateStatusMutation.mutate({ 
-                                    platform: p, 
-                                    validationStatus: value 
-                                  })
-                                }
-                                disabled={updateStatusMutation.isPending}
-                              >
-                                <SelectTrigger className="h-7 text-xs" data-testid={`select-validation-${p}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {VALIDATION_STATUS.map((s) => (
-                                    <SelectItem key={s} value={s} className="text-xs">
-                                      {s.replace(/_/g, ' ')}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
+                            <Select
+                              value={ps.validationStatus || "ожидает_проверки"}
+                              onValueChange={(value) => 
+                                updateStatusMutation.mutate({ 
+                                  platform: p, 
+                                  validationStatus: value,
+                                  versionNumber: displayVersion
+                                })
+                              }
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              <SelectTrigger className="h-7 text-xs" data-testid={`select-validation-${p}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {VALIDATION_STATUS.map((s) => (
+                                  <SelectItem key={s} value={s} className="text-xs">
+                                    {s.replace(/_/g, ' ')}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       </div>

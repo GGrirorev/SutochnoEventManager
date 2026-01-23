@@ -350,8 +350,7 @@ export async function registerRoutes(
       
       const status = await storage.updateEventPlatformStatus(existing.id, updates);
       
-      // Sync to legacy JSONB field for backwards compatibility
-      const event = await storage.getEvent(eventId);
+      // Sync to legacy JSONB field for backwards compatibility (use already fetched event)
       if (event) {
         const platformStatuses = { ...(event.platformStatuses || {}) };
         const existingPlatformStatus = platformStatuses[platform] || {
