@@ -78,14 +78,22 @@ export function AnalyticsChart({ eventAction, eventCategory, platforms }: Analyt
     if (!data || typeof data !== 'object') return;
     
     Object.entries(data).forEach(([date, dayData]: [string, any]) => {
-      if (typeof dayData === 'object' && dayData !== null) {
-        let existing = chartData.find(d => d.date === date);
-        if (!existing) {
-          existing = { date };
-          chartData.push(existing);
-        }
+      let existing = chartData.find(d => d.date === date);
+      if (!existing) {
+        existing = { date };
+        chartData.push(existing);
+      }
+      
+      // Handle array format: each day is an array of objects
+      if (Array.isArray(dayData) && dayData.length > 0) {
+        const events = dayData[0]?.nb_events || dayData[0]?.nb_visits || 0;
+        (existing as any)[platform] = typeof events === 'number' ? events : parseInt(events) || 0;
+      } else if (typeof dayData === 'object' && dayData !== null) {
+        // Handle object format directly
         const events = dayData.nb_events || dayData.nb_visits || 0;
         (existing as any)[platform] = typeof events === 'number' ? events : parseInt(events) || 0;
+      } else {
+        (existing as any)[platform] = 0;
       }
     });
   };
