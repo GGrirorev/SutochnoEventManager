@@ -213,17 +213,23 @@ export async function registerRoutes(
       const event = await storage.getEvent(eventId);
       if (event) {
         const platformStatuses = { ...(event.platformStatuses || {}) };
+        const timestamp = new Date().toISOString();
         platformStatuses[validated.platform] = {
           implementationStatus: validated.implementationStatus,
           validationStatus: validated.validationStatus,
-          implementationHistory: [],
-          validationHistory: []
+          implementationHistory: [{ status: validated.implementationStatus, timestamp }],
+          validationHistory: [{ status: validated.validationStatus, timestamp }]
         };
         const platformJiraLinks = { ...(event.platformJiraLinks || {}) };
         if (validated.jiraLink) {
           platformJiraLinks[validated.platform] = validated.jiraLink;
         }
-        await storage.updateEvent(eventId, { platformStatuses, platformJiraLinks });
+        // Ensure platform is in the platforms array
+        const platforms = [...(event.platforms || [])];
+        if (!platforms.includes(validated.platform)) {
+          platforms.push(validated.platform);
+        }
+        await storage.updateEvent(eventId, { platformStatuses, platformJiraLinks, platforms });
       }
       
       res.status(201).json(status);
@@ -308,7 +314,12 @@ export async function registerRoutes(
         if (validated.jiraLink !== undefined) {
           platformJiraLinks[platform] = validated.jiraLink;
         }
-        await storage.updateEvent(eventId, { platformStatuses, platformJiraLinks });
+        // Ensure platform is in the platforms array
+        const platforms = [...(event.platforms || [])];
+        if (!platforms.includes(platform)) {
+          platforms.push(platform);
+        }
+        await storage.updateEvent(eventId, { platformStatuses, platformJiraLinks, platforms });
       }
       
       res.json(status);
