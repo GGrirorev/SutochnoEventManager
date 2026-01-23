@@ -72,7 +72,9 @@ import {
   ExternalLink,
   Rocket,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  FileText,
+  Activity
 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -151,8 +153,14 @@ function EventDetailsModal({ event }: { event: any }) {
 
       <Tabs defaultValue="description" className="pt-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="description">Описание</TabsTrigger>
-          <TabsTrigger value="health">Здоровье</TabsTrigger>
+          <TabsTrigger value="description" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Описание
+          </TabsTrigger>
+          <TabsTrigger value="health" className="flex items-center gap-2">
+            <Activity className="w-4 h-4" />
+            Здоровье
+          </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Описание */}
