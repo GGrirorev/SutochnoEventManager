@@ -236,7 +236,7 @@ function EventDetailsModal({ event }: { event: any }) {
   return (
     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pr-8">
           <DialogTitle className="text-2xl flex items-center gap-2">
             {displayData.category}
             <Badge variant="outline">{displayData.action}</Badge>
