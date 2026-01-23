@@ -90,6 +90,46 @@ export const insertCommentSchema = createInsertSchema(comments).omit({
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 
+// Event Platform Statuses - stores per-platform status for each event
+export const eventPlatformStatuses = pgTable("event_platform_statuses", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(),
+  platform: text("platform", { enum: PLATFORMS }).notNull(),
+  jiraLink: text("jira_link"),
+  implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("черновик"),
+  validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("ожидает_проверки"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEventPlatformStatusSchema = createInsertSchema(eventPlatformStatuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type EventPlatformStatus = typeof eventPlatformStatuses.$inferSelect;
+export type InsertEventPlatformStatus = z.infer<typeof insertEventPlatformStatusSchema>;
+
+// Status History - tracks all status changes
+export const statusHistory = pgTable("status_history", {
+  id: serial("id").primaryKey(),
+  eventPlatformStatusId: integer("event_platform_status_id").notNull(),
+  statusType: text("status_type", { enum: ["implementation", "validation"] as const }).notNull(),
+  oldStatus: text("old_status"),
+  newStatus: text("new_status").notNull(),
+  changedBy: text("changed_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertStatusHistorySchema = createInsertSchema(statusHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type StatusHistory = typeof statusHistory.$inferSelect;
+export type InsertStatusHistory = z.infer<typeof insertStatusHistorySchema>;
+
 // Property categories
 export const PROPERTY_CATEGORIES = [
   "посещения",

@@ -89,6 +89,15 @@ function EventDetailsModal({ event }: { event: any }) {
     }
   });
 
+  // Fetch platform statuses from the new table
+  const { data: platformStatuses = [] } = useQuery({
+    queryKey: ["/api/events", event.id, "platform-statuses"],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${event.id}/platform-statuses`);
+      return res.json();
+    }
+  });
+
   const commentMutation = useMutation({
     mutationFn: async (content: string) => {
       const res = await fetch(`/api/events/${event.id}/comments`, {
@@ -136,9 +145,9 @@ function EventDetailsModal({ event }: { event: any }) {
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-2">Платформы и статусы</h4>
               <div className="space-y-3">
-                {event.platforms?.map((p: string) => {
-                  const jiraLink = event.platformJiraLinks?.[p];
-                  const platformStatus = event.platformStatuses?.[p];
+                {(platformStatuses.length > 0 ? platformStatuses : event.platforms?.map((p: string) => ({ platform: p, ...event.platformStatuses?.[p] }))).map((ps: any) => {
+                  const p = ps.platform;
+                  const jiraLink = ps.jiraLink || event.platformJiraLinks?.[p];
                   return (
                     <div key={p} className="p-3 bg-muted/30 rounded-lg border">
                       <div className="flex items-center justify-between mb-2">
@@ -157,40 +166,31 @@ function EventDetailsModal({ event }: { event: any }) {
                           </a>
                         )}
                       </div>
-                      {platformStatus && (
-                        <div className="space-y-2">
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <span className="text-xs text-muted-foreground">Внедрение:</span>
-                              <div className="mt-1">
-                                <StatusBadge status={platformStatus.implementationStatus} />
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <span className="text-xs text-muted-foreground">Валидация:</span>
-                              <div className="mt-1">
-                                <StatusBadge status={platformStatus.validationStatus} />
-                              </div>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <span className="text-xs text-muted-foreground">Внедрение:</span>
+                            <div className="mt-1">
+                              <StatusBadge status={ps.implementationStatus || "черновик"} />
                             </div>
                           </div>
-                          {(platformStatus.implementationHistory?.length > 1 || platformStatus.validationHistory?.length > 1) && (
-                            <details className="text-xs">
-                              <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                История изменений
-                              </summary>
-                              <div className="mt-2 space-y-1 pl-4 border-l-2 border-muted">
-                                {platformStatus.implementationHistory?.slice().reverse().map((h: any, i: number) => (
-                                  <div key={`impl-${i}`} className="text-muted-foreground">
-                                    <span className="font-medium">Внедрение:</span> {h.status.replace('_', ' ')} 
-                                    <span className="ml-1 opacity-70">
-                                      ({new Date(h.timestamp).toLocaleDateString('ru-RU')})
-                                    </span>
-                                  </div>
-                                ))}
-                                {platformStatus.validationHistory?.slice().reverse().map((h: any, i: number) => (
-                                  <div key={`val-${i}`} className="text-muted-foreground">
-                                    <span className="font-medium">Валидация:</span> {h.status.replace('_', ' ')}
+                          <div className="flex-1">
+                            <span className="text-xs text-muted-foreground">Валидация:</span>
+                            <div className="mt-1">
+                              <StatusBadge status={ps.validationStatus || "ожидает_проверки"} />
+                            </div>
+                          </div>
+                        </div>
+                        {ps.history && ps.history.length > 0 && (
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              История изменений ({ps.history.length})
+                            </summary>
+                            <div className="mt-2 space-y-1 pl-4 border-l-2 border-muted">
+                              {ps.history.slice().reverse().map((h: any, i: number) => (
+                                <div key={`hist-${i}`} className="text-muted-foreground">
+                                  <span className="font-medium">{h.statusType === 'implementation' ? 'Внедрение' : 'Валидация'}:</span> {h.oldStatus?.replace('_', ' ') || '-'} → {h.newStatus?.replace('_', ' ')} 
                                     <span className="ml-1 opacity-70">
                                       ({new Date(h.timestamp).toLocaleDateString('ru-RU')})
                                     </span>
@@ -200,23 +200,6 @@ function EventDetailsModal({ event }: { event: any }) {
                             </details>
                           )}
                         </div>
-                      )}
-                      {!platformStatus && (
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <span className="text-xs text-muted-foreground">Внедрение:</span>
-                            <div className="mt-1">
-                              <StatusBadge status={event.implementationStatus} />
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <span className="text-xs text-muted-foreground">Валидация:</span>
-                            <div className="mt-1">
-                              <StatusBadge status={event.validationStatus} />
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}

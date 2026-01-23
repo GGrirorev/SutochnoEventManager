@@ -1,8 +1,8 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { insertEventSchema, IMPLEMENTATION_STATUS, PLATFORMS, VALIDATION_STATUS, type InsertEvent, type PropertyTemplate, type PlatformStatuses, type PlatformStatus } from "@shared/schema";
-import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
+import { useCreateEvent, useUpdateEvent, useCreatePlatformStatus, useUpdatePlatformStatus, useDeletePlatformStatus, useEventPlatformStatuses } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,8 +79,15 @@ const updatePlatformStatus = (
 };
 
 export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
+  const queryClient = useQueryClient();
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
+  const createPlatformStatusMutation = useCreatePlatformStatus();
+  const updatePlatformStatusMutation = useUpdatePlatformStatus();
+  const deletePlatformStatusMutation = useDeletePlatformStatus();
+  
+  // Fetch existing platform statuses when editing
+  const { data: existingPlatformStatuses = [], refetch: refetchPlatformStatuses } = useEventPlatformStatuses(initialData?.id || 0);
 
   const { data: propertyTemplates = [] } = useQuery<PropertyTemplate[]>({
     queryKey: ["/api/property-templates"],
@@ -114,14 +121,87 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
     name: "properties" as never, // Typings for dynamic jsonb are tricky with Zod
   });
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const isPending = createMutation.isPending || updateMutation.isPending || createPlatformStatusMutation.isPending || updatePlatformStatusMutation.isPending || deletePlatformStatusMutation.isPending;
 
   const onSubmit = async (data: InsertEvent) => {
+    let eventId: number;
+    
     if (mode === "edit" && initialData?.id) {
       await updateMutation.mutateAsync({ id: initialData.id, ...data });
+      eventId = initialData.id;
+      
+      // Refetch platform statuses to get latest data before diffing
+      const { data: freshPlatformStatuses } = await refetchPlatformStatuses();
+      const currentPlatformStatuses = freshPlatformStatuses || existingPlatformStatuses;
+      
+      // Save platform statuses to the new table
+      const platforms = data.platforms || [];
+      const platformStatusesData = data.platformStatuses || {};
+      const jiraLinks = data.platformJiraLinks || {};
+      
+      // Delete platform statuses for removed platforms
+      const existingPlatformNames = currentPlatformStatuses.map((s: any) => s.platform);
+      for (const existingPlatform of existingPlatformNames) {
+        if (!platforms.includes(existingPlatform)) {
+          await deletePlatformStatusMutation.mutateAsync({ eventId, platform: existingPlatform });
+        }
+      }
+      
+      // Create or update platform statuses for current platforms
+      for (const platform of platforms) {
+        const status = platformStatusesData[platform];
+        const jiraLink = jiraLinks[platform];
+        
+        // Check if this platform status already exists
+        const existingStatus = currentPlatformStatuses.find((s: any) => s.platform === platform);
+        
+        if (existingStatus) {
+          // Update existing platform status
+          await updatePlatformStatusMutation.mutateAsync({
+            eventId,
+            platform,
+            jiraLink: jiraLink || undefined,
+            implementationStatus: status?.implementationStatus,
+            validationStatus: status?.validationStatus,
+          });
+        } else {
+          // Create new platform status
+          await createPlatformStatusMutation.mutateAsync({
+            eventId,
+            platform,
+            jiraLink: jiraLink || undefined,
+            implementationStatus: status?.implementationStatus || "черновик",
+            validationStatus: status?.validationStatus || "ожидает_проверки",
+          });
+        }
+      }
     } else {
-      await createMutation.mutateAsync(data);
+      const newEvent = await createMutation.mutateAsync(data);
+      eventId = newEvent.id;
+      
+      // For new events, create platform statuses for all platforms
+      const platforms = data.platforms || [];
+      const platformStatusesData = data.platformStatuses || {};
+      const jiraLinks = data.platformJiraLinks || {};
+      
+      for (const platform of platforms) {
+        const status = platformStatusesData[platform];
+        const jiraLink = jiraLinks[platform];
+        
+        await createPlatformStatusMutation.mutateAsync({
+          eventId,
+          platform,
+          jiraLink: jiraLink || undefined,
+          implementationStatus: status?.implementationStatus || "черновик",
+          validationStatus: status?.validationStatus || "ожидает_проверки",
+        });
+      }
     }
+    
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "platform-statuses"] });
+    
     onSuccess?.();
   };
 

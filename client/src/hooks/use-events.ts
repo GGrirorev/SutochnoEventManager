@@ -178,3 +178,94 @@ export function useDeleteEvent() {
     }
   });
 }
+
+// ============================================
+// PLATFORM STATUS HOOKS
+// ============================================
+
+export function useEventPlatformStatuses(eventId: number) {
+  return useQuery({
+    queryKey: ["/api/events", eventId, "platform-statuses"],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${eventId}/platform-statuses`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch platform statuses");
+      return res.json();
+    },
+    enabled: !!eventId,
+  });
+}
+
+export function useCreatePlatformStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ eventId, platform, jiraLink, implementationStatus, validationStatus }: {
+      eventId: number;
+      platform: string;
+      jiraLink?: string;
+      implementationStatus?: string;
+      validationStatus?: string;
+    }) => {
+      const res = await fetch(`/api/events/${eventId}/platform-statuses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform, jiraLink, implementationStatus, validationStatus }),
+        credentials: "include",
+      });
+      
+      if (!res.ok) throw new Error("Failed to create platform status");
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", variables.eventId, "platform-statuses"] });
+    }
+  });
+}
+
+export function useUpdatePlatformStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ eventId, platform, jiraLink, implementationStatus, validationStatus }: {
+      eventId: number;
+      platform: string;
+      jiraLink?: string;
+      implementationStatus?: string;
+      validationStatus?: string;
+    }) => {
+      const res = await fetch(`/api/events/${eventId}/platform-statuses/${platform}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jiraLink, implementationStatus, validationStatus }),
+        credentials: "include",
+      });
+      
+      if (!res.ok) throw new Error("Failed to update platform status");
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", variables.eventId, "platform-statuses"] });
+    }
+  });
+}
+
+export function useDeletePlatformStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ eventId, platform }: {
+      eventId: number;
+      platform: string;
+    }) => {
+      const res = await fetch(`/api/events/${eventId}/platform-statuses/${platform}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      
+      if (!res.ok) throw new Error("Failed to delete platform status");
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", variables.eventId, "platform-statuses"] });
+    }
+  });
+}

@@ -3,6 +3,8 @@ import {
   events,
   comments,
   propertyTemplates,
+  eventPlatformStatuses,
+  statusHistory,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
@@ -11,10 +13,14 @@ import {
   type InsertComment,
   type PropertyTemplate,
   type InsertPropertyTemplate,
+  type EventPlatformStatus,
+  type InsertEventPlatformStatus,
+  type StatusHistory,
+  type InsertStatusHistory,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
-import { eq, ilike, and, desc } from "drizzle-orm";
+import { eq, ilike, and, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   getEvents(filters?: {
@@ -43,6 +49,18 @@ export interface IStorage {
   updatePropertyTemplate(id: number, updates: Partial<InsertPropertyTemplate>): Promise<PropertyTemplate>;
   deletePropertyTemplate(id: number): Promise<void>;
   getNextDimension(): Promise<number>;
+  
+  // Event platform status operations
+  getEventPlatformStatuses(eventId: number): Promise<EventPlatformStatus[]>;
+  getEventPlatformStatus(eventId: number, platform: string): Promise<EventPlatformStatus | undefined>;
+  createEventPlatformStatus(status: InsertEventPlatformStatus): Promise<EventPlatformStatus>;
+  updateEventPlatformStatus(id: number, updates: Partial<InsertEventPlatformStatus>): Promise<EventPlatformStatus>;
+  deletePlatformStatus(id: number): Promise<void>;
+  deleteEventPlatformStatuses(eventId: number): Promise<void>;
+  
+  // Status history operations
+  getStatusHistory(eventPlatformStatusId: number): Promise<StatusHistory[]>;
+  createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -165,6 +183,67 @@ export class DatabaseStorage implements IStorage {
   async getNextDimension(): Promise<number> {
     const result = await db.select().from(propertyTemplates).orderBy(desc(propertyTemplates.dimension)).limit(1);
     return result.length > 0 ? result[0].dimension + 1 : 1;
+  }
+
+  // Event platform status operations
+  async getEventPlatformStatuses(eventId: number): Promise<EventPlatformStatus[]> {
+    return await db.select()
+      .from(eventPlatformStatuses)
+      .where(eq(eventPlatformStatuses.eventId, eventId))
+      .orderBy(eventPlatformStatuses.platform);
+  }
+
+  async getEventPlatformStatus(eventId: number, platform: string): Promise<EventPlatformStatus | undefined> {
+    const [status] = await db.select()
+      .from(eventPlatformStatuses)
+      .where(and(
+        eq(eventPlatformStatuses.eventId, eventId),
+        eq(eventPlatformStatuses.platform, platform)
+      ));
+    return status;
+  }
+
+  async createEventPlatformStatus(status: InsertEventPlatformStatus): Promise<EventPlatformStatus> {
+    const [newStatus] = await db.insert(eventPlatformStatuses).values(status).returning();
+    return newStatus;
+  }
+
+  async updateEventPlatformStatus(id: number, updates: Partial<InsertEventPlatformStatus>): Promise<EventPlatformStatus> {
+    const [status] = await db.update(eventPlatformStatuses)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(eventPlatformStatuses.id, id))
+      .returning();
+    return status;
+  }
+
+  async deletePlatformStatus(id: number): Promise<void> {
+    // First delete related status history
+    await db.delete(statusHistory).where(eq(statusHistory.eventPlatformStatusId, id));
+    // Then delete platform status
+    await db.delete(eventPlatformStatuses).where(eq(eventPlatformStatuses.id, id));
+  }
+
+  async deleteEventPlatformStatuses(eventId: number): Promise<void> {
+    // First delete related status history
+    const platformStatuses = await this.getEventPlatformStatuses(eventId);
+    for (const ps of platformStatuses) {
+      await db.delete(statusHistory).where(eq(statusHistory.eventPlatformStatusId, ps.id));
+    }
+    // Then delete platform statuses
+    await db.delete(eventPlatformStatuses).where(eq(eventPlatformStatuses.eventId, eventId));
+  }
+
+  // Status history operations
+  async getStatusHistory(eventPlatformStatusId: number): Promise<StatusHistory[]> {
+    return await db.select()
+      .from(statusHistory)
+      .where(eq(statusHistory.eventPlatformStatusId, eventPlatformStatusId))
+      .orderBy(desc(statusHistory.createdAt));
+  }
+
+  async createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory> {
+    const [newHistory] = await db.insert(statusHistory).values(history).returning();
+    return newHistory;
   }
 }
 
