@@ -127,9 +127,10 @@ The application supports modular extensions through a plugin system. Plugins can
 - `PATCH /api/plugins/:id` - Toggle plugin enabled state (admin-only)
 
 **Plugin Structure:**
-- `plugins/<plugin-id>/manifest.json` - Plugin metadata (name, description, version)
-- `plugins/<plugin-id>/README.md` - Plugin documentation
-- `client/src/plugins/<plugin-id>/index.tsx` - React component
+Each plugin is a self-contained folder in `client/src/plugins/<plugin-id>/`:
+- `manifest.json` - Plugin metadata (name, description, version)
+- `README.md` - Plugin documentation
+- `index.tsx` - React component with plugin logic
 
 **Frontend Integration:**
 - `usePlugins()` hook - Fetch all plugins
