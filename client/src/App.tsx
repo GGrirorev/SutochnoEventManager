@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import EventsList from "@/pages/EventsList";
 import PropertiesPage from "@/pages/PropertiesPage";
+import UsersPage from "@/pages/UsersPage";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/events" component={EventsList} />
       <Route path="/properties" component={PropertiesPage} />
+      <Route path="/users" component={UsersPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>

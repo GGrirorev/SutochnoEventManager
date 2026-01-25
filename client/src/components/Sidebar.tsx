@@ -6,7 +6,8 @@ import {
   Settings, 
   Activity,
   GitGraph,
-  Database
+  Database,
+  Users
 } from "lucide-react";
 import logoHeader from "@assets/logo-header_1769085215107.png";
 
@@ -16,6 +17,10 @@ const NAV_ITEMS = [
   { label: "Свойства событий", icon: Database, href: "/properties" },
   { label: "Валидация", icon: Activity, href: "/validation" },
   { label: "Интеграция", icon: GitGraph, href: "/integration" },
+];
+
+const ADMIN_ITEMS = [
+  { label: "Пользователи", icon: Users, href: "/users" },
 ];
 
 export function Sidebar() {
@@ -44,6 +49,30 @@ export function Sidebar() {
                     ? "bg-primary/10 text-primary shadow-sm" 
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
+                data-testid={`nav-${item.href.slice(1) || 'dashboard'}`}
+              >
+                <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
+                {item.label}
+              </div>
+            </Link>
+          );
+        })}
+
+        <div className="px-3 mt-6 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Администрирование
+        </div>
+        {ADMIN_ITEMS.map((item) => {
+          const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+          return (
+            <Link key={item.href} href={item.href}>
+              <div
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                  isActive 
+                    ? "bg-primary/10 text-primary shadow-sm" 
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                data-testid={`nav-${item.href.slice(1)}`}
               >
                 <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
                 {item.label}
