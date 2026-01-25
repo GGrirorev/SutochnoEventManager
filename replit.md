@@ -53,6 +53,17 @@ The application tracks:
 - **Event Platform Statuses**: Per-platform implementation and validation statuses with history
 - **Property Templates**: Reusable property definitions that can be applied to events
 - **Comments**: Discussion threads attached to events
+- **Users**: User accounts with role-based access control
+
+### User Management System
+Users have four access levels (roles):
+- **viewer** (Только просмотр): Can only view events and properties
+- **developer** (Разработчик): Can view events and change platform statuses
+- **analyst** (Аналитик): Can create/edit events and change statuses
+- **admin** (Администратор): Full access including user management
+
+User CRUD API: `/api/users` (GET, POST), `/api/users/:id` (GET, PATCH, DELETE)
+User management UI is accessible via "Пользователи" link in sidebar under "Администрирование" section.
 
 Events have two status dimensions:
 - **Implementation Status**: черновик (draft), в_разработке (in development), внедрено (implemented), архив (archived)
