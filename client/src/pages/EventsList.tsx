@@ -349,7 +349,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
               )}
               <button className="underline ml-auto" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
             </div>
-            {displayedVersion.changeDescription && (
+            {displayedVersion.changeDescription && displayedVersion.version > 1 && (
               <div className="text-xs opacity-80 mt-1">
                 Изменения: {displayedVersion.changeDescription}
               </div>
@@ -371,7 +371,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                 </span>
               )}
             </div>
-            {currentVersionData.changeDescription && (
+            {currentVersionData.changeDescription && currentVersionData.version > 1 && (
               <div className="text-xs opacity-70 mt-1">
                 Изменения: {currentVersionData.changeDescription}
               </div>
