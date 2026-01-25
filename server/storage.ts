@@ -6,6 +6,7 @@ import {
   eventPlatformStatuses,
   statusHistory,
   eventVersions,
+  users,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
@@ -20,6 +21,8 @@ import {
   type InsertStatusHistory,
   type EventVersion,
   type InsertEventVersion,
+  type User,
+  type InsertUser,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
@@ -70,6 +73,14 @@ export interface IStorage {
   getEventVersions(eventId: number): Promise<EventVersion[]>;
   getEventVersion(eventId: number, version: number): Promise<EventVersion | undefined>;
   createEventVersion(version: InsertEventVersion): Promise<EventVersion>;
+  
+  // User operations
+  getUsers(): Promise<User[]>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
+  deleteUser(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -307,6 +318,38 @@ export class DatabaseStorage implements IStorage {
   async createEventVersion(version: InsertEventVersion): Promise<EventVersion> {
     const [newVersion] = await db.insert(eventVersions).values(version).returning();
     return newVersion;
+  }
+
+  // User operations
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(users.name);
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 }
 

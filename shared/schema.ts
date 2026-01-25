@@ -25,6 +25,72 @@ export const PLATFORMS = [
   "backend"
 ] as const;
 
+// User roles
+export const USER_ROLES = [
+  "viewer",      // Только просмотр
+  "developer",   // Просмотр и изменение статусов
+  "analyst",     // Редактирование и создание событий, изменение статусов
+  "admin"        // Полные права, включая управление пользователями
+] as const;
+
+export type UserRole = typeof USER_ROLES[number];
+
+// Role descriptions in Russian
+export const ROLE_LABELS: Record<UserRole, string> = {
+  viewer: "Только просмотр",
+  developer: "Разработчик",
+  analyst: "Аналитик",
+  admin: "Администратор"
+};
+
+// Role permissions
+export const ROLE_PERMISSIONS: Record<UserRole, {
+  canViewEvents: boolean;
+  canCreateEvents: boolean;
+  canEditEvents: boolean;
+  canDeleteEvents: boolean;
+  canChangeStatuses: boolean;
+  canManageUsers: boolean;
+  canManageProperties: boolean;
+}> = {
+  viewer: {
+    canViewEvents: true,
+    canCreateEvents: false,
+    canEditEvents: false,
+    canDeleteEvents: false,
+    canChangeStatuses: false,
+    canManageUsers: false,
+    canManageProperties: false
+  },
+  developer: {
+    canViewEvents: true,
+    canCreateEvents: false,
+    canEditEvents: false,
+    canDeleteEvents: false,
+    canChangeStatuses: true,
+    canManageUsers: false,
+    canManageProperties: false
+  },
+  analyst: {
+    canViewEvents: true,
+    canCreateEvents: true,
+    canEditEvents: true,
+    canDeleteEvents: false,
+    canChangeStatuses: true,
+    canManageUsers: false,
+    canManageProperties: true
+  },
+  admin: {
+    canViewEvents: true,
+    canCreateEvents: true,
+    canEditEvents: true,
+    canDeleteEvents: true,
+    canChangeStatuses: true,
+    canManageUsers: true,
+    canManageProperties: true
+  }
+};
+
 // Type for status history entry
 export type StatusHistoryEntry = {
   status: string;
@@ -231,3 +297,23 @@ export type StatusSummary = {
   status: string;
   count: number;
 };
+
+// Users table
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  role: text("role", { enum: USER_ROLES }).notNull().default("viewer"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
