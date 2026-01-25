@@ -90,7 +90,7 @@ import {
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Sidebar } from "@/components/Sidebar";
-import { AnalyticsChart } from "@/components/AnalyticsChart";
+import { AnalyticsChart } from "@/plugins/analytics-chart";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, type Event } from "@shared/schema";
@@ -167,6 +167,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
   const [comment, setComment] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const { isEnabled: isCodeGeneratorEnabled } = useIsPluginEnabled("code-generator");
+  const { isEnabled: isAnalyticsChartEnabled } = useIsPluginEnabled("analytics-chart");
 
   // Fetch fresh event data to get updated statuses
   const { data: event = initialEvent } = useQuery({
@@ -635,12 +636,14 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
             </div>
           </div>
 
-          {/* Analytics Chart */}
-          <AnalyticsChart 
-            eventAction={event.action} 
-            eventCategory={event.category}
-            platforms={event.platforms || []}
-          />
+          {/* Analytics Chart Plugin */}
+          {isAnalyticsChartEnabled && (
+            <AnalyticsChart 
+              eventAction={event.action} 
+              eventCategory={event.category}
+              platforms={event.platforms || []}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </DialogContent>

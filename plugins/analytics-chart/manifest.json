@@ -1,0 +1,8 @@
+{
+  "id": "analytics-chart",
+  "name": "График аналитики",
+  "description": "Отображает график событий за последние 30 дней с данными из системы аналитики Matomo. Показывает динамику по платформам WEB, iOS и Android.",
+  "version": "1.0.0",
+  "author": "Suточно.ру",
+  "category": "analytics"
+}

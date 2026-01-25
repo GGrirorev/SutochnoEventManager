@@ -771,16 +771,29 @@ export async function registerRoutes(
 
 async function seedPlugins() {
   const existingPlugins = await storage.getPlugins();
-  if (existingPlugins.length > 0) return;
+  const existingIds = existingPlugins.map(p => p.id);
 
-  await storage.upsertPlugin({
-    id: "code-generator",
-    name: "Генератор кода Matomo",
-    description: "Генерирует примеры кода для отправки событий в Matomo для разных платформ (Web, iOS, Android)",
-    version: "1.0.0",
-    isEnabled: true,
-    config: { showForPlatforms: ["web", "ios", "android"] },
-  });
+  if (!existingIds.includes("code-generator")) {
+    await storage.upsertPlugin({
+      id: "code-generator",
+      name: "Генератор кода Matomo",
+      description: "Генерирует примеры кода для отправки событий в Matomo для разных платформ (Web, iOS, Android)",
+      version: "1.0.0",
+      isEnabled: true,
+      config: { showForPlatforms: ["web", "ios", "android"] },
+    });
+  }
+
+  if (!existingIds.includes("analytics-chart")) {
+    await storage.upsertPlugin({
+      id: "analytics-chart",
+      name: "График аналитики",
+      description: "Отображает график событий за последние 30 дней с данными из системы аналитики Matomo",
+      version: "1.0.0",
+      isEnabled: true,
+      config: { period: 30 },
+    });
+  }
 }
 
 async function seedDatabase() {

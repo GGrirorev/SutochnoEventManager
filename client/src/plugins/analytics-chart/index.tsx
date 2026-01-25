@@ -84,12 +84,10 @@ export function AnalyticsChart({ eventAction, eventCategory, platforms }: Analyt
         chartData.push(existing);
       }
       
-      // Handle array format: each day is an array of objects
       if (Array.isArray(dayData) && dayData.length > 0) {
         const events = dayData[0]?.nb_events || dayData[0]?.nb_visits || 0;
         (existing as any)[platform] = typeof events === 'number' ? events : parseInt(events) || 0;
       } else if (typeof dayData === 'object' && dayData !== null) {
-        // Handle object format directly
         const events = dayData.nb_events || dayData.nb_visits || 0;
         (existing as any)[platform] = typeof events === 'number' ? events : parseInt(events) || 0;
       } else {
@@ -109,7 +107,7 @@ export function AnalyticsChart({ eventAction, eventCategory, platforms }: Analyt
   }
 
   return (
-    <Card className="mt-4">
+    <Card className="mt-4" data-testid="plugin-analytics-chart">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
           <TrendingUp className="w-4 h-4" />
@@ -182,3 +180,11 @@ export function AnalyticsChart({ eventAction, eventCategory, platforms }: Analyt
     </Card>
   );
 }
+
+export const pluginInfo = {
+  id: "analytics-chart",
+  name: "График аналитики",
+  component: AnalyticsChart,
+};
+
+export default AnalyticsChart;

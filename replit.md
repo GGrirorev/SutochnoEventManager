@@ -138,6 +138,7 @@ The application supports modular extensions through a plugin system. Plugins can
 
 **Available Plugins:**
 - `code-generator` - Generates Matomo tracking code snippets for WEB, iOS, Android platforms
+- `analytics-chart` - Displays event analytics chart for the last 30 days from Matomo
 
 **Plugin Management UI:**
 - Accessible at `/plugins` (admin-only page)
