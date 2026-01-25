@@ -1,9 +1,10 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { PLATFORMS, IMPLEMENTATION_STATUS, VALIDATION_STATUS, insertEventPlatformStatusSchema, insertStatusHistorySchema } from "@shared/schema";
+import bcrypt from "bcrypt";
+import { PLATFORMS, IMPLEMENTATION_STATUS, VALIDATION_STATUS, insertEventPlatformStatusSchema, insertStatusHistorySchema, loginSchema, ROLE_PERMISSIONS, UserRole } from "@shared/schema";
 
 // Zod schemas for platform status API validation
 const createPlatformStatusSchema = z.object({
@@ -539,8 +540,13 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Email already exists", field: "email" });
       }
       
-      const user = await storage.createUser(input);
-      res.status(201).json(user);
+      // Hash password
+      const { password, ...userData } = input;
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      const user = await storage.createUserWithPassword(userData, passwordHash);
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
@@ -570,8 +576,16 @@ export async function registerRoutes(
         }
       }
       
-      const user = await storage.updateUser(id, input);
-      res.json(user);
+      // Handle password update
+      const { password, ...userData } = input;
+      let passwordHash: string | undefined;
+      if (password) {
+        passwordHash = await bcrypt.hash(password, 10);
+      }
+      
+      const user = await storage.updateUser(id, userData, passwordHash);
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
@@ -595,6 +609,69 @@ export async function registerRoutes(
 
   // Initial seed data
   await seedDatabase();
+
+  // ============ Auth Routes ============
+  
+  // Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const result = loginSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid email or password format" });
+      }
+
+      const { email, password } = result.data;
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user || !user.passwordHash) {
+        return res.status(401).json({ message: "Неверный email или пароль" });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({ message: "Аккаунт деактивирован" });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Неверный email или пароль" });
+      }
+
+      req.session.userId = user.id;
+      
+      const { passwordHash, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Ошибка сервера" });
+    }
+  });
+
+  // Logout
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Ошибка при выходе" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ message: "Выход выполнен" });
+    });
+  });
+
+  // Get current user
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Не авторизован" });
+    }
+
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      req.session.destroy(() => {});
+      return res.status(401).json({ message: "Пользователь не найден" });
+    }
+
+    const { passwordHash, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  });
 
   return httpServer;
 }

@@ -97,7 +97,9 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/users',
-      input: insertUserSchema,
+      input: insertUserSchema.extend({
+        password: z.string().min(6, "Пароль должен быть не менее 6 символов"),
+      }),
       responses: {
         201: z.custom<typeof users.$inferSelect>(),
         400: errorSchemas.validation,
@@ -106,7 +108,9 @@ export const api = {
     update: {
       method: 'PATCH' as const,
       path: '/api/users/:id',
-      input: insertUserSchema.partial(),
+      input: insertUserSchema.partial().extend({
+        password: z.string().min(6, "Пароль должен быть не менее 6 символов").optional(),
+      }),
       responses: {
         200: z.custom<typeof users.$inferSelect>(),
         400: errorSchemas.validation,

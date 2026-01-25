@@ -7,9 +7,13 @@ import {
   Activity,
   GitGraph,
   Database,
-  Users
+  Users,
+  LogOut
 } from "lucide-react";
 import logoHeader from "@assets/logo-header_1769085215107.png";
+import { useCurrentUser, useLogout } from "@/hooks/useAuth";
+import { ROLE_LABELS } from "@shared/schema";
+import { Button } from "@/components/ui/button";
 
 const NAV_ITEMS = [
   { label: "Обзор", icon: LayoutDashboard, href: "/" },
@@ -83,17 +87,47 @@ export function Sidebar() {
       </div>
 
       {/* User / Footer */}
-      <div className="p-4 border-t bg-muted/20">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
-            АД
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="text-sm font-medium truncate">Админ</p>
-            <p className="text-xs text-muted-foreground truncate">Продукт-менеджер</p>
-          </div>
-          <Settings className="w-4 h-4 text-muted-foreground cursor-pointer hover:text-foreground" />
+      <UserFooter />
+    </div>
+  );
+}
+
+function UserFooter() {
+  const { data: user } = useCurrentUser();
+  const logout = useLogout();
+
+  if (!user) return null;
+
+  const initials = user.name
+    .split(" ")
+    .map(n => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <div className="p-4 border-t bg-muted/20">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+          {initials}
         </div>
+        <div className="flex-1 overflow-hidden">
+          <p className="text-sm font-medium truncate" data-testid="text-current-user-name">
+            {user.name}
+          </p>
+          <p className="text-xs text-muted-foreground truncate" data-testid="text-current-user-role">
+            {ROLE_LABELS[user.role]}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
+          data-testid="button-logout"
+        >
+          <LogOut className="w-4 h-4" />
+        </Button>
       </div>
     </div>
   );

@@ -54,12 +54,21 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Edit, Trash2, Users, Loader2, Shield, Eye, Code, BarChart3 } from "lucide-react";
 import { USER_ROLES, ROLE_LABELS, insertUserSchema, type User, type UserRole, type InsertUser } from "@shared/schema";
 
-const userFormSchema = insertUserSchema.extend({
+const createUserFormSchema = insertUserSchema.extend({
   email: z.string().email("Введите корректный email"),
   name: z.string().min(1, "Введите имя пользователя"),
+  password: z.string().min(6, "Пароль должен быть не менее 6 символов"),
 });
 
-type UserFormData = z.infer<typeof userFormSchema>;
+const editUserFormSchema = insertUserSchema.extend({
+  email: z.string().email("Введите корректный email"),
+  name: z.string().min(1, "Введите имя пользователя"),
+  password: z.string().min(6, "Пароль должен быть не менее 6 символов").optional().or(z.literal("")),
+});
+
+type CreateUserFormData = z.infer<typeof createUserFormSchema>;
+type EditUserFormData = z.infer<typeof editUserFormSchema>;
+type UserFormData = CreateUserFormData | EditUserFormData;
 
 function UserForm({ 
   initialData, 
@@ -73,13 +82,16 @@ function UserForm({
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const formSchema = mode === "create" ? createUserFormSchema : editUserFormSchema;
+
   const form = useForm<UserFormData>({
-    resolver: zodResolver(userFormSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       email: initialData?.email || "",
       name: initialData?.name || "",
       role: initialData?.role || "viewer",
-      isActive: initialData?.isActive ?? true
+      isActive: initialData?.isActive ?? true,
+      password: "",
     }
   });
 
@@ -88,7 +100,13 @@ function UserForm({
       const url = mode === "create" 
         ? "/api/users" 
         : `/api/users/${initialData?.id}`;
-      const res = await apiRequest(mode === "create" ? "POST" : "PATCH", url, data);
+      
+      const payload = { ...data };
+      if (mode === "edit" && (!payload.password || payload.password === "")) {
+        delete (payload as EditUserFormData).password;
+      }
+      
+      const res = await apiRequest(mode === "create" ? "POST" : "PATCH", url, payload);
       return res.json();
     },
     onSuccess: () => {
@@ -144,6 +162,27 @@ function UserForm({
                 <Input 
                   placeholder="Иван Иванов"
                   data-testid="input-user-name"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                {mode === "create" ? "Пароль" : "Новый пароль (оставьте пустым, чтобы не менять)"}
+              </FormLabel>
+              <FormControl>
+                <Input 
+                  type="password"
+                  placeholder={mode === "create" ? "Минимум 6 символов" : "Оставьте пустым, чтобы не менять"}
+                  data-testid="input-user-password"
                   {...field}
                 />
               </FormControl>

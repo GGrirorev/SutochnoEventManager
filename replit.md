@@ -65,6 +65,19 @@ Users have four access levels (roles):
 User CRUD API: `/api/users` (GET, POST), `/api/users/:id` (GET, PATCH, DELETE)
 User management UI is accessible via "Пользователи" link in sidebar under "Администрирование" section.
 
+### Authentication System
+- **Session-based authentication** using express-session with PostgreSQL store (connect-pg-simple)
+- **Password hashing** with bcrypt (10 rounds)
+- **Protected routes** on frontend using ProtectedRoute wrapper that redirects to /login
+- **Session storage** in `session` table (auto-created)
+
+Auth API endpoints:
+- `POST /api/auth/login` - Login with email/password, returns user data
+- `POST /api/auth/logout` - Destroys session
+- `GET /api/auth/me` - Returns current authenticated user
+
+Required environment variable: `SESSION_SECRET` (mandatory in production)
+
 Events have two status dimensions:
 - **Implementation Status**: черновик (draft), в_разработке (in development), внедрено (implemented), архив (archived)
 - **Validation Status**: ожидает_проверки (pending), корректно (correct), ошибка (error), предупреждение (warning)

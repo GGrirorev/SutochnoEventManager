@@ -79,7 +79,8 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
+  createUserWithPassword(user: InsertUser, passwordHash: string): Promise<User>;
+  updateUser(id: number, updates: Partial<InsertUser>, passwordHash?: string): Promise<User>;
   deleteUser(id: number): Promise<void>;
 }
 
@@ -340,9 +341,18 @@ export class DatabaseStorage implements IStorage {
     return newUser;
   }
 
-  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User> {
+  async createUserWithPassword(user: InsertUser, passwordHash: string): Promise<User> {
+    const [newUser] = await db.insert(users).values({ ...user, passwordHash }).returning();
+    return newUser;
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>, passwordHash?: string): Promise<User> {
+    const setValues: Record<string, unknown> = { ...updates, updatedAt: new Date() };
+    if (passwordHash) {
+      setValues.passwordHash = passwordHash;
+    }
     const [user] = await db.update(users)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(setValues)
       .where(eq(users.id, id))
       .returning();
     return user;
