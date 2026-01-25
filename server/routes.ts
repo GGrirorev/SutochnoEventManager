@@ -794,6 +794,17 @@ async function seedPlugins() {
       config: { period: 30 },
     });
   }
+
+  if (!existingIds.includes("platform-statuses")) {
+    await storage.upsertPlugin({
+      id: "platform-statuses",
+      name: "Статусы платформ",
+      description: "Управление статусами внедрения и валидации для каждой платформы с полной историей изменений",
+      version: "1.0.0",
+      isEnabled: true,
+      config: {},
+    });
+  }
 }
 
 async function seedDatabase() {

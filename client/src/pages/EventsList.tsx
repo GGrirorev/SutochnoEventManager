@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useEvents, useDeleteEvent, useEventVersions } from "@/hooks/use-events";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { MatomoCodeGenerator } from "@/plugins/code-generator";
+import { PlatformStatuses } from "@/plugins/platform-statuses";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
@@ -168,6 +169,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const { isEnabled: isCodeGeneratorEnabled } = useIsPluginEnabled("code-generator");
   const { isEnabled: isAnalyticsChartEnabled } = useIsPluginEnabled("analytics-chart");
+  const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
 
   // Fetch fresh event data to get updated statuses
   const { data: event = initialEvent } = useQuery({
@@ -188,15 +190,6 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
 
   // Determine the version to display
   const displayVersion = selectedVersion || event.currentVersion || 1;
-
-  // Fetch platform statuses for the selected version
-  const { data: platformStatuses = [] } = useQuery({
-    queryKey: ["/api/events", event.id, "platform-statuses", displayVersion],
-    queryFn: async () => {
-      const res = await fetch(`/api/events/${event.id}/platform-statuses?version=${displayVersion}`);
-      return res.json();
-    }
-  });
 
   // Fetch event versions
   const { data: versions = [] } = useEventVersions(event.id);
@@ -223,30 +216,6 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", event.id, "comments"] });
       setComment("");
-    }
-  });
-
-  // Mutation for updating platform status (without creating new version)
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ platform, implementationStatus, validationStatus, versionNumber }: { 
-      platform: string; 
-      implementationStatus?: string; 
-      validationStatus?: string;
-      versionNumber: number;
-    }) => {
-      const res = await fetch(`/api/events/${event.id}/platform-statuses/${platform}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ implementationStatus, validationStatus, versionNumber })
-      });
-      if (!res.ok) throw new Error("Failed to update status");
-      return res.json();
-    },
-    onSuccess: () => {
-      // Invalidate all relevant queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ["/api/events", event.id, "platform-statuses", displayVersion] });
-      queryClient.invalidateQueries({ queryKey: ["/api/events", event.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
     }
   });
 
@@ -508,133 +477,15 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
 
         {/* Tab 2: Здоровье */}
         <TabsContent value="health" className="space-y-6 pt-4">
-          <div>
-            <h4 className="text-sm font-semibold text-muted-foreground mb-3">Платформы и статусы</h4>
-            <div className="space-y-3">
-              {/* Use version-specific platform statuses from API */}
-              {(platformStatuses.length > 0 
-                ? platformStatuses 
-                : (displayData.platforms || []).map((p: string) => ({
-                    platform: p,
-                    implementationStatus: "черновик",
-                    validationStatus: "ожидает_проверки"
-                  }))
-              ).map((ps: any) => {
-                const p = ps.platform;
-                const jiraLink = ps.jiraLink || displayData.platformJiraLinks?.[p];
-                return (
-                  <div key={p} className="p-3 bg-muted/30 rounded-lg border">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="uppercase text-[10px]">
-                        {p}
-                      </Badge>
-                      {jiraLink && (
-                        <a
-                          href={jiraLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline flex items-center gap-1"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          Jira
-                        </a>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <span className="text-xs text-muted-foreground">Внедрение:</span>
-                          <div className="mt-1">
-                            <Select
-                              value={ps.implementationStatus || "черновик"}
-                              onValueChange={(value) => 
-                                updateStatusMutation.mutate({ 
-                                  platform: p, 
-                                  implementationStatus: value,
-                                  versionNumber: displayVersion
-                                })
-                              }
-                              disabled={updateStatusMutation.isPending}
-                            >
-                              <SelectTrigger className="h-7 text-xs" data-testid={`select-implementation-${p}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {IMPLEMENTATION_STATUS.map((s) => (
-                                  <SelectItem key={s} value={s} className="text-xs" data-testid={`option-impl-${s}-${p}`}>
-                                    {s.replace(/_/g, ' ')}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <span className="text-xs text-muted-foreground">Валидация:</span>
-                          <div className="mt-1">
-                            <Select
-                              value={ps.validationStatus || "ожидает_проверки"}
-                              onValueChange={(value) => 
-                                updateStatusMutation.mutate({ 
-                                  platform: p, 
-                                  validationStatus: value,
-                                  versionNumber: displayVersion
-                                })
-                              }
-                              disabled={updateStatusMutation.isPending}
-                            >
-                              <SelectTrigger className="h-7 text-xs" data-testid={`select-validation-${p}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {VALIDATION_STATUS.map((s) => (
-                                  <SelectItem key={s} value={s} className="text-xs" data-testid={`option-valid-${s}-${p}`}>
-                                    {s.replace(/_/g, ' ')}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
-                      {ps.history && ps.history.length > 0 && (
-                        <details className="text-xs">
-                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            История изменений ({ps.history.length})
-                          </summary>
-                          <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
-                            {ps.history.slice().reverse().map((h: any, i: number) => (
-                              <div key={`hist-${i}`} className="flex items-center gap-2 text-muted-foreground py-1">
-                                {h.statusType === 'implementation' ? (
-                                  <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                                ) : (
-                                  <ShieldCheck className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                                )}
-                                <span className="font-medium text-foreground">
-                                  {h.statusType === 'implementation' ? 'Внедрение:' : 'Валидация:'}
-                                </span>
-                                <span className={getStatusColor(h.oldStatus)}>
-                                  {h.oldStatus?.replace(/_/g, ' ') || '-'}
-                                </span>
-                                <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                                <span className={getStatusColor(h.newStatus)}>
-                                  {h.newStatus?.replace(/_/g, ' ')}
-                                </span>
-                                <span className="ml-auto opacity-70 whitespace-nowrap">
-                                  {h.createdAt ? new Date(h.createdAt).toLocaleDateString('ru-RU') : ''}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </details>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* Platform Statuses Plugin */}
+          {isPlatformStatusesEnabled && (
+            <PlatformStatuses
+              eventId={event.id}
+              platforms={displayData.platforms || []}
+              displayVersion={displayVersion}
+              platformJiraLinks={displayData.platformJiraLinks}
+            />
+          )}
 
           {/* Analytics Chart Plugin */}
           {isAnalyticsChartEnabled && (
