@@ -165,52 +165,8 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
         createdBy: "Админ" // TODO: Replace with actual user when auth is implemented
       });
       eventId = initialData.id;
-      
-      // Refetch platform statuses to get latest data before diffing
-      const { data: freshPlatformStatuses } = await refetchPlatformStatuses();
-      const currentPlatformStatuses = freshPlatformStatuses || existingPlatformStatuses;
-      
-      // Save platform statuses to the new table
-      const platforms = data.platforms || [];
-      const platformStatusesData = data.platformStatuses || {};
-      const jiraLinks = data.platformJiraLinks || {};
-      
-      // Delete platform statuses for removed platforms
-      const existingPlatformNames = currentPlatformStatuses.map((s: any) => s.platform);
-      for (const existingPlatform of existingPlatformNames) {
-        if (!platforms.includes(existingPlatform)) {
-          await deletePlatformStatusMutation.mutateAsync({ eventId, platform: existingPlatform });
-        }
-      }
-      
-      // Create or update platform statuses for current platforms
-      for (const platform of platforms) {
-        const status = platformStatusesData[platform];
-        const jiraLink = jiraLinks[platform];
-        
-        // Check if this platform status already exists
-        const existingStatus = currentPlatformStatuses.find((s: any) => s.platform === platform);
-        
-        if (existingStatus) {
-          // Update existing platform status
-          await updatePlatformStatusMutation.mutateAsync({
-            eventId,
-            platform,
-            jiraLink: jiraLink || undefined,
-            implementationStatus: status?.implementationStatus,
-            validationStatus: status?.validationStatus,
-          });
-        } else {
-          // Create new platform status
-          await createPlatformStatusMutation.mutateAsync({
-            eventId,
-            platform,
-            jiraLink: jiraLink || undefined,
-            implementationStatus: status?.implementationStatus || "черновик",
-            validationStatus: status?.validationStatus || "ожидает_проверки",
-          });
-        }
-      }
+      // Platform statuses for the new version are created by the server with default values
+      // (черновик / ожидает_проверки). User can change them later in the Health tab.
     } else {
       const newEvent = await createMutation.mutateAsync(data);
       eventId = newEvent.id;
@@ -648,14 +604,16 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
             }}>
               Отмена
             </AlertDialogCancel>
-            <AlertDialogAction onClick={async () => {
-              if (pendingFormData) {
-                await performSubmit(pendingFormData, changeDescription || undefined);
-                setShowVersionConfirm(false);
-                setPendingFormData(null);
-                setChangeDescription("");
-              }
-            }}>
+            <AlertDialogAction 
+              data-testid="button-save-version"
+              onClick={async () => {
+                if (pendingFormData) {
+                  await performSubmit(pendingFormData, changeDescription || undefined);
+                  setShowVersionConfirm(false);
+                  setPendingFormData(null);
+                  setChangeDescription("");
+                }
+              }}>
               Сохранить версию
             </AlertDialogAction>
           </AlertDialogFooter>
