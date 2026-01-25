@@ -40,6 +40,11 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -159,6 +164,45 @@ TrackHelper.track().event("${category}", "${action}")${name ? `.name("${name}")`
         })}
       </div>
     </div>
+  );
+}
+
+function VersionBadge({ event }: { event: any }) {
+  const version = event.currentVersion || 1;
+  
+  // Lazy load version details on hover
+  const { data: versions } = useQuery({
+    queryKey: ["/api/events", event.id, "versions"],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${event.id}/versions`);
+      return res.json();
+    },
+    staleTime: 60000 // Cache for 1 minute
+  });
+  
+  const latestVersion = versions?.find((v: any) => v.version === version);
+  
+  const formattedDate = latestVersion?.createdAt 
+    ? format(new Date(latestVersion.createdAt), "d MMM yyyy, HH:mm", { locale: ru })
+    : null;
+  
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="text-xs text-muted-foreground/60 cursor-default">
+          v{version}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-xs">
+        <div className="space-y-0.5">
+          <div>Версия {version}</div>
+          {formattedDate && <div className="text-muted-foreground">{formattedDate}</div>}
+          {latestVersion?.createdBy && (
+            <div className="text-muted-foreground">Автор: {latestVersion.createdBy}</div>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -810,7 +854,10 @@ export default function EventsList() {
                       <Dialog>
                         <DialogTrigger asChild>
                           <div className="flex flex-col gap-1">
-                            <span className="text-sm font-medium group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">{event.action}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">{event.action}</span>
+                              <VersionBadge event={event} />
+                            </div>
                             {event.actionDescription && (
                               <span className="text-sm text-muted-foreground/80 line-clamp-2">
                                 {event.actionDescription}
