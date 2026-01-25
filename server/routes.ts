@@ -720,7 +720,67 @@ export async function registerRoutes(
     }
   });
 
+  // ============ Plugin Routes ============
+
+  // Get all plugins
+  app.get(api.plugins.list.path, async (req, res) => {
+    const pluginsList = await storage.getPlugins();
+    res.json(pluginsList);
+  });
+
+  // Get single plugin
+  app.get(api.plugins.get.path, async (req, res) => {
+    const plugin = await storage.getPlugin(req.params.id);
+    if (!plugin) {
+      return res.status(404).json({ message: "Plugin not found" });
+    }
+    res.json(plugin);
+  });
+
+  // Toggle plugin enabled state (admin only)
+  app.patch(api.plugins.toggle.path, async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== "admin") {
+        return res.status(403).json({ message: "Доступ запрещен" });
+      }
+      
+      const input = api.plugins.toggle.input.parse(req.body);
+      const plugin = await storage.getPlugin(req.params.id);
+      if (!plugin) {
+        return res.status(404).json({ message: "Plugin not found" });
+      }
+      const updated = await storage.updatePluginEnabled(req.params.id, input.isEnabled);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
+    }
+  });
+
+  // Seed default plugins
+  await seedPlugins();
+
   return httpServer;
+}
+
+async function seedPlugins() {
+  const existingPlugins = await storage.getPlugins();
+  if (existingPlugins.length > 0) return;
+
+  await storage.upsertPlugin({
+    id: "code-generator",
+    name: "Генератор кода Matomo",
+    description: "Генерирует примеры кода для отправки событий в Matomo для разных платформ (Web, iOS, Android)",
+    version: "1.0.0",
+    isEnabled: true,
+    config: { showForPlatforms: ["web", "ios", "android"] },
+  });
 }
 
 async function seedDatabase() {

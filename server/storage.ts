@@ -7,6 +7,7 @@ import {
   statusHistory,
   eventVersions,
   users,
+  plugins,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
@@ -23,6 +24,8 @@ import {
   type InsertEventVersion,
   type User,
   type InsertUser,
+  type Plugin,
+  type InsertPlugin,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
@@ -82,6 +85,13 @@ export interface IStorage {
   createUserWithPassword(user: InsertUser, passwordHash: string): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>, passwordHash?: string): Promise<User>;
   deleteUser(id: number): Promise<void>;
+  
+  // Plugin operations
+  getPlugins(): Promise<Plugin[]>;
+  getPlugin(id: string): Promise<Plugin | undefined>;
+  upsertPlugin(plugin: InsertPlugin): Promise<Plugin>;
+  updatePluginEnabled(id: string, isEnabled: boolean): Promise<Plugin>;
+  deletePlugin(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -360,6 +370,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: number): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
+  }
+
+  // Plugin operations
+  async getPlugins(): Promise<Plugin[]> {
+    return await db.select().from(plugins).orderBy(plugins.name);
+  }
+
+  async getPlugin(id: string): Promise<Plugin | undefined> {
+    const [plugin] = await db.select().from(plugins).where(eq(plugins.id, id));
+    return plugin;
+  }
+
+  async upsertPlugin(plugin: InsertPlugin): Promise<Plugin> {
+    const existing = await this.getPlugin(plugin.id);
+    if (existing) {
+      const [updated] = await db.update(plugins)
+        .set({ ...plugin, updatedAt: new Date() })
+        .where(eq(plugins.id, plugin.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(plugins).values(plugin).returning();
+    return created;
+  }
+
+  async updatePluginEnabled(id: string, isEnabled: boolean): Promise<Plugin> {
+    const [plugin] = await db.update(plugins)
+      .set({ isEnabled, updatedAt: new Date() })
+      .where(eq(plugins.id, id))
+      .returning();
+    return plugin;
+  }
+
+  async deletePlugin(id: string): Promise<void> {
+    await db.delete(plugins).where(eq(plugins.id, id));
   }
 }
 

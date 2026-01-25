@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertEventSchema, insertUserSchema, events, users, IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, USER_ROLES } from './schema';
+import { insertEventSchema, insertUserSchema, insertPluginSchema, events, users, plugins, IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, USER_ROLES } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -152,6 +152,34 @@ export const api = {
         }),
         400: errorSchemas.validation,
         409: z.object({ message: z.string() }),
+      },
+    },
+  },
+  plugins: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/plugins',
+      responses: {
+        200: z.array(z.custom<typeof plugins.$inferSelect>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/plugins/:id',
+      responses: {
+        200: z.custom<typeof plugins.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    toggle: {
+      method: 'PATCH' as const,
+      path: '/api/plugins/:id',
+      input: z.object({
+        isEnabled: z.boolean(),
+      }),
+      responses: {
+        200: z.custom<typeof plugins.$inferSelect>(),
+        404: errorSchemas.notFound,
       },
     },
   },

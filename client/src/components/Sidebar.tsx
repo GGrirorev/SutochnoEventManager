@@ -8,7 +8,8 @@ import {
   GitGraph,
   Database,
   Users,
-  LogOut
+  LogOut,
+  Puzzle
 } from "lucide-react";
 import logoHeader from "@assets/logo-header_1769085215107.png";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
 
 const ADMIN_ITEMS = [
   { label: "Пользователи", icon: Users, href: "/users" },
+  { label: "Модули", icon: Puzzle, href: "/plugins" },
 ];
 
 export function Sidebar() {

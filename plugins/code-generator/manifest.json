@@ -1,0 +1,17 @@
+{
+  "id": "code-generator",
+  "name": "Генератор кода Matomo",
+  "description": "Генерирует примеры кода для отправки событий в Matomo для разных платформ (Web, iOS, Android)",
+  "version": "1.0.0",
+  "author": "Suточно.ру",
+  "category": "integration",
+  "hooks": {
+    "eventDetails": {
+      "component": "MatomoCodeGenerator",
+      "position": "after-properties"
+    }
+  },
+  "config": {
+    "showForPlatforms": ["web", "ios", "android"]
+  }
+}

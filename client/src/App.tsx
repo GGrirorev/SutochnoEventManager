@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import EventsList from "@/pages/EventsList";
 import PropertiesPage from "@/pages/PropertiesPage";
 import UsersPage from "@/pages/UsersPage";
+import PluginsPage from "@/pages/PluginsPage";
 import LoginPage from "@/pages/LoginPage";
 import SetupPage from "@/pages/SetupPage";
 import { useIsAuthenticated } from "@/hooks/useAuth";
@@ -104,6 +105,9 @@ function Router() {
       </Route>
       <Route path="/users">
         <ProtectedRoute component={UsersPage} />
+      </Route>
+      <Route path="/plugins">
+        <ProtectedRoute component={PluginsPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>

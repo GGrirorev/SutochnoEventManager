@@ -326,3 +326,23 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+// Plugins table - tracks installed plugins and their enabled state
+export const plugins = pgTable("plugins", {
+  id: text("id").primaryKey(), // e.g., "code-generator"
+  name: text("name").notNull(),
+  description: text("description"),
+  version: text("version").notNull().default("1.0.0"),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  config: jsonb("config"), // Plugin-specific configuration
+  installedAt: timestamp("installed_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPluginSchema = createInsertSchema(plugins).omit({
+  installedAt: true,
+  updatedAt: true,
+});
+
+export type Plugin = typeof plugins.$inferSelect;
+export type InsertPlugin = z.infer<typeof insertPluginSchema>;
