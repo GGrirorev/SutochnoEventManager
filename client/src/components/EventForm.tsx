@@ -214,24 +214,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
     } else {
       const newEvent = await createMutation.mutateAsync(data);
       eventId = newEvent.id;
-      
-      // For new events, create platform statuses for all platforms
-      const platforms = data.platforms || [];
-      const platformStatusesData = data.platformStatuses || {};
-      const jiraLinks = data.platformJiraLinks || {};
-      
-      for (const platform of platforms) {
-        const status = platformStatusesData[platform];
-        const jiraLink = jiraLinks[platform];
-        
-        await createPlatformStatusMutation.mutateAsync({
-          eventId,
-          platform,
-          jiraLink: jiraLink || undefined,
-          implementationStatus: status?.implementationStatus || "черновик",
-          validationStatus: status?.validationStatus || "ожидает_проверки",
-        });
-      }
+      // Platform statuses are already created by the server for new events
     }
     
     // Invalidate queries to refresh data
