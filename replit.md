@@ -115,6 +115,35 @@ Routes are defined declaratively in `shared/routes.ts` with Zod schemas for inpu
 - Input validation schemas
 - Response type definitions for each status code
 
+### Plugin System (Модульная архитектура)
+The application supports modular extensions through a plugin system. Plugins can add new functionality that integrates with the event catalog.
+
+**Database Schema:**
+- `plugins` table: id (PK), name, description, version, isEnabled, config (JSONB), installedAt, updatedAt
+
+**Plugin API Endpoints:**
+- `GET /api/plugins` - List all plugins (public to authenticated users)
+- `GET /api/plugins/:id` - Get single plugin details
+- `PATCH /api/plugins/:id` - Toggle plugin enabled state (admin-only)
+
+**Plugin Structure:**
+- `plugins/<plugin-id>/manifest.json` - Plugin metadata (name, description, version)
+- `plugins/<plugin-id>/README.md` - Plugin documentation
+- `client/src/plugins/<plugin-id>/index.tsx` - React component
+
+**Frontend Integration:**
+- `usePlugins()` hook - Fetch all plugins
+- `useIsPluginEnabled(id)` hook - Check if specific plugin is enabled
+- Plugin components are conditionally rendered based on isEnabled state
+
+**Available Plugins:**
+- `code-generator` - Generates Matomo tracking code snippets for WEB, iOS, Android platforms
+
+**Plugin Management UI:**
+- Accessible at `/plugins` (admin-only page)
+- Toggle switch to enable/disable plugins
+- Shows plugin version and description
+
 ## External Dependencies
 
 ### Database
