@@ -31,8 +31,9 @@ const PLATFORM_LABELS: Record<string, string> = {
 export function AnalyticsChart({ eventAction, eventCategory, platforms }: AnalyticsChartProps) {
   const label = `${eventCategory} > @${eventAction}`;
   
-  const endDate = new Date().toISOString().split('T')[0];
-  const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Exclude today - use yesterday as end date (today's data is incomplete)
+  const endDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
   const activePlatforms = platforms.filter(p => ["web", "ios", "android"].includes(p.toLowerCase()));
   
