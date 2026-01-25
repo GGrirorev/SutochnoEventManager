@@ -557,7 +557,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                               </SelectTrigger>
                               <SelectContent>
                                 {IMPLEMENTATION_STATUS.map((s) => (
-                                  <SelectItem key={s} value={s} className="text-xs">
+                                  <SelectItem key={s} value={s} className="text-xs" data-testid={`option-impl-${s}-${p}`}>
                                     {s.replace(/_/g, ' ')}
                                   </SelectItem>
                                 ))}
@@ -584,7 +584,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                               </SelectTrigger>
                               <SelectContent>
                                 {VALIDATION_STATUS.map((s) => (
-                                  <SelectItem key={s} value={s} className="text-xs">
+                                  <SelectItem key={s} value={s} className="text-xs" data-testid={`option-valid-${s}-${p}`}>
                                     {s.replace(/_/g, ' ')}
                                   </SelectItem>
                                 ))}
@@ -857,7 +857,7 @@ export default function EventsList() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Действия</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEdit(event)}>Редактировать</DropdownMenuItem>
+                          <DropdownMenuItem data-testid={`button-edit-event-${event.id}`} onClick={() => handleEdit(event)}>Редактировать</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigator.clipboard.writeText(JSON.stringify(event, null, 2))}>
                             Копировать JSON
                           </DropdownMenuItem>

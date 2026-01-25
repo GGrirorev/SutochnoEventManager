@@ -193,7 +193,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                   <FormItem>
                     <FormLabel>Event Category *</FormLabel>
                     <FormControl>
-                      <Input placeholder="например, Авторизация" {...field} />
+                      <Input placeholder="например, Авторизация" data-testid="input-event-category" {...field} />
                     </FormControl>
                     <FormDescription>Верхнеуровневая категория событий.</FormDescription>
                     <FormMessage />
@@ -223,7 +223,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                   <FormItem>
                     <FormLabel>Event Action *</FormLabel>
                     <FormControl>
-                      <Input placeholder="например, click" {...field} />
+                      <Input placeholder="например, click" data-testid="input-event-action" {...field} />
                     </FormControl>
                     <FormDescription>Основное действие конкретного события.</FormDescription>
                     <FormMessage />
@@ -242,6 +242,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                     <Textarea 
                       placeholder="Что триггерит это действие?" 
                       className="resize-none h-20 border-blue-200 focus-visible:ring-blue-500"
+                      data-testid="input-action-description"
                       {...field} 
                     />
                   </FormControl>
@@ -567,7 +568,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
         </div>
 
         <div className="pt-4 border-t flex justify-end gap-3 sticky bottom-0 bg-background py-2">
-          <Button type="submit" disabled={isPending} className="w-48">
+          <Button type="submit" disabled={isPending} className="w-48" data-testid="button-save-event">
             {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {mode === "create" ? "Создать событие" : "Сохранить изменения"}
           </Button>
@@ -590,6 +591,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 <Textarea 
                   placeholder="Что изменилось в этой версии?"
                   className="mt-2"
+                  data-testid="input-version-description"
                   value={changeDescription}
                   onChange={(e) => setChangeDescription(e.target.value)}
                 />
