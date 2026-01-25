@@ -167,6 +167,34 @@ TrackHelper.track().event("${category}", "${action}")${name ? `.name("${name}")`
   );
 }
 
+function CopyableText({ text, className = "" }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  
+  return (
+    <span className={`inline-flex items-center gap-1 group/copy ${className}`}>
+      <span>{text}</span>
+      <button
+        onClick={handleCopy}
+        className="opacity-0 group-hover/copy:opacity-100 transition-opacity p-0.5 hover:bg-muted rounded"
+        data-testid={`button-copy-${text.replace(/\s+/g, '-').toLowerCase()}`}
+      >
+        {copied ? (
+          <Check className="w-3 h-3 text-green-500" />
+        ) : (
+          <Copy className="w-3 h-3 text-muted-foreground" />
+        )}
+      </button>
+    </span>
+  );
+}
+
 function VersionBadge({ event }: { event: any }) {
   const version = event.currentVersion || 1;
   
@@ -319,8 +347,10 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
       <DialogHeader>
         <div className="flex items-center justify-between pr-8">
           <DialogTitle className="text-2xl flex items-center gap-2">
-            {displayData.category}
-            <Badge variant="outline">{displayData.action}</Badge>
+            <CopyableText text={displayData.category} />
+            <Badge variant="outline">
+              <CopyableText text={displayData.action} />
+            </Badge>
           </DialogTitle>
           <div className="flex items-center gap-2">
             {/* Version Badge */}
@@ -844,7 +874,7 @@ export default function EventsList() {
                   <TableRow key={event.id} className="group hover:bg-muted/30 transition-colors">
                     <TableCell>
                       <Badge variant="outline" className="font-normal">
-                        {event.category}
+                        <CopyableText text={event.category} />
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -855,7 +885,7 @@ export default function EventsList() {
                         <DialogTrigger asChild>
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium group-hover:text-primary transition-colors underline-offset-4 group-hover:underline">{event.action}</span>
+                              <CopyableText text={event.action} className="text-sm font-medium group-hover:text-primary transition-colors underline-offset-4 group-hover:underline" />
                               <VersionBadge event={event} />
                             </div>
                             {event.actionDescription && (
