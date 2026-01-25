@@ -201,9 +201,10 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
   
   // Get the currently displayed version data
   const currentVersionNumber = selectedVersion || event.currentVersion || 1;
+  const currentVersionData = versions.find((v: any) => v.version === (event.currentVersion || 1));
   const displayedVersion = selectedVersion 
     ? versions.find((v: any) => v.version === selectedVersion) 
-    : null;
+    : currentVersionData;
   
   // Use version data if viewing an old version, otherwise use current event data
   const displayData = displayedVersion || event;
@@ -347,6 +348,23 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                 </span>
               )}
               <button className="underline ml-auto" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
+            </div>
+          </div>
+        )}
+        {!selectedVersion && currentVersionData && (
+          <div className="mt-2 p-2 bg-muted/50 rounded text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>Текущая версия v{event.currentVersion || 1}</span>
+              {currentVersionData.createdAt && (
+                <span className="text-xs opacity-80">
+                  от {format(new Date(currentVersionData.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
+                </span>
+              )}
+              {currentVersionData.createdBy && (
+                <span className="text-xs opacity-80">
+                  • Автор: {currentVersionData.createdBy}
+                </span>
+              )}
             </div>
           </div>
         )}
