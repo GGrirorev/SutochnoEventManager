@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertEventSchema, events, IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS } from './schema';
+import { insertEventSchema, insertUserSchema, events, users, IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, USER_ROLES } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -77,6 +77,50 @@ export const api = {
         }),
       },
     }
+  },
+  users: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/users',
+      responses: {
+        200: z.array(z.custom<typeof users.$inferSelect>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/users/:id',
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/users',
+      input: insertUserSchema,
+      responses: {
+        201: z.custom<typeof users.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/users/:id',
+      input: insertUserSchema.partial(),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/users/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+      },
+    },
   },
 };
 
