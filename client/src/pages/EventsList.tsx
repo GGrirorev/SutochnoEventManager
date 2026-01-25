@@ -838,6 +838,7 @@ export default function EventsList() {
                 <TableHead className="w-[200px]">Event Name</TableHead>
                 <TableHead>Event Value</TableHead>
                 <TableHead>Платформы и статусы</TableHead>
+                <TableHead className="w-[60px]">Версия</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -852,13 +853,14 @@ export default function EventsList() {
                     <TableCell><div className="h-5 w-32 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-16 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell><div className="h-5 w-32 bg-muted/50 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-5 w-8 bg-muted/50 rounded animate-pulse" /></TableCell>
                     <TableCell />
                   </TableRow>
                 ))
               ) : events?.length === 0 ? (
                 // Empty State
                 <TableRow>
-                  <TableCell colSpan={7} className="h-64 text-center">
+                  <TableCell colSpan={8} className="h-64 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <div className="p-4 rounded-full bg-muted mb-3">
                         <Filter className="w-6 h-6" />
@@ -884,10 +886,7 @@ export default function EventsList() {
                       <Dialog>
                         <DialogTrigger asChild>
                           <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <CopyableText text={event.action} className="text-sm font-medium group-hover:text-primary transition-colors underline-offset-4 group-hover:underline" />
-                              <VersionBadge event={event} />
-                            </div>
+                            <CopyableText text={event.action} className="text-sm font-medium group-hover:text-primary transition-colors underline-offset-4 group-hover:underline" />
                             {event.actionDescription && (
                               <span className="text-sm text-muted-foreground/80 line-clamp-2">
                                 {event.actionDescription}
@@ -924,6 +923,9 @@ export default function EventsList() {
                           );
                         })}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <VersionBadge event={event} />
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
