@@ -349,6 +349,11 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
               )}
               <button className="underline ml-auto" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
             </div>
+            {displayedVersion.changeDescription && (
+              <div className="text-xs opacity-80 mt-1">
+                Изменения: {displayedVersion.changeDescription}
+              </div>
+            )}
           </div>
         )}
         {!selectedVersion && currentVersionData && (
@@ -366,6 +371,11 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                 </span>
               )}
             </div>
+            {currentVersionData.changeDescription && (
+              <div className="text-xs opacity-70 mt-1">
+                Изменения: {currentVersionData.changeDescription}
+              </div>
+            )}
           </div>
         )}
       </DialogHeader>
@@ -384,14 +394,6 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
 
         {/* Tab 1: Описание */}
         <TabsContent value="description" className="space-y-6 pt-4">
-          {displayedVersion?.changeDescription && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
-              <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1">Изменения в версии v{displayedVersion.version}</h4>
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                {displayedVersion.changeDescription}
-              </p>
-            </div>
-          )}
           <div className="space-y-4">
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-1">Описание действия</h4>
