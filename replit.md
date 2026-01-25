@@ -78,6 +78,18 @@ Auth API endpoints:
 
 Required environment variable: `SESSION_SECRET` (mandatory in production)
 
+### Initial Setup (Setup Wizard)
+When the system is first deployed with no users, it redirects to `/setup` page where the first administrator account can be created. After setup completion:
+- The administrator is automatically logged in
+- The setup page becomes inaccessible
+- Standard login flow is required for subsequent users
+
+Setup API endpoints:
+- `GET /api/setup/status` - Returns { isConfigured: boolean, hasUsers: boolean }
+- `POST /api/setup` - Creates first admin user (only works when no users exist)
+
+See `INSTALL.md` for complete installation and deployment instructions.
+
 Events have two status dimensions:
 - **Implementation Status**: черновик (draft), в_разработке (in development), внедрено (implemented), архив (archived)
 - **Validation Status**: ожидает_проверки (pending), корректно (correct), ошибка (error), предупреждение (warning)

@@ -126,6 +126,35 @@ export const api = {
       },
     },
   },
+  setup: {
+    status: {
+      method: 'GET' as const,
+      path: '/api/setup/status',
+      responses: {
+        200: z.object({
+          isConfigured: z.boolean(),
+          hasUsers: z.boolean(),
+        }),
+      },
+    },
+    complete: {
+      method: 'POST' as const,
+      path: '/api/setup',
+      input: z.object({
+        name: z.string().min(1, "Имя обязательно"),
+        email: z.string().email("Введите корректный email"),
+        password: z.string().min(6, "Пароль должен быть не менее 6 символов"),
+      }),
+      responses: {
+        201: z.object({
+          success: z.boolean(),
+          user: z.custom<typeof users.$inferSelect>(),
+        }),
+        400: errorSchemas.validation,
+        409: z.object({ message: z.string() }),
+      },
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {

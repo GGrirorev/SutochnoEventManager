@@ -1,6 +1,6 @@
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
@@ -9,19 +9,31 @@ import EventsList from "@/pages/EventsList";
 import PropertiesPage from "@/pages/PropertiesPage";
 import UsersPage from "@/pages/UsersPage";
 import LoginPage from "@/pages/LoginPage";
+import SetupPage from "@/pages/SetupPage";
 import { useIsAuthenticated } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useIsAuthenticated();
-  const [location] = useLocation();
+function useSetupStatus() {
+  return useQuery<{ isConfigured: boolean; hasUsers: boolean }>({
+    queryKey: ["/api/setup/status"],
+    staleTime: 1000 * 60 * 5,
+  });
+}
 
-  if (isLoading) {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isLoading: authLoading } = useIsAuthenticated();
+  const { data: setupStatus, isLoading: setupLoading } = useSetupStatus();
+
+  if (authLoading || setupLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (!setupStatus?.isConfigured) {
+    return <Redirect to="/setup" />;
   }
 
   if (!isAuthenticated) {
@@ -32,14 +44,19 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 }
 
 function PublicRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useIsAuthenticated();
+  const { isAuthenticated, isLoading: authLoading } = useIsAuthenticated();
+  const { data: setupStatus, isLoading: setupLoading } = useSetupStatus();
 
-  if (isLoading) {
+  if (authLoading || setupLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (!setupStatus?.isConfigured) {
+    return <Redirect to="/setup" />;
   }
 
   if (isAuthenticated) {
@@ -49,9 +66,30 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
   return <Component />;
 }
 
+function SetupRoute({ component: Component }: { component: React.ComponentType }) {
+  const { data: setupStatus, isLoading } = useSetupStatus();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (setupStatus?.isConfigured) {
+    return <Redirect to="/login" />;
+  }
+
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
+      <Route path="/setup">
+        <SetupRoute component={SetupPage} />
+      </Route>
       <Route path="/login">
         <PublicRoute component={LoginPage} />
       </Route>

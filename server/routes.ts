@@ -248,8 +248,8 @@ export async function registerRoutes(
       // Validate input with Zod
       const validated = createPlatformStatusSchema.parse(req.body);
       
-      // Check if status for this platform already exists
-      const existing = await storage.getEventPlatformStatus(eventId, validated.platform);
+      // Check if status for this platform already exists (check version 1 by default)
+      const existing = await storage.getEventPlatformStatus(eventId, validated.platform, 1);
       if (existing) {
         return res.status(400).json({ message: "Status for this platform already exists" });
       }
@@ -395,7 +395,7 @@ export async function registerRoutes(
       const eventId = Number(req.params.eventId);
       const platform = req.params.platform;
       
-      const existing = await storage.getEventPlatformStatus(eventId, platform);
+      const existing = await storage.getEventPlatformStatus(eventId, platform, 1);
       if (!existing) {
         return res.status(404).json({ message: "Platform status not found" });
       }
@@ -671,6 +671,53 @@ export async function registerRoutes(
 
     const { passwordHash, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
+  });
+
+  // ============ Setup Routes ============
+
+  // Check if system is configured
+  app.get(api.setup.status.path, async (req, res) => {
+    const users = await storage.getUsers();
+    res.json({
+      isConfigured: users.length > 0,
+      hasUsers: users.length > 0,
+    });
+  });
+
+  // Complete initial setup - create first admin
+  app.post(api.setup.complete.path, async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      if (users.length > 0) {
+        return res.status(409).json({ message: "Система уже настроена" });
+      }
+
+      const input = api.setup.complete.input.parse(req.body);
+      const passwordHash = await bcrypt.hash(input.password, 10);
+
+      const user = await storage.createUserWithPassword({
+        name: input.name,
+        email: input.email,
+        role: "admin",
+        isActive: true,
+      }, passwordHash);
+
+      req.session.userId = user.id;
+
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.status(201).json({
+        success: true,
+        user: userWithoutPassword,
+      });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
   });
 
   return httpServer;
