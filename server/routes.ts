@@ -193,32 +193,29 @@ export async function registerRoutes(
   app.post(api.events.create.path, requireAuth, requirePermission("canCreateEvents"), async (req, res) => {
     try {
       const input = api.events.create.input.parse(req.body);
-      const event = await storage.createEvent(input);
+      const platforms = input.platforms || [];
       
-      // Create initial version (v1)
-      await storage.createEventVersion({
-        eventId: event.id,
-        version: 1,
-        category: event.category,
-        block: event.block || "",
-        action: event.action,
-        actionDescription: event.actionDescription || "",
-        name: event.name,
-        valueDescription: event.valueDescription || "",
-        owner: event.owner,
-        platforms: event.platforms || [],
-        implementationStatus: "черновик",
-        validationStatus: "ожидает_проверки",
-        properties: event.properties || [],
-        notes: event.notes,
-        changeDescription: "Начальная версия",
-      });
-      
-      // Create platform statuses for version 1
-      const platforms = event.platforms || [];
-      if (platforms.length > 0) {
-        await storage.createVersionPlatformStatuses(event.id, 1, platforms);
-      }
+      // Atomic transaction: create event + version + platform statuses
+      const event = await storage.createEventWithVersionAndStatuses(
+        input,
+        {
+          version: 1,
+          category: input.category,
+          block: input.block || "",
+          action: input.action,
+          actionDescription: input.actionDescription || "",
+          name: input.name,
+          valueDescription: input.valueDescription || "",
+          owner: input.owner,
+          platforms: platforms,
+          implementationStatus: "черновик",
+          validationStatus: "ожидает_проверки",
+          properties: input.properties || [],
+          notes: input.notes,
+          changeDescription: "Начальная версия",
+        },
+        platforms
+      );
       
       res.status(201).json(event);
     } catch (err) {
@@ -246,36 +243,31 @@ export async function registerRoutes(
       
       // Increment version
       const newVersion = (existing.currentVersion || 1) + 1;
-      const event = await storage.updateEvent(id, { 
-        ...input, 
-        currentVersion: newVersion 
-      });
+      const platforms = input.platforms || [];
       
-      // Create new version snapshot
-      await storage.createEventVersion({
-        eventId: event.id,
-        version: newVersion,
-        category: event.category,
-        block: event.block || "",
-        action: event.action,
-        actionDescription: event.actionDescription || "",
-        name: event.name,
-        valueDescription: event.valueDescription || "",
-        owner: event.owner,
-        platforms: event.platforms || [],
-        implementationStatus: "черновик", // Default for new version
-        validationStatus: "ожидает_проверки", // Default for new version
-        properties: event.properties || [],
-        notes: event.notes,
-        changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
-        createdBy: createdBy || "Админ",
-      });
-      
-      // Create new platform statuses for the new version with default values
-      const platforms = event.platforms || [];
-      if (platforms.length > 0) {
-        await storage.createVersionPlatformStatuses(event.id, newVersion, platforms);
-      }
+      // Atomic transaction: update event + create version + platform statuses
+      const event = await storage.updateEventWithVersionAndStatuses(
+        id,
+        { ...input, currentVersion: newVersion },
+        {
+          version: newVersion,
+          category: input.category,
+          block: input.block || "",
+          action: input.action,
+          actionDescription: input.actionDescription || "",
+          name: input.name,
+          valueDescription: input.valueDescription || "",
+          owner: input.owner,
+          platforms: platforms,
+          implementationStatus: "черновик",
+          validationStatus: "ожидает_проверки",
+          properties: input.properties || [],
+          notes: input.notes,
+          changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
+          createdBy: createdBy || "Админ",
+        },
+        platforms
+      );
       
       res.json(event);
     } catch (err) {
@@ -296,7 +288,8 @@ export async function registerRoutes(
     if (!existing) {
       return res.status(404).json({ message: 'Event not found' });
     }
-    await storage.deleteEvent(id);
+    // Atomic transaction: delete event + versions + statuses + history + comments
+    await storage.deleteEventWithRelatedData(id);
     res.status(204).send();
   });
 

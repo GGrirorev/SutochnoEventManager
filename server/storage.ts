@@ -415,6 +415,97 @@ export class DatabaseStorage implements IStorage {
   async deletePlugin(id: string): Promise<void> {
     await db.delete(plugins).where(eq(plugins.id, id));
   }
+
+  // Transactional operations for atomic multi-step operations
+  async createEventWithVersionAndStatuses(
+    insertEvent: InsertEvent,
+    versionData: Omit<InsertEventVersion, 'eventId'>,
+    platforms: string[]
+  ): Promise<Event> {
+    return await db.transaction(async (tx) => {
+      // Step 1: Create event
+      const [event] = await tx.insert(events).values(insertEvent).returning();
+      
+      // Step 2: Create initial version
+      await tx.insert(eventVersions).values({
+        ...versionData,
+        eventId: event.id,
+      });
+      
+      // Step 3: Create platform statuses for version 1
+      for (const platform of platforms) {
+        await tx.insert(eventPlatformStatuses).values({
+          eventId: event.id,
+          versionNumber: 1,
+          platform: platform as any,
+          implementationStatus: "черновик",
+          validationStatus: "ожидает_проверки"
+        });
+      }
+      
+      return event;
+    });
+  }
+
+  async updateEventWithVersionAndStatuses(
+    id: number,
+    updates: UpdateEventRequest,
+    versionData: Omit<InsertEventVersion, 'eventId'>,
+    platforms: string[]
+  ): Promise<Event> {
+    return await db.transaction(async (tx) => {
+      // Step 1: Update event
+      const [event] = await tx.update(events)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(events.id, id))
+        .returning();
+      
+      // Step 2: Create new version snapshot
+      await tx.insert(eventVersions).values({
+        ...versionData,
+        eventId: event.id,
+      });
+      
+      // Step 3: Create platform statuses for new version
+      const newVersion = versionData.version;
+      for (const platform of platforms) {
+        await tx.insert(eventPlatformStatuses).values({
+          eventId: event.id,
+          versionNumber: newVersion,
+          platform: platform as any,
+          implementationStatus: "черновик",
+          validationStatus: "ожидает_проверки"
+        });
+      }
+      
+      return event;
+    });
+  }
+
+  async deleteEventWithRelatedData(id: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Step 1: Delete status history for all platform statuses
+      const platformStatuses = await tx.select()
+        .from(eventPlatformStatuses)
+        .where(eq(eventPlatformStatuses.eventId, id));
+      
+      for (const ps of platformStatuses) {
+        await tx.delete(statusHistory).where(eq(statusHistory.eventPlatformStatusId, ps.id));
+      }
+      
+      // Step 2: Delete platform statuses
+      await tx.delete(eventPlatformStatuses).where(eq(eventPlatformStatuses.eventId, id));
+      
+      // Step 3: Delete event versions
+      await tx.delete(eventVersions).where(eq(eventVersions.eventId, id));
+      
+      // Step 4: Delete comments
+      await tx.delete(comments).where(eq(comments.eventId, id));
+      
+      // Step 5: Delete event
+      await tx.delete(events).where(eq(events.id, id));
+    });
+  }
 }
 
 export const storage = new DatabaseStorage();

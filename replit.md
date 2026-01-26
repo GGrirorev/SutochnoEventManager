@@ -25,7 +25,16 @@ Preferred communication style: Simple, everyday language.
 - **API Pattern**: RESTful API with typed routes defined in `shared/routes.ts`
 - **Validation**: Zod schemas shared between client and server
 - **Database ORM**: Drizzle ORM with PostgreSQL dialect
+- **Transactions**: Multi-step operations use `db.transaction()` for atomicity
 - **Development**: Hot module replacement via Vite middleware
+
+### Database Transactions
+Multi-step operations are wrapped in transactions to ensure data integrity:
+- `createEventWithVersionAndStatuses()` - Atomically creates event + version + platform statuses
+- `updateEventWithVersionAndStatuses()` - Atomically updates event + creates new version + platform statuses
+- `deleteEventWithRelatedData()` - Atomically deletes event + versions + statuses + history + comments
+
+This prevents "half-baked" data if any operation fails mid-way.
 
 ### Project Structure
 ```
