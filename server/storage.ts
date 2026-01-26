@@ -32,7 +32,7 @@ import {
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
-import { eq, ilike, and, desc, sql } from "drizzle-orm";
+import { eq, ilike, and, or, desc, sql } from "drizzle-orm";
 
 export type EventWithAuthor = Event & { authorName?: string | null; category?: string };
 export type EventVersionWithAuthor = EventVersion & { authorName?: string | null };
@@ -121,7 +121,13 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
 
     if (filters?.search) {
-      conditions.push(ilike(events.name, `%${filters.search}%`));
+      // Search by Event Action and Action Description
+      conditions.push(
+        or(
+          ilike(events.action, `%${filters.search}%`),
+          ilike(events.actionDescription, `%${filters.search}%`)
+        )
+      );
     }
     if (filters?.category) {
       conditions.push(eq(eventCategories.name, filters.category));
