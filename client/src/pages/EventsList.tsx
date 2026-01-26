@@ -156,8 +156,8 @@ function VersionBadge({ event }: { event: any }) {
         <div className="space-y-0.5">
           <div>Версия {version}</div>
           {formattedDate && <div className="text-muted-foreground">{formattedDate}</div>}
-          {latestVersion?.createdBy && (
-            <div className="text-muted-foreground">Автор: {latestVersion.createdBy}</div>
+          {latestVersion?.authorName && (
+            <div className="text-muted-foreground">Автор: {latestVersion.authorName}</div>
           )}
         </div>
       </TooltipContent>
@@ -271,9 +271,9 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                         <span className="text-xs text-muted-foreground">
                           {v.changeDescription || `Версия ${v.version}`}
                         </span>
-                        {v.createdBy && (
+                        {v.authorName && (
                           <span className="text-[10px] text-muted-foreground/70">
-                            Автор: {v.createdBy}
+                            Автор: {v.authorName}
                           </span>
                         )}
                       </div>
@@ -293,9 +293,9 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                   от {format(new Date(displayedVersion.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
                 </span>
               )}
-              {displayedVersion.createdBy && (
+              {displayedVersion.authorName && (
                 <span className="text-xs opacity-80">
-                  • Автор: {displayedVersion.createdBy}
+                  • Автор: {displayedVersion.authorName}
                 </span>
               )}
               <button className="underline ml-auto" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
@@ -316,9 +316,9 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                   от {format(new Date(currentVersionData.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
                 </span>
               )}
-              {currentVersionData.createdBy && (
+              {currentVersionData.authorName && (
                 <span className="text-xs opacity-80">
-                  • Автор: {currentVersionData.createdBy}
+                  • Автор: {currentVersionData.authorName}
                 </span>
               )}
             </div>

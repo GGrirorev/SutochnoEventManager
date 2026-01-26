@@ -240,7 +240,7 @@ export async function registerRoutes(
         return res.status(404).json({ message: 'Event not found' });
       }
 
-      const { changeDescription, createdBy, ...updateData } = req.body;
+      const { changeDescription, ...updateData } = req.body;
       const input = api.events.update.input.parse(updateData);
       const versionAuthorId = (req as any).user?.id;
       
@@ -267,7 +267,6 @@ export async function registerRoutes(
           properties: input.properties || [],
           notes: input.notes,
           changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
-          createdBy: createdBy || "Админ",
           authorId: versionAuthorId,
         },
         platforms
