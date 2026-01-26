@@ -298,6 +298,11 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                   • Автор: {displayedVersion.authorName}
                 </span>
               )}
+              {displayData.owner && (
+                <span className="text-xs opacity-80">
+                  • Ответственный: {displayData.owner}
+                </span>
+              )}
               <button className="underline ml-auto" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
             </div>
             {displayedVersion.changeDescription && displayedVersion.version > 1 && (
@@ -319,6 +324,11 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
               {currentVersionData.authorName && (
                 <span className="text-xs opacity-80">
                   • Автор: {currentVersionData.authorName}
+                </span>
+              )}
+              {displayData.owner && (
+                <span className="text-xs opacity-80">
+                  • Ответственный: {displayData.owner}
                 </span>
               )}
             </div>
@@ -358,10 +368,6 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                 <p className="text-sm">{displayData.block}</p>
               </div>
             )}
-            <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Ответственный</h4>
-              <p className="text-sm">{displayData.owner || "Не назначен"}</p>
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
