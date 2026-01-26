@@ -140,11 +140,15 @@ Each plugin is a self-contained folder in `client/src/plugins/<plugin-id>/`:
 **Available Plugins:**
 - `code-generator` - Generates Matomo tracking code snippets for WEB, iOS, Android platforms
 - `analytics-chart` - Displays event analytics chart for the last 30 days from Matomo
+  - Configurable: API URL, API Token, platform-to-idSite mapping
+  - Server-side caching: 12-hour TTL for API responses
+  - Cache management: Clear cache button in plugin settings
 - `platform-statuses` - Platform implementation and validation status management with history
 - `comments` - Event discussion and commenting system
 
 **Plugin Management UI:**
 - Accessible at `/plugins` (admin-only page)
+- Analytics-chart plugin has dedicated settings dialog (gear icon)
 - Toggle switch to enable/disable plugins
 - Shows plugin version and description
 
