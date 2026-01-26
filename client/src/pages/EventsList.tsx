@@ -225,9 +225,9 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
         <div className="flex items-center justify-between pr-8">
           <DialogTitle className="text-2xl flex items-center gap-3">
             <Badge variant="outline" className="text-base font-normal">
-              <CopyableText text={displayData.category} />
+              {displayData.category}
             </Badge>
-            <CopyableText text={displayData.action} />
+            {displayData.action}
           </DialogTitle>
           <div className="flex items-center gap-2">
             {/* Version Badge */}
@@ -371,11 +371,15 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Category</h4>
-                <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.category || "-"}</p>
+                <p className="text-sm font-mono bg-muted p-2 rounded">
+                  <CopyableText text={displayData.category || "-"} />
+                </p>
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Action</h4>
-                <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.action || "-"}</p>
+                <p className="text-sm font-mono bg-muted p-2 rounded">
+                  <CopyableText text={displayData.action || "-"} />
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
