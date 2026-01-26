@@ -4,7 +4,18 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import bcrypt from "bcrypt";
-import { PLATFORMS, IMPLEMENTATION_STATUS, VALIDATION_STATUS, insertEventPlatformStatusSchema, insertStatusHistorySchema, loginSchema, ROLE_PERMISSIONS, UserRole } from "@shared/schema";
+import {
+  PLATFORMS,
+  IMPLEMENTATION_STATUS,
+  VALIDATION_STATUS,
+  insertCommentSchema,
+  insertEventPlatformStatusSchema,
+  insertPropertyTemplateSchema,
+  insertStatusHistorySchema,
+  loginSchema,
+  ROLE_PERMISSIONS,
+  UserRole,
+} from "@shared/schema";
 
 // Zod schemas for platform status API validation
 const createPlatformStatusSchema = z.object({
@@ -19,6 +30,16 @@ const updatePlatformStatusSchema = z.object({
   implementationStatus: z.enum(IMPLEMENTATION_STATUS).optional(),
   validationStatus: z.enum(VALIDATION_STATUS).optional(),
 });
+
+const createCommentSchema = insertCommentSchema
+  .pick({
+    content: true,
+    author: true,
+  })
+  .partial({ author: true });
+
+const createPropertyTemplateSchema = insertPropertyTemplateSchema;
+const updatePropertyTemplateSchema = insertPropertyTemplateSchema.partial();
 
 export async function registerRoutes(
   httpServer: Server,
@@ -173,13 +194,24 @@ export async function registerRoutes(
   });
 
   app.post("/api/events/:id/comments", async (req, res) => {
-    const eventId = Number(req.params.id);
-    const comment = await storage.createComment({
-      eventId,
-      content: req.body.content,
-      author: req.body.author || "Аноним"
-    });
-    res.status(201).json(comment);
+    try {
+      const eventId = Number(req.params.id);
+      const input = createCommentSchema.parse(req.body);
+      const comment = await storage.createComment({
+        eventId,
+        content: input.content,
+        author: input.author || "Аноним",
+      });
+      res.status(201).json(comment);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
   });
 
   // Property Templates API
@@ -204,18 +236,32 @@ export async function registerRoutes(
 
   app.post("/api/property-templates", async (req, res) => {
     try {
-      const template = await storage.createPropertyTemplate(req.body);
+      const input = createPropertyTemplateSchema.parse(req.body);
+      const template = await storage.createPropertyTemplate(input);
       res.status(201).json(template);
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: error.errors[0].message,
+          field: error.errors[0].path.join('.'),
+        });
+      }
       res.status(400).json({ message: error.message || "Failed to create template" });
     }
   });
 
   app.patch("/api/property-templates/:id", async (req, res) => {
     try {
-      const template = await storage.updatePropertyTemplate(Number(req.params.id), req.body);
+      const input = updatePropertyTemplateSchema.parse(req.body);
+      const template = await storage.updatePropertyTemplate(Number(req.params.id), input);
       res.json(template);
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: error.errors[0].message,
+          field: error.errors[0].path.join('.'),
+        });
+      }
       res.status(400).json({ message: error.message || "Failed to update template" });
     }
   });
