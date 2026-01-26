@@ -356,18 +356,18 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
         {/* Tab 1: Описание */}
         <TabsContent value="description" className="space-y-6 pt-4">
           <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Описание действия</h4>
-              <p className="text-sm">
-                {displayData.actionDescription || "Нет описания"}
-              </p>
-            </div>
             {displayData.block && (
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Блок</h4>
                 <p className="text-sm">{displayData.block}</p>
               </div>
             )}
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Описание действия</h4>
+              <p className="text-sm">
+                {displayData.actionDescription || "Нет описания"}
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
