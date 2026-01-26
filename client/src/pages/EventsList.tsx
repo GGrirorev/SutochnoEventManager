@@ -352,16 +352,6 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
                 {displayData.actionDescription || "Нет описания"}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
-                <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.name || "-"}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Значение (Value)</h4>
-                <p className="text-sm bg-muted p-2 rounded">{displayData.valueDescription || "-"}</p>
-              </div>
-            </div>
             {displayData.block && (
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Блок</h4>
@@ -371,6 +361,16 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
             <div>
               <h4 className="text-sm font-semibold text-muted-foreground mb-1">Ответственный</h4>
               <p className="text-sm">{displayData.owner || "Не назначен"}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
+                <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.name || "-"}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Значение (Value)</h4>
+                <p className="text-sm bg-muted p-2 rounded">{displayData.valueDescription || "-"}</p>
+              </div>
             </div>
           </div>
 
