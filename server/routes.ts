@@ -41,12 +41,56 @@ const createCommentSchema = insertCommentSchema
 const createPropertyTemplateSchema = insertPropertyTemplateSchema;
 const updatePropertyTemplateSchema = insertPropertyTemplateSchema.partial();
 
+// Authentication middleware - requires valid session
+const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Требуется авторизация" });
+  }
+  
+  const user = await storage.getUser(req.session.userId);
+  if (!user || !user.isActive) {
+    req.session.destroy(() => {});
+    return res.status(401).json({ message: "Сессия недействительна" });
+  }
+  
+  // Attach user to request for downstream use
+  (req as any).user = user;
+  next();
+};
+
+// Role-based access control middleware factory
+const requirePermission = (permission: keyof typeof ROLE_PERMISSIONS.admin) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ message: "Требуется авторизация" });
+    }
+    
+    const userPermissions = ROLE_PERMISSIONS[user.role as UserRole];
+    if (!userPermissions || !userPermissions[permission]) {
+      return res.status(403).json({ message: "Недостаточно прав для выполнения операции" });
+    }
+    
+    next();
+  };
+};
+
+// Admin-only middleware (shortcut)
+const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  const user = (req as any).user;
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ message: "Доступ только для администраторов" });
+  }
+  next();
+};
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
-  app.get(api.events.list.path, async (req, res) => {
+  // Events - Read (requires auth + canViewEvents)
+  app.get(api.events.list.path, requireAuth, requirePermission("canViewEvents"), async (req, res) => {
     try {
       // Manual query param extraction since Zod is used for validation but express query params are strings
       const filters = {
@@ -63,7 +107,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.events.get.path, async (req, res) => {
+  app.get(api.events.get.path, requireAuth, requirePermission("canViewEvents"), async (req, res) => {
     const event = await storage.getEvent(Number(req.params.id));
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
@@ -71,7 +115,8 @@ export async function registerRoutes(
     res.json(event);
   });
 
-  app.post(api.events.create.path, async (req, res) => {
+  // Events - Create (requires auth + canCreateEvents)
+  app.post(api.events.create.path, requireAuth, requirePermission("canCreateEvents"), async (req, res) => {
     try {
       const input = api.events.create.input.parse(req.body);
       const event = await storage.createEvent(input);
@@ -115,7 +160,8 @@ export async function registerRoutes(
     }
   });
 
-  app.patch(api.events.update.path, async (req, res) => {
+  // Events - Update (requires auth + canEditEvents)
+  app.patch(api.events.update.path, requireAuth, requirePermission("canEditEvents"), async (req, res) => {
     try {
       const id = Number(req.params.id);
       const existing = await storage.getEvent(id);
@@ -173,7 +219,8 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.events.delete.path, async (req, res) => {
+  // Events - Delete (requires auth + canDeleteEvents)
+  app.delete(api.events.delete.path, requireAuth, requirePermission("canDeleteEvents"), async (req, res) => {
     const id = Number(req.params.id);
     const existing = await storage.getEvent(id);
     if (!existing) {
@@ -183,24 +230,28 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  app.get(api.events.stats.path, async (req, res) => {
+  // Events stats (requires auth)
+  app.get(api.events.stats.path, requireAuth, async (req, res) => {
     const stats = await storage.getStats();
     res.json(stats);
   });
 
-  app.get("/api/events/:id/comments", async (req, res) => {
+  // Comments - Read (requires auth)
+  app.get("/api/events/:id/comments", requireAuth, async (req, res) => {
     const comments = await storage.getComments(Number(req.params.id));
     res.json(comments);
   });
 
-  app.post("/api/events/:id/comments", async (req, res) => {
+  // Comments - Create (requires auth)
+  app.post("/api/events/:id/comments", requireAuth, async (req, res) => {
     try {
       const eventId = Number(req.params.id);
+      const user = (req as any).user;
       const input = createCommentSchema.parse(req.body);
       const comment = await storage.createComment({
         eventId,
         content: input.content,
-        author: input.author || "Аноним",
+        author: user?.name || input.author || "Аноним",
       });
       res.status(201).json(comment);
     } catch (err) {
@@ -215,18 +266,19 @@ export async function registerRoutes(
   });
 
   // Property Templates API
-  app.get("/api/property-templates", async (req, res) => {
+  // Read - requires auth
+  app.get("/api/property-templates", requireAuth, async (req, res) => {
     const category = req.query.category as string | undefined;
     const templates = await storage.getPropertyTemplates(category);
     res.json(templates);
   });
 
-  app.get("/api/property-templates/next-dimension", async (req, res) => {
+  app.get("/api/property-templates/next-dimension", requireAuth, async (req, res) => {
     const nextDimension = await storage.getNextDimension();
     res.json({ nextDimension });
   });
 
-  app.get("/api/property-templates/:id", async (req, res) => {
+  app.get("/api/property-templates/:id", requireAuth, async (req, res) => {
     const template = await storage.getPropertyTemplate(Number(req.params.id));
     if (!template) {
       return res.status(404).json({ message: "Template not found" });
@@ -234,7 +286,8 @@ export async function registerRoutes(
     res.json(template);
   });
 
-  app.post("/api/property-templates", async (req, res) => {
+  // Create/Update/Delete - requires canManageProperties permission
+  app.post("/api/property-templates", requireAuth, requirePermission("canManageProperties"), async (req, res) => {
     try {
       const input = createPropertyTemplateSchema.parse(req.body);
       const template = await storage.createPropertyTemplate(input);
@@ -250,7 +303,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/property-templates/:id", async (req, res) => {
+  app.patch("/api/property-templates/:id", requireAuth, requirePermission("canManageProperties"), async (req, res) => {
     try {
       const input = updatePropertyTemplateSchema.parse(req.body);
       const template = await storage.updatePropertyTemplate(Number(req.params.id), input);
@@ -266,13 +319,14 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/property-templates/:id", async (req, res) => {
+  app.delete("/api/property-templates/:id", requireAuth, requirePermission("canManageProperties"), async (req, res) => {
     await storage.deletePropertyTemplate(Number(req.params.id));
     res.status(204).send();
   });
 
   // Event Platform Statuses API (version-aware)
-  app.get("/api/events/:eventId/platform-statuses", async (req, res) => {
+  // Read - requires auth
+  app.get("/api/events/:eventId/platform-statuses", requireAuth, async (req, res) => {
     const eventId = Number(req.params.eventId);
     const versionNumber = req.query.version ? Number(req.query.version) : undefined;
     
@@ -287,7 +341,8 @@ export async function registerRoutes(
     res.json(statusesWithHistory);
   });
 
-  app.post("/api/events/:eventId/platform-statuses", async (req, res) => {
+  // Create platform status - requires canChangeStatuses permission
+  app.post("/api/events/:eventId/platform-statuses", requireAuth, requirePermission("canChangeStatuses"), async (req, res) => {
     try {
       const eventId = Number(req.params.eventId);
       
@@ -339,11 +394,13 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/events/:eventId/platform-statuses/:platform", async (req, res) => {
+  // Update platform status - requires canChangeStatuses permission
+  app.patch("/api/events/:eventId/platform-statuses/:platform", requireAuth, requirePermission("canChangeStatuses"), async (req, res) => {
     try {
       const eventId = Number(req.params.eventId);
       const platform = req.params.platform;
       const versionNumber = req.body.versionNumber ? Number(req.body.versionNumber) : undefined;
+      const user = (req as any).user;
       
       // Validate input with Zod
       const validated = updatePlatformStatusSchema.parse(req.body);
@@ -436,7 +493,8 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/events/:eventId/platform-statuses/:platform", async (req, res) => {
+  // Delete platform status - requires canChangeStatuses permission
+  app.delete("/api/events/:eventId/platform-statuses/:platform", requireAuth, requirePermission("canChangeStatuses"), async (req, res) => {
     try {
       const eventId = Number(req.params.eventId);
       const platform = req.params.platform;
@@ -467,21 +525,21 @@ export async function registerRoutes(
     }
   });
 
-  // Status History API
-  app.get("/api/platform-statuses/:statusId/history", async (req, res) => {
+  // Status History API - requires auth
+  app.get("/api/platform-statuses/:statusId/history", requireAuth, async (req, res) => {
     const statusId = Number(req.params.statusId);
     const history = await storage.getStatusHistory(statusId);
     res.json(history);
   });
 
-  // Event Versions API
-  app.get("/api/events/:eventId/versions", async (req, res) => {
+  // Event Versions API - requires auth
+  app.get("/api/events/:eventId/versions", requireAuth, async (req, res) => {
     const eventId = Number(req.params.eventId);
     const versions = await storage.getEventVersions(eventId);
     res.json(versions);
   });
 
-  app.get("/api/events/:eventId/versions/:version", async (req, res) => {
+  app.get("/api/events/:eventId/versions/:version", requireAuth, async (req, res) => {
     const eventId = Number(req.params.eventId);
     const version = Number(req.params.version);
     const eventVersion = await storage.getEventVersion(eventId, version);
@@ -491,7 +549,7 @@ export async function registerRoutes(
     res.json(eventVersion);
   });
 
-  // Analytics API - proxy to Matomo/Piwik analytics
+  // Analytics API - proxy to Matomo/Piwik analytics (requires auth)
   const analyticsQuerySchema = z.object({
     label: z.string().min(1, "Label parameter is required"),
     platform: z.enum(["web", "ios", "android"]).optional(),
@@ -499,7 +557,7 @@ export async function registerRoutes(
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   });
 
-  app.get("/api/analytics/events", async (req, res) => {
+  app.get("/api/analytics/events", requireAuth, async (req, res) => {
     try {
       const validated = analyticsQuerySchema.safeParse(req.query);
       if (!validated.success) {
@@ -585,34 +643,20 @@ export async function registerRoutes(
   });
   
   // Analytics cache stats endpoint (admin only)
-  app.get("/api/analytics/cache-stats", async (req, res) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    const user = await storage.getUser(req.session.userId);
-    if (!user || user.role !== "admin") {
-      return res.status(403).json({ message: "Доступ запрещен" });
-    }
+  app.get("/api/analytics/cache-stats", requireAuth, requireAdmin, async (req, res) => {
     const { analyticsCache } = await import("./analyticsCache");
     res.json(analyticsCache.getStats());
   });
   
   // Clear analytics cache endpoint (admin only)
-  app.post("/api/analytics/clear-cache", async (req, res) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    const user = await storage.getUser(req.session.userId);
-    if (!user || user.role !== "admin") {
-      return res.status(403).json({ message: "Доступ запрещен" });
-    }
+  app.post("/api/analytics/clear-cache", requireAuth, requireAdmin, async (req, res) => {
     const { analyticsCache } = await import("./analyticsCache");
     analyticsCache.clear();
     res.json({ message: "Cache cleared" });
   });
 
-  // Users API
-  app.get(api.users.list.path, async (req, res) => {
+  // Users API - All user management requires admin role (canManageUsers)
+  app.get(api.users.list.path, requireAuth, requirePermission("canManageUsers"), async (req, res) => {
     try {
       const users = await storage.getUsers();
       res.json(users);
@@ -621,7 +665,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.users.get.path, async (req, res) => {
+  app.get(api.users.get.path, requireAuth, requirePermission("canManageUsers"), async (req, res) => {
     const user = await storage.getUser(Number(req.params.id));
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -629,7 +673,7 @@ export async function registerRoutes(
     res.json(user);
   });
 
-  app.post(api.users.create.path, async (req, res) => {
+  app.post(api.users.create.path, requireAuth, requirePermission("canManageUsers"), async (req, res) => {
     try {
       const input = api.users.create.input.parse(req.body);
       
@@ -657,7 +701,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch(api.users.update.path, async (req, res) => {
+  app.patch(api.users.update.path, requireAuth, requirePermission("canManageUsers"), async (req, res) => {
     try {
       const id = Number(req.params.id);
       const existing = await storage.getUser(id);
@@ -696,7 +740,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.users.delete.path, async (req, res) => {
+  app.delete(api.users.delete.path, requireAuth, requirePermission("canManageUsers"), async (req, res) => {
     const id = Number(req.params.id);
     const existing = await storage.getUser(id);
     if (!existing) {
@@ -821,14 +865,14 @@ export async function registerRoutes(
 
   // ============ Plugin Routes ============
 
-  // Get all plugins
-  app.get(api.plugins.list.path, async (req, res) => {
+  // Get all plugins - requires auth
+  app.get(api.plugins.list.path, requireAuth, async (req, res) => {
     const pluginsList = await storage.getPlugins();
     res.json(pluginsList);
   });
 
-  // Get single plugin
-  app.get(api.plugins.get.path, async (req, res) => {
+  // Get single plugin - requires auth
+  app.get(api.plugins.get.path, requireAuth, async (req, res) => {
     const plugin = await storage.getPlugin(req.params.id);
     if (!plugin) {
       return res.status(404).json({ message: "Plugin not found" });
@@ -837,16 +881,8 @@ export async function registerRoutes(
   });
 
   // Update plugin settings (admin only)
-  app.patch(api.plugins.toggle.path, async (req, res) => {
+  app.patch(api.plugins.toggle.path, requireAuth, requireAdmin, async (req, res) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      const user = await storage.getUser(req.session.userId);
-      if (!user || user.role !== "admin") {
-        return res.status(403).json({ message: "Доступ запрещен" });
-      }
-      
       const input = api.plugins.toggle.input.parse(req.body);
       const plugin = await storage.getPlugin(req.params.id);
       if (!plugin) {
