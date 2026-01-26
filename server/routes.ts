@@ -299,6 +299,182 @@ export async function registerRoutes(
     res.json(stats);
   });
 
+  // Events import preview - check for duplicates (requires auth + canCreateEvents)
+  app.post("/api/events/import/preview", requireAuth, requirePermission("canCreateEvents"), async (req, res) => {
+    try {
+      const { events } = req.body as { events: Array<{
+        platforms: string[];
+        block: string;
+        actionDescription: string;
+        category: string;
+        action: string;
+        name: string;
+        valueDescription: string;
+        properties: { name: string; type: string; required: boolean; description: string }[];
+      }> };
+
+      const allEvents = await storage.getEvents({});
+      const newEvents: typeof events = [];
+      const existingEvents: Array<{ parsed: typeof events[0]; existingId: number; existingVersion: number }> = [];
+      const errors: string[] = [];
+
+      for (const event of events) {
+        if (!event.category || !event.action) {
+          errors.push(`Событие без category или action пропущено`);
+          continue;
+        }
+
+        const existing = allEvents.find(
+          e => e.category === event.category && e.action === event.action
+        );
+
+        if (existing) {
+          existingEvents.push({
+            parsed: event,
+            existingId: existing.id,
+            existingVersion: existing.currentVersion || 1
+          });
+        } else {
+          newEvents.push(event);
+        }
+      }
+
+      res.json({ newEvents, existingEvents, errors });
+    } catch (err) {
+      res.status(500).json({ message: "Ошибка при анализе файла" });
+    }
+  });
+
+  // Events import - create/update events (requires auth + canCreateEvents)
+  app.post("/api/events/import", requireAuth, requirePermission("canCreateEvents"), async (req, res) => {
+    try {
+      const { newEvents, updateEvents } = req.body as {
+        newEvents: Array<{
+          platforms: string[];
+          block: string;
+          actionDescription: string;
+          category: string;
+          action: string;
+          name: string;
+          valueDescription: string;
+          properties: { name: string; type: string; required: boolean; description: string }[];
+        }>;
+        updateEvents: Array<{
+          parsed: {
+            platforms: string[];
+            block: string;
+            actionDescription: string;
+            category: string;
+            action: string;
+            name: string;
+            valueDescription: string;
+            properties: { name: string; type: string; required: boolean; description: string }[];
+          };
+          existingId: number;
+        }>;
+      };
+
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      // Create new events
+      for (const event of newEvents) {
+        try {
+          await storage.createEventWithVersionAndStatuses(
+            {
+              category: event.category,
+              action: event.action,
+              name: event.name || null,
+              block: event.block || null,
+              actionDescription: event.actionDescription || null,
+              valueDescription: event.valueDescription || null,
+              platforms: event.platforms,
+              properties: event.properties,
+              owner: null,
+              notes: null,
+              implementationStatus: "черновик",
+              validationStatus: "ожидает_проверки",
+              currentVersion: 1,
+            },
+            {
+              version: 1,
+              category: event.category,
+              action: event.action,
+              name: event.name || null,
+              block: event.block || "",
+              actionDescription: event.actionDescription || "",
+              valueDescription: event.valueDescription || "",
+              platforms: event.platforms,
+              properties: event.properties,
+              owner: null,
+              notes: null,
+              implementationStatus: "черновик",
+              validationStatus: "ожидает_проверки",
+              changeDescription: "Импорт из CSV",
+            },
+            event.platforms
+          );
+          created++;
+        } catch (err) {
+          errors.push(`Ошибка создания ${event.category}/${event.action}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+      // Update existing events
+      for (const { parsed, existingId } of updateEvents) {
+        try {
+          const existing = await storage.getEvent(existingId);
+          if (!existing) {
+            skipped++;
+            continue;
+          }
+
+          const newVersion = (existing.currentVersion || 1) + 1;
+          await storage.updateEventWithVersionAndStatuses(
+            existingId,
+            {
+              category: parsed.category,
+              action: parsed.action,
+              name: parsed.name || null,
+              block: parsed.block || null,
+              actionDescription: parsed.actionDescription || null,
+              valueDescription: parsed.valueDescription || null,
+              platforms: parsed.platforms,
+              properties: parsed.properties,
+              currentVersion: newVersion,
+            },
+            {
+              version: newVersion,
+              category: parsed.category,
+              action: parsed.action,
+              name: parsed.name || null,
+              block: parsed.block || "",
+              actionDescription: parsed.actionDescription || "",
+              valueDescription: parsed.valueDescription || "",
+              platforms: parsed.platforms,
+              properties: parsed.properties,
+              owner: existing.owner,
+              notes: existing.notes,
+              implementationStatus: "черновик",
+              validationStatus: "ожидает_проверки",
+              changeDescription: "Обновление из CSV импорта",
+            },
+            parsed.platforms
+          );
+          updated++;
+        } catch (err) {
+          errors.push(`Ошибка обновления ${parsed.category}/${parsed.action}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+      res.json({ created, updated, skipped, errors });
+    } catch (err) {
+      res.status(500).json({ message: "Ошибка импорта" });
+    }
+  });
+
   // Comments - Read (requires auth)
   app.get("/api/events/:id/comments", requireAuth, async (req, res) => {
     const comments = await storage.getComments(Number(req.params.id));
