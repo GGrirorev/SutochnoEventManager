@@ -370,6 +370,16 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Category</h4>
+                <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.category || "-"}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Action</h4>
+                <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.action || "-"}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
                 <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.name || "-"}</p>
               </div>
