@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEvents, useDeleteEvent, useEventVersions } from "@/hooks/use-events";
+import { useEvents, useDeleteEvent, useEventVersions, useEventPlatformStatuses } from "@/hooks/use-events";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { MatomoCodeGenerator } from "@/plugins/code-generator";
 import { PlatformStatuses } from "@/plugins/platform-statuses";
@@ -123,6 +123,41 @@ function CopyableText({ text, className = "" }: { text: string; className?: stri
         )}
       </button>
     </span>
+  );
+}
+
+function PlatformWithStatus({ eventId, platform, currentVersion }: { eventId: number; platform: string; currentVersion: number }) {
+  const { data: statuses } = useEventPlatformStatuses(eventId);
+  
+  const status = statuses?.find((s: any) => s.platform === platform && s.versionNumber === currentVersion);
+  
+  const getStatusColor = (implStatus?: string) => {
+    switch (implStatus) {
+      case "внедрено": return "bg-green-500";
+      case "в_разработке": return "bg-blue-500";
+      case "черновик": return "bg-gray-400";
+      case "архив": return "bg-gray-300";
+      default: return "bg-gray-400";
+    }
+  };
+  
+  return (
+    <div className="flex items-center gap-1.5">
+      <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px] min-w-[70px]">
+        {getPlatformIcon(platform)}
+        {platform}
+      </Badge>
+      {status && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={`w-2 h-2 rounded-full ${getStatusColor(status.implementationStatus)}`} />
+          </TooltipTrigger>
+          <TooltipContent side="right" className="text-xs">
+            <div>{status.implementationStatus || "черновик"}</div>
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </div>
   );
 }
 
@@ -655,12 +690,23 @@ export default function EventsList() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        {event.platforms?.map((p) => (
-                          <Badge key={p} variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px] min-w-[70px]">
-                            {getPlatformIcon(p)}
-                            {p}
-                          </Badge>
-                        ))}
+                        {isPlatformStatusesEnabled ? (
+                          event.platforms?.map((p) => (
+                            <PlatformWithStatus
+                              key={p}
+                              eventId={event.id}
+                              platform={p}
+                              currentVersion={event.currentVersion || 1}
+                            />
+                          ))
+                        ) : (
+                          event.platforms?.map((p) => (
+                            <Badge key={p} variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px] min-w-[70px]">
+                              {getPlatformIcon(p)}
+                              {p}
+                            </Badge>
+                          ))
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
