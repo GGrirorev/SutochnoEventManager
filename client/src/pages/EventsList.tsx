@@ -126,6 +126,16 @@ function CopyableText({ text, className = "" }: { text: string; className?: stri
   );
 }
 
+const getPlatformIcon = (p: string) => {
+  switch (p) {
+    case 'web': return <Globe className="w-3.5 h-3.5" />;
+    case 'ios': 
+    case 'android': return <Smartphone className="w-3.5 h-3.5" />;
+    case 'backend': return <Server className="w-3.5 h-3.5" />;
+    default: return <Code className="w-3.5 h-3.5" />;
+  }
+};
+
 function PlatformWithStatus({ eventId, platform, currentVersion }: { eventId: number; platform: string; currentVersion: number }) {
   const { data: statuses } = useEventPlatformStatuses(eventId);
   
@@ -533,16 +543,6 @@ export default function EventsList() {
     if (deleteId) {
       await deleteMutation.mutateAsync(deleteId);
       setDeleteId(null);
-    }
-  };
-
-  const getPlatformIcon = (p: string) => {
-    switch (p) {
-      case 'web': return <Globe className="w-3.5 h-3.5" />;
-      case 'ios': 
-      case 'android': return <Smartphone className="w-3.5 h-3.5" />;
-      case 'backend': return <Server className="w-3.5 h-3.5" />;
-      default: return <Code className="w-3.5 h-3.5" />;
     }
   };
 
