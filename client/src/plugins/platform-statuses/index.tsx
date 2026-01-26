@@ -14,7 +14,6 @@ interface PlatformStatusesProps {
   eventId: number;
   platforms: string[];
   displayVersion: number;
-  platformJiraLinks?: Record<string, string>;
 }
 
 interface PlatformStatus {
@@ -52,8 +51,7 @@ function getStatusColor(status: string | undefined): string {
 export function PlatformStatuses({ 
   eventId, 
   platforms, 
-  displayVersion,
-  platformJiraLinks 
+  displayVersion
 }: PlatformStatusesProps) {
   const queryClient = useQueryClient();
 
@@ -106,7 +104,7 @@ export function PlatformStatuses({
       <div className="space-y-3">
         {statusData.map((ps: PlatformStatus) => {
           const p = ps.platform;
-          const jiraLink = ps.jiraLink || platformJiraLinks?.[p];
+          const jiraLink = ps.jiraLink;
           return (
             <div key={p} className="p-3 bg-muted/30 rounded-lg border">
               <div className="flex items-center justify-between mb-2">

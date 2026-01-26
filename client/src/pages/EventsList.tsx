@@ -421,7 +421,6 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
               eventId={event.id}
               platforms={displayData.platforms || []}
               displayVersion={displayVersion}
-              platformJiraLinks={displayData.platformJiraLinks}
             />
           )}
 
