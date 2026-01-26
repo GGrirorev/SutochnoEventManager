@@ -214,6 +214,7 @@ export async function registerRoutes(
           properties: input.properties || [],
           notes: input.notes,
           changeDescription: "Начальная версия",
+          authorId,
         },
         platforms
       );
@@ -241,6 +242,7 @@ export async function registerRoutes(
 
       const { changeDescription, createdBy, ...updateData } = req.body;
       const input = api.events.update.input.parse(updateData);
+      const versionAuthorId = (req as any).user?.id;
       
       // Increment version
       const newVersion = (existing.currentVersion || 1) + 1;
@@ -266,6 +268,7 @@ export async function registerRoutes(
           notes: input.notes,
           changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
           createdBy: createdBy || "Админ",
+          authorId: versionAuthorId,
         },
         platforms
       );
@@ -416,6 +419,7 @@ export async function registerRoutes(
               implementationStatus: "черновик",
               validationStatus: "ожидает_проверки",
               changeDescription: "Импорт из CSV",
+              authorId,
             },
             event.platforms
           );
@@ -463,6 +467,7 @@ export async function registerRoutes(
               implementationStatus: "черновик",
               validationStatus: "ожидает_проверки",
               changeDescription: "Обновление из CSV импорта",
+              authorId,
             },
             parsed.platforms
           );

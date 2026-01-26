@@ -32,6 +32,7 @@ import {
 import { eq, ilike, and, desc, sql } from "drizzle-orm";
 
 export type EventWithAuthor = Event & { authorName?: string | null };
+export type EventVersionWithAuthor = EventVersion & { authorName?: string | null };
 
 export interface IStorage {
   getEvents(filters?: {
@@ -75,8 +76,8 @@ export interface IStorage {
   createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory>;
   
   // Event version operations
-  getEventVersions(eventId: number): Promise<EventVersion[]>;
-  getEventVersion(eventId: number, version: number): Promise<EventVersion | undefined>;
+  getEventVersions(eventId: number): Promise<EventVersionWithAuthor[]>;
+  getEventVersion(eventId: number, version: number): Promise<EventVersionWithAuthor | undefined>;
   createEventVersion(version: InsertEventVersion): Promise<EventVersion>;
   
   // User operations
@@ -356,21 +357,65 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Event version operations
-  async getEventVersions(eventId: number): Promise<EventVersion[]> {
-    return await db.select()
+  async getEventVersions(eventId: number): Promise<EventVersionWithAuthor[]> {
+    return await db.select({
+      id: eventVersions.id,
+      eventId: eventVersions.eventId,
+      version: eventVersions.version,
+      category: eventVersions.category,
+      block: eventVersions.block,
+      action: eventVersions.action,
+      actionDescription: eventVersions.actionDescription,
+      name: eventVersions.name,
+      valueDescription: eventVersions.valueDescription,
+      owner: eventVersions.owner,
+      platforms: eventVersions.platforms,
+      implementationStatus: eventVersions.implementationStatus,
+      validationStatus: eventVersions.validationStatus,
+      properties: eventVersions.properties,
+      notes: eventVersions.notes,
+      changeDescription: eventVersions.changeDescription,
+      createdBy: eventVersions.createdBy,
+      authorId: eventVersions.authorId,
+      authorName: users.name,
+      createdAt: eventVersions.createdAt,
+    })
       .from(eventVersions)
+      .leftJoin(users, eq(eventVersions.authorId, users.id))
       .where(eq(eventVersions.eventId, eventId))
       .orderBy(desc(eventVersions.version));
   }
 
-  async getEventVersion(eventId: number, version: number): Promise<EventVersion | undefined> {
-    const [eventVersion] = await db.select()
+  async getEventVersion(eventId: number, version: number): Promise<EventVersionWithAuthor | undefined> {
+    const [result] = await db.select({
+      id: eventVersions.id,
+      eventId: eventVersions.eventId,
+      version: eventVersions.version,
+      category: eventVersions.category,
+      block: eventVersions.block,
+      action: eventVersions.action,
+      actionDescription: eventVersions.actionDescription,
+      name: eventVersions.name,
+      valueDescription: eventVersions.valueDescription,
+      owner: eventVersions.owner,
+      platforms: eventVersions.platforms,
+      implementationStatus: eventVersions.implementationStatus,
+      validationStatus: eventVersions.validationStatus,
+      properties: eventVersions.properties,
+      notes: eventVersions.notes,
+      changeDescription: eventVersions.changeDescription,
+      createdBy: eventVersions.createdBy,
+      authorId: eventVersions.authorId,
+      authorName: users.name,
+      createdAt: eventVersions.createdAt,
+    })
       .from(eventVersions)
+      .leftJoin(users, eq(eventVersions.authorId, users.id))
       .where(and(
         eq(eventVersions.eventId, eventId),
         eq(eventVersions.version, version)
       ));
-    return eventVersion;
+    return result;
   }
 
   async createEventVersion(version: InsertEventVersion): Promise<EventVersion> {

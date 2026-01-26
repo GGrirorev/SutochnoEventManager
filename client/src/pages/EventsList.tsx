@@ -373,9 +373,15 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
               <p className="text-sm">{displayData.owner || "Не назначен"}</p>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Автор</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Автор начальной версии</h4>
               <p className="text-sm">{event.authorName || "Неизвестен"}</p>
             </div>
+            {displayData.authorName && (
+              <div>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Автор версии</h4>
+                <p className="text-sm">{displayData.authorName}</p>
+              </div>
+            )}
           </div>
 
           {displayData.properties && displayData.properties.length > 0 && (

@@ -267,6 +267,7 @@ export const eventVersions = pgTable("event_versions", {
   
   changeDescription: text("change_description"), // What changed in this version
   createdBy: text("created_by"),
+  authorId: integer("author_id"), // ID of user who created this version
   createdAt: timestamp("created_at").defaultNow(),
 });
 

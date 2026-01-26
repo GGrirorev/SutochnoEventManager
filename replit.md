@@ -70,6 +70,12 @@ The application tracks:
 - Author name is displayed in event details modal alongside "Ответственный" (owner)
 - Author is immutable - set only at creation time
 
+### Version Authorship
+- Each event version has an `authorId` field that stores the ID of the user who created that version
+- When editing an event, the current user becomes the author of the new version
+- UI displays both "Автор начальной версии" (original author) and "Автор версии" (version author)
+- Version author is shown when viewing historical versions
+
 ### User Management System
 Users have four access levels (roles):
 - **viewer** (Только просмотр): Can only view events and properties
