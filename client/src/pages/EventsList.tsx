@@ -223,11 +223,11 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <div className="flex items-center justify-between pr-8">
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <CopyableText text={displayData.category} />
-            <Badge variant="outline">
-              <CopyableText text={displayData.action} />
+          <DialogTitle className="text-2xl flex items-center gap-3">
+            <Badge variant="outline" className="text-base font-normal">
+              <CopyableText text={displayData.category} />
             </Badge>
+            <CopyableText text={displayData.action} />
           </DialogTitle>
           <div className="flex items-center gap-2">
             {/* Version Badge */}
