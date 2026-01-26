@@ -805,6 +805,17 @@ async function seedPlugins() {
       config: {},
     });
   }
+
+  if (!existingIds.includes("comments")) {
+    await storage.upsertPlugin({
+      id: "comments",
+      name: "Комментарии",
+      description: "Система комментариев для обсуждения событий аналитики",
+      version: "1.0.0",
+      isEnabled: true,
+      config: {},
+    });
+  }
 }
 
 async function seedDatabase() {

@@ -3,6 +3,7 @@ import { useEvents, useDeleteEvent, useEventVersions } from "@/hooks/use-events"
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { MatomoCodeGenerator } from "@/plugins/code-generator";
 import { PlatformStatuses } from "@/plugins/platform-statuses";
+import Comments from "@/plugins/comments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
@@ -164,26 +165,17 @@ function VersionBadge({ event }: { event: any }) {
 }
 
 function EventDetailsModal({ event: initialEvent }: { event: any }) {
-  const queryClient = useQueryClient();
-  const [comment, setComment] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const { isEnabled: isCodeGeneratorEnabled } = useIsPluginEnabled("code-generator");
   const { isEnabled: isAnalyticsChartEnabled } = useIsPluginEnabled("analytics-chart");
   const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
+  const { isEnabled: isCommentsEnabled } = useIsPluginEnabled("comments");
 
   // Fetch fresh event data to get updated statuses
   const { data: event = initialEvent } = useQuery({
     queryKey: ["/api/events", initialEvent.id],
     queryFn: async () => {
       const res = await fetch(`/api/events/${initialEvent.id}`);
-      return res.json();
-    }
-  });
-
-  const { data: comments = [] } = useQuery({
-    queryKey: ["/api/events", event.id, "comments"],
-    queryFn: async () => {
-      const res = await fetch(`/api/events/${event.id}/comments`);
       return res.json();
     }
   });
@@ -203,21 +195,6 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
   
   // Use version data if viewing an old version, otherwise use current event data
   const displayData = displayedVersion || event;
-
-  const commentMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const res = await fetch(`/api/events/${event.id}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, author: "Пользователь" })
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events", event.id, "comments"] });
-      setComment("");
-    }
-  });
 
   // Helper function to get status color class
   const getStatusColor = (status: string | null) => {
@@ -432,47 +409,8 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
           {/* Matomo Code Generator Plugin */}
           {isCodeGeneratorEnabled && <MatomoCodeGenerator event={displayData} />}
 
-          <div className="border-t pt-6">
-            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              Комментарии ({comments.length})
-            </h4>
-            
-            <div className="space-y-4 mb-6">
-              {comments.map((c: any) => (
-                <div key={c.id} className="bg-muted/30 p-3 rounded-lg border border-border/50">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-semibold">{c.author}</span>
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {format(new Date(c.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
-                    </span>
-                  </div>
-                  <p className="text-sm text-foreground/90">{c.content}</p>
-                </div>
-              ))}
-              {comments.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Нет комментариев. Будьте первым!</p>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Textarea 
-                placeholder="Оставьте комментарий к событию..." 
-                className="min-h-[80px] text-sm"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-              <Button 
-                size="icon" 
-                className="self-end" 
-                disabled={!comment.trim() || commentMutation.isPending}
-                onClick={() => commentMutation.mutate(comment)}
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+          {/* Comments Plugin */}
+          {isCommentsEnabled && <Comments eventId={event.id} />}
         </TabsContent>
 
         {/* Tab 2: Здоровье */}

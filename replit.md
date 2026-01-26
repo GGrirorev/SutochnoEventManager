@@ -141,6 +141,7 @@ Each plugin is a self-contained folder in `client/src/plugins/<plugin-id>/`:
 - `code-generator` - Generates Matomo tracking code snippets for WEB, iOS, Android platforms
 - `analytics-chart` - Displays event analytics chart for the last 30 days from Matomo
 - `platform-statuses` - Platform implementation and validation status management with history
+- `comments` - Event discussion and commenting system
 
 **Plugin Management UI:**
 - Accessible at `/plugins` (admin-only page)

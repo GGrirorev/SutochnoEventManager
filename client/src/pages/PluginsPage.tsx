@@ -5,13 +5,14 @@ import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Puzzle, Code, Loader2, TrendingUp, Activity } from "lucide-react";
+import { Puzzle, Code, Loader2, TrendingUp, Activity, MessageSquare } from "lucide-react";
 import type { Plugin } from "@shared/schema";
 
 const PLUGIN_ICONS: Record<string, typeof Code> = {
   "code-generator": Code,
   "analytics-chart": TrendingUp,
   "platform-statuses": Activity,
+  "comments": MessageSquare,
 };
 
 export default function PluginsPage() {
