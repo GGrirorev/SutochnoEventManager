@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Loader2, Library, Link2 } from "lucide-react";
+import { Trash2, Plus, Loader2, Library } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EventFormProps {
@@ -90,8 +90,6 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
       name: "",
       valueDescription: "",
       platforms: [],
-      platformJiraLinks: {},
-      platformStatuses: {},
       implementationStatus: "черновик",
       validationStatus: "ожидает_проверки",
       owner: "",
@@ -275,10 +273,6 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                                   field.onChange([...current, p]);
                                 } else {
                                   field.onChange(current.filter((v: string) => v !== p));
-                                  // Remove Jira link when platform is unchecked
-                                  const currentLinks = form.getValues("platformJiraLinks") || {};
-                                  const { [p]: removedLink, ...restLinks } = currentLinks;
-                                  form.setValue("platformJiraLinks", restLinks);
                                 }
                               }}
                             />
@@ -289,26 +283,6 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                               {p}
                             </label>
                           </div>
-                          
-                          {isSelected && (
-                            <div className="ml-6 mt-2">
-                              <div className="flex items-center gap-2">
-                                <Link2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                <Input
-                                  placeholder="Ссылка на задачу Jira (опционально)"
-                                  className="h-8 text-xs"
-                                  value={form.watch("platformJiraLinks")?.[p] || ""}
-                                  onChange={(e) => {
-                                    const currentLinks = form.getValues("platformJiraLinks") || {};
-                                    form.setValue("platformJiraLinks", {
-                                      ...currentLinks,
-                                      [p]: e.target.value
-                                    });
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })}
