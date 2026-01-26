@@ -40,7 +40,9 @@ export interface IStorage {
     category?: string;
     platform?: string;
     status?: string;
-  }): Promise<EventWithAuthor[]>;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean }>;
   getEvent(id: number): Promise<EventWithAuthor | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, updates: UpdateEventRequest): Promise<Event>;
@@ -104,7 +106,9 @@ export class DatabaseStorage implements IStorage {
     category?: string;
     platform?: string;
     status?: string;
-  }): Promise<EventWithAuthor[]> {
+    limit?: number;
+    offset?: number;
+  }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean }> {
     const conditions = [];
 
     if (filters?.search) {
@@ -119,6 +123,17 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(events.implementationStatus, filters.status));
     }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const limit = filters?.limit ?? 50;
+    const offset = filters?.offset ?? 0;
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events)
+      .where(whereClause);
+    
+    const total = countResult?.count ?? 0;
 
     const result = await db.select({
       id: events.id,
@@ -142,10 +157,16 @@ export class DatabaseStorage implements IStorage {
     })
       .from(events)
       .leftJoin(users, eq(events.authorId, users.id))
-      .where(and(...conditions))
-      .orderBy(desc(events.createdAt));
+      .where(whereClause)
+      .orderBy(desc(events.createdAt))
+      .limit(limit)
+      .offset(offset);
     
-    return result;
+    return {
+      events: result,
+      total,
+      hasMore: offset + result.length < total,
+    };
   }
 
   async getEvent(id: number): Promise<EventWithAuthor | undefined> {

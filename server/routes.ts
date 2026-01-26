@@ -172,10 +172,12 @@ export async function registerRoutes(
         category: req.query.category as string | undefined,
         platform: req.query.platform as string | undefined,
         status: req.query.status as string | undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
+        offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
       };
       
-      const events = await storage.getEvents(filters);
-      res.json(events);
+      const result = await storage.getEvents(filters);
+      res.json(result);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch events" });
     }

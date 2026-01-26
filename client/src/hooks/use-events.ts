@@ -1,10 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { api, buildUrl, type CreateEventRequest, type UpdateEventRequest } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import type { EventWithAuthor } from "@shared/schema";
 
 // ============================================
 // DATA FETCHING HOOKS
 // ============================================
+
+const PAGE_SIZE = 50;
+
+interface EventsResponse {
+  events: EventWithAuthor[];
+  total: number;
+  hasMore: boolean;
+}
 
 export function useEvents(filters?: { 
   search?: string; 
@@ -14,22 +23,29 @@ export function useEvents(filters?: {
 }) {
   const queryKey = [api.events.list.path, filters];
   
-  return useQuery({
+  return useInfiniteQuery<EventsResponse>({
     queryKey,
-    queryFn: async () => {
-      // Filter out empty/undefined values to keep URL clean
+    queryFn: async ({ pageParam = 0 }) => {
       const validFilters = Object.fromEntries(
         Object.entries(filters || {}).filter(([_, v]) => v != null && v !== '')
       ) as Record<string, string>;
       
+      const params = new URLSearchParams(validFilters);
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(pageParam));
+      
       const url = buildUrl(api.events.list.path);
-      const queryString = new URLSearchParams(validFilters).toString();
-      const finalUrl = queryString ? `${url}?${queryString}` : url;
+      const finalUrl = `${url}?${params.toString()}`;
       
       const res = await fetch(finalUrl, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch events");
-      return api.events.list.responses[200].parse(await res.json());
+      return res.json() as Promise<EventsResponse>;
     },
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage.hasMore) return undefined;
+      return allPages.length * PAGE_SIZE;
+    },
+    initialPageParam: 0,
   });
 }
 

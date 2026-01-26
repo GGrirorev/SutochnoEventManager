@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useEvents, useDeleteEvent, useEventVersions, useEventPlatformStatuses } from "@/hooks/use-events";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { MatomoCodeGenerator } from "@/plugins/code-generator";
@@ -539,11 +539,43 @@ export default function EventsList() {
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-    const { data: events, isLoading } = useEvents({ 
+    const { 
+    data, 
+    isLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useEvents({ 
     search, 
     platform: platform,
     status: status === "all" ? undefined : status 
   });
+  
+  const events = useMemo(() => {
+    return data?.pages.flatMap(page => page.events) ?? [];
+  }, [data]);
+  
+  const totalCount = data?.pages[0]?.total ?? 0;
+  
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  
+  const handleScroll = useCallback(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    if (scrollHeight - scrollTop - clientHeight < 200 && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+    
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
   
   const deleteMutation = useDeleteEvent();
 
@@ -633,7 +665,7 @@ export default function EventsList() {
 
         {/* Table */}
         <div className="flex-1 overflow-hidden p-6 lg:px-10 pt-4">
-        <div className="rounded-xl border bg-card shadow-sm h-full overflow-auto">
+        <div ref={tableContainerRef} className="rounded-xl border bg-card shadow-sm h-full overflow-auto">
           <Table className="relative">
             <TableHeader className="sticky top-0 z-10">
               <TableRow className="bg-muted">
@@ -770,6 +802,17 @@ export default function EventsList() {
               )}
             </TableBody>
           </Table>
+          {isFetchingNextPage && (
+            <div className="flex items-center justify-center py-4">
+              <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span className="ml-2 text-sm text-muted-foreground">Загрузка...</span>
+            </div>
+          )}
+          {!isLoading && !hasNextPage && events.length > 0 && (
+            <div className="text-center py-4 text-sm text-muted-foreground">
+              Показано {events.length} из {totalCount} событий
+            </div>
+          )}
         </div>
         </div>
 
