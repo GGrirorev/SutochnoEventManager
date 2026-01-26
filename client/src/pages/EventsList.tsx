@@ -632,8 +632,8 @@ export default function EventsList() {
         </div>
 
         {/* Table */}
-        <div className="flex-1 overflow-auto p-6 lg:px-10 pt-4">
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="flex-1 overflow-hidden p-6 lg:px-10 pt-4">
+        <div className="rounded-xl border bg-card shadow-sm h-full overflow-auto">
           <Table>
             <TableHeader className="bg-muted/30 sticky top-0 z-10">
               <TableRow>
