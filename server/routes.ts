@@ -207,8 +207,6 @@ export async function registerRoutes(
         valueDescription: event.valueDescription || "",
         owner: event.owner,
         platforms: event.platforms || [],
-        platformJiraLinks: event.platformJiraLinks || {},
-        platformStatuses: {},
         implementationStatus: "черновик",
         validationStatus: "ожидает_проверки",
         properties: event.properties || [],
@@ -265,8 +263,6 @@ export async function registerRoutes(
         valueDescription: event.valueDescription || "",
         owner: event.owner,
         platforms: event.platforms || [],
-        platformJiraLinks: event.platformJiraLinks || {},
-        platformStatuses: {}, // New version starts with empty/fresh statuses
         implementationStatus: "черновик", // Default for new version
         validationStatus: "ожидает_проверки", // Default for new version
         properties: event.properties || [],
@@ -437,29 +433,14 @@ export async function registerRoutes(
         validationStatus: validated.validationStatus
       });
       
-      // No initial history entries - history starts when user actually changes status
-      
-      // Sync to legacy JSONB field for backwards compatibility
+      // Add platform to event's platforms array if not already there
       const event = await storage.getEvent(eventId);
       if (event) {
-        const platformStatuses = { ...(event.platformStatuses || {}) };
-        const timestamp = new Date().toISOString();
-        platformStatuses[validated.platform] = {
-          implementationStatus: validated.implementationStatus,
-          validationStatus: validated.validationStatus,
-          implementationHistory: [{ status: validated.implementationStatus, timestamp }],
-          validationHistory: [{ status: validated.validationStatus, timestamp }]
-        };
-        const platformJiraLinks = { ...(event.platformJiraLinks || {}) };
-        if (validated.jiraLink) {
-          platformJiraLinks[validated.platform] = validated.jiraLink;
-        }
-        // Ensure platform is in the platforms array
         const platforms = [...(event.platforms || [])];
         if (!platforms.includes(validated.platform)) {
           platforms.push(validated.platform);
+          await storage.updateEvent(eventId, { platforms });
         }
-        await storage.updateEvent(eventId, { platformStatuses, platformJiraLinks, platforms });
       }
       
       res.status(201).json(status);
@@ -517,50 +498,6 @@ export async function registerRoutes(
       
       const status = await storage.updateEventPlatformStatus(existing.id, updates);
       
-      // Sync to legacy JSONB field for backwards compatibility (use already fetched event)
-      if (event) {
-        const platformStatuses = { ...(event.platformStatuses || {}) };
-        const existingPlatformStatus = platformStatuses[platform] || {
-          implementationHistory: [],
-          validationHistory: []
-        };
-        
-        // Add history entry if status changed
-        const implementationHistory = [...(existingPlatformStatus.implementationHistory || [])];
-        const validationHistory = [...(existingPlatformStatus.validationHistory || [])];
-        
-        if (validated.implementationStatus && validated.implementationStatus !== existing.implementationStatus) {
-          implementationHistory.push({
-            status: validated.implementationStatus,
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        if (validated.validationStatus && validated.validationStatus !== existing.validationStatus) {
-          validationHistory.push({
-            status: validated.validationStatus,
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        platformStatuses[platform] = {
-          implementationStatus: validated.implementationStatus || existing.implementationStatus,
-          validationStatus: validated.validationStatus || existing.validationStatus,
-          implementationHistory,
-          validationHistory
-        };
-        const platformJiraLinks = { ...(event.platformJiraLinks || {}) };
-        if (validated.jiraLink !== undefined) {
-          platformJiraLinks[platform] = validated.jiraLink;
-        }
-        // Ensure platform is in the platforms array
-        const platforms = [...(event.platforms || [])];
-        if (!platforms.includes(platform)) {
-          platforms.push(platform);
-        }
-        await storage.updateEvent(eventId, { platformStatuses, platformJiraLinks, platforms });
-      }
-      
       res.json(status);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Failed to update platform status" });
@@ -581,16 +518,11 @@ export async function registerRoutes(
       // Delete the platform status (this will cascade delete history via foreign key or we handle it)
       await storage.deletePlatformStatus(existing.id);
       
-      // Sync to legacy JSONB field for backwards compatibility
+      // Update the platforms array to remove this platform
       const event = await storage.getEvent(eventId);
       if (event) {
-        const platformStatuses = { ...(event.platformStatuses || {}) };
-        delete platformStatuses[platform];
-        const platformJiraLinks = { ...(event.platformJiraLinks || {}) };
-        delete platformJiraLinks[platform];
-        // Also update the platforms array to remove this platform
         const platforms = (event.platforms || []).filter(p => p !== platform);
-        await storage.updateEvent(eventId, { platformStatuses, platformJiraLinks, platforms });
+        await storage.updateEvent(eventId, { platforms });
       }
       
       res.status(204).send();
