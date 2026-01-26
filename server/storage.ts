@@ -31,14 +31,16 @@ import {
 } from "@shared/schema";
 import { eq, ilike, and, desc, sql } from "drizzle-orm";
 
+export type EventWithAuthor = Event & { authorName?: string | null };
+
 export interface IStorage {
   getEvents(filters?: {
     search?: string;
     category?: string;
     platform?: string;
     status?: string;
-  }): Promise<Event[]>;
-  getEvent(id: number): Promise<Event | undefined>;
+  }): Promise<EventWithAuthor[]>;
+  getEvent(id: number): Promise<EventWithAuthor | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, updates: UpdateEventRequest): Promise<Event>;
   deleteEvent(id: number): Promise<void>;
@@ -101,7 +103,7 @@ export class DatabaseStorage implements IStorage {
     category?: string;
     platform?: string;
     status?: string;
-  }): Promise<Event[]> {
+  }): Promise<EventWithAuthor[]> {
     const conditions = [];
 
     if (filters?.search) {
@@ -117,14 +119,58 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(events.implementationStatus, filters.status));
     }
 
-    return await db.select()
+    const result = await db.select({
+      id: events.id,
+      category: events.category,
+      block: events.block,
+      action: events.action,
+      actionDescription: events.actionDescription,
+      name: events.name,
+      valueDescription: events.valueDescription,
+      owner: events.owner,
+      authorId: events.authorId,
+      authorName: users.name,
+      platforms: events.platforms,
+      implementationStatus: events.implementationStatus,
+      validationStatus: events.validationStatus,
+      properties: events.properties,
+      notes: events.notes,
+      currentVersion: events.currentVersion,
+      createdAt: events.createdAt,
+      updatedAt: events.updatedAt,
+    })
       .from(events)
+      .leftJoin(users, eq(events.authorId, users.id))
       .where(and(...conditions))
       .orderBy(desc(events.createdAt));
+    
+    return result;
   }
 
-  async getEvent(id: number): Promise<Event | undefined> {
-    const [event] = await db.select().from(events).where(eq(events.id, id));
+  async getEvent(id: number): Promise<EventWithAuthor | undefined> {
+    const [event] = await db.select({
+      id: events.id,
+      category: events.category,
+      block: events.block,
+      action: events.action,
+      actionDescription: events.actionDescription,
+      name: events.name,
+      valueDescription: events.valueDescription,
+      owner: events.owner,
+      authorId: events.authorId,
+      authorName: users.name,
+      platforms: events.platforms,
+      implementationStatus: events.implementationStatus,
+      validationStatus: events.validationStatus,
+      properties: events.properties,
+      notes: events.notes,
+      currentVersion: events.currentVersion,
+      createdAt: events.createdAt,
+      updatedAt: events.updatedAt,
+    })
+      .from(events)
+      .leftJoin(users, eq(events.authorId, users.id))
+      .where(eq(events.id, id));
     return event;
   }
 

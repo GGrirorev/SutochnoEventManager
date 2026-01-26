@@ -194,10 +194,11 @@ export async function registerRoutes(
     try {
       const input = api.events.create.input.parse(req.body);
       const platforms = input.platforms || [];
+      const authorId = (req as any).user?.id;
       
       // Atomic transaction: create event + version + platform statuses
       const event = await storage.createEventWithVersionAndStatuses(
-        input,
+        { ...input, authorId },
         {
           version: 1,
           category: input.category,
@@ -378,6 +379,7 @@ export async function registerRoutes(
       let updated = 0;
       let skipped = 0;
       const errors: string[] = [];
+      const authorId = (req as any).user?.id;
 
       // Create new events
       for (const event of newEvents) {
@@ -393,6 +395,7 @@ export async function registerRoutes(
               platforms: event.platforms,
               properties: event.properties,
               owner: null,
+              authorId,
               notes: null,
               implementationStatus: "черновик",
               validationStatus: "ожидает_проверки",

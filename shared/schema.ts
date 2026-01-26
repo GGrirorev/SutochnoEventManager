@@ -119,6 +119,7 @@ export const events = pgTable("events", {
   valueDescription: text("value_description").default(""), // Event Value Description (Text)
   
   owner: text("owner"), 
+  authorId: integer("author_id"),
   platforms: text("platforms").array().notNull().default(sql`ARRAY[]::text[]`),
   
   // Legacy global statuses (kept for display, actual statuses in event_platform_statuses table)

@@ -57,12 +57,18 @@ This prevents "half-baked" data if any operation fails mid-way.
 
 ### Data Model
 The application tracks:
-- **Events**: Analytics events with category, action, name, description, and properties
+- **Events**: Analytics events with category, action, name, description, properties, owner (responsible person), and author (who created the event)
 - **Event Versions**: Snapshots of event state at each edit, enabling full version history
 - **Event Platform Statuses**: Per-platform implementation and validation statuses with history
 - **Property Templates**: Reusable property definitions that can be applied to events
 - **Comments**: Discussion threads attached to events
 - **Users**: User accounts with role-based access control
+
+### Event Authorship
+- Each event has an `authorId` field that stores the ID of the user who created it
+- Author is automatically set when creating events (both manually and via CSV import)
+- Author name is displayed in event details modal alongside "Ответственный" (owner)
+- Author is immutable - set only at creation time
 
 ### User Management System
 Users have four access levels (roles):
