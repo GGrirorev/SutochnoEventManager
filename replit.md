@@ -57,12 +57,20 @@ This prevents "half-baked" data if any operation fails mid-way.
 
 ### Data Model
 The application tracks:
-- **Events**: Analytics events with category, action, name, description, properties, owner (responsible person), and author (who created the event)
+- **Event Categories**: Separate table for categories (event_categories) with auto-creation on event creation
+- **Events**: Analytics events with categoryId (FK), action, name, description, properties, owner (responsible person), and author (who created the event)
 - **Event Versions**: Snapshots of event state at each edit, enabling full version history
 - **Event Platform Statuses**: Per-platform implementation and validation statuses with history
 - **Property Templates**: Reusable property definitions that can be applied to events
 - **Comments**: Discussion threads attached to events
 - **Users**: User accounts with role-based access control
+
+### Category Management
+- Categories are stored in a separate `event_categories` table with id, name, createdAt
+- Events reference categories via `categoryId` foreign key
+- API accepts `category` as string and auto-creates new categories via `getOrCreateCategory()`
+- Frontend EventForm has autocomplete using HTML datalist with existing category names
+- Categories API: GET /api/categories returns all categories, POST /api/categories creates new category
 
 ### Event Authorship
 - Each event has an `authorId` field that stores the ID of the user who created it

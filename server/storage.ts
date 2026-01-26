@@ -6,6 +6,7 @@ import {
   eventPlatformStatuses,
   statusHistory,
   eventVersions,
+  eventCategories,
   users,
   plugins,
   type Event,
@@ -22,6 +23,8 @@ import {
   type InsertStatusHistory,
   type EventVersion,
   type InsertEventVersion,
+  type EventCategory,
+  type InsertEventCategory,
   type User,
   type InsertUser,
   type Plugin,
@@ -31,7 +34,7 @@ import {
 } from "@shared/schema";
 import { eq, ilike, and, desc, sql } from "drizzle-orm";
 
-export type EventWithAuthor = Event & { authorName?: string | null };
+export type EventWithAuthor = Event & { authorName?: string | null; category?: string };
 export type EventVersionWithAuthor = EventVersion & { authorName?: string | null };
 
 export interface IStorage {
@@ -98,6 +101,12 @@ export interface IStorage {
   updatePluginEnabled(id: string, isEnabled: boolean): Promise<Plugin>;
   updatePluginConfig(id: string, config: any): Promise<Plugin>;
   deletePlugin(id: string): Promise<void>;
+  
+  // Category operations
+  getCategories(): Promise<EventCategory[]>;
+  getCategoryByName(name: string): Promise<EventCategory | undefined>;
+  createCategory(category: InsertEventCategory): Promise<EventCategory>;
+  getOrCreateCategory(name: string): Promise<EventCategory>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -115,7 +124,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(ilike(events.name, `%${filters.search}%`));
     }
     if (filters?.category) {
-      conditions.push(eq(events.category, filters.category));
+      conditions.push(eq(eventCategories.name, filters.category));
     }
     if (filters?.platform) {
       conditions.push(sql`${events.platforms} @> ARRAY[${filters.platform}]::text[]`);
@@ -131,13 +140,15 @@ export class DatabaseStorage implements IStorage {
     const [countResult] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(events)
+      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
       .where(whereClause);
     
     const total = countResult?.count ?? 0;
 
     const result = await db.select({
       id: events.id,
-      category: events.category,
+      categoryId: events.categoryId,
+      category: eventCategories.name,
       block: events.block,
       action: events.action,
       actionDescription: events.actionDescription,
@@ -157,6 +168,7 @@ export class DatabaseStorage implements IStorage {
     })
       .from(events)
       .leftJoin(users, eq(events.authorId, users.id))
+      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
       .where(whereClause)
       .orderBy(desc(events.createdAt))
       .limit(limit)
@@ -172,7 +184,8 @@ export class DatabaseStorage implements IStorage {
   async getEvent(id: number): Promise<EventWithAuthor | undefined> {
     const [event] = await db.select({
       id: events.id,
-      category: events.category,
+      categoryId: events.categoryId,
+      category: eventCategories.name,
       block: events.block,
       action: events.action,
       actionDescription: events.actionDescription,
@@ -192,6 +205,7 @@ export class DatabaseStorage implements IStorage {
     })
       .from(events)
       .leftJoin(users, eq(events.authorId, users.id))
+      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
       .where(eq(events.id, id));
     return event;
   }
@@ -378,12 +392,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Event version operations
-  async getEventVersions(eventId: number): Promise<EventVersionWithAuthor[]> {
+  async getEventVersions(eventId: number): Promise<(EventVersionWithAuthor & { category?: string })[]> {
     return await db.select({
       id: eventVersions.id,
       eventId: eventVersions.eventId,
       version: eventVersions.version,
-      category: eventVersions.category,
+      categoryId: eventVersions.categoryId,
+      category: eventCategories.name,
       block: eventVersions.block,
       action: eventVersions.action,
       actionDescription: eventVersions.actionDescription,
@@ -402,16 +417,18 @@ export class DatabaseStorage implements IStorage {
     })
       .from(eventVersions)
       .leftJoin(users, eq(eventVersions.authorId, users.id))
+      .leftJoin(eventCategories, eq(eventVersions.categoryId, eventCategories.id))
       .where(eq(eventVersions.eventId, eventId))
       .orderBy(desc(eventVersions.version));
   }
 
-  async getEventVersion(eventId: number, version: number): Promise<EventVersionWithAuthor | undefined> {
+  async getEventVersion(eventId: number, version: number): Promise<(EventVersionWithAuthor & { category?: string }) | undefined> {
     const [result] = await db.select({
       id: eventVersions.id,
       eventId: eventVersions.eventId,
       version: eventVersions.version,
-      category: eventVersions.category,
+      categoryId: eventVersions.categoryId,
+      category: eventCategories.name,
       block: eventVersions.block,
       action: eventVersions.action,
       actionDescription: eventVersions.actionDescription,
@@ -430,6 +447,7 @@ export class DatabaseStorage implements IStorage {
     })
       .from(eventVersions)
       .leftJoin(users, eq(eventVersions.authorId, users.id))
+      .leftJoin(eventCategories, eq(eventVersions.categoryId, eventCategories.id))
       .where(and(
         eq(eventVersions.eventId, eventId),
         eq(eventVersions.version, version)
@@ -526,19 +544,36 @@ export class DatabaseStorage implements IStorage {
     await db.delete(plugins).where(eq(plugins.id, id));
   }
 
+  // Helper function to get or create category within a transaction
+  private async getOrCreateCategoryTx(tx: any, name: string): Promise<EventCategory> {
+    const [existing] = await tx.select().from(eventCategories).where(eq(eventCategories.name, name));
+    if (existing) return existing;
+    const [newCategory] = await tx.insert(eventCategories).values({ name }).returning();
+    return newCategory;
+  }
+
   // Transactional operations for atomic multi-step operations
   async createEventWithVersionAndStatuses(
-    insertEvent: InsertEvent,
+    insertEvent: any,
     versionData: Omit<InsertEventVersion, 'eventId'>,
-    platforms: string[]
+    platforms: string[],
+    categoryName?: string
   ): Promise<Event> {
     return await db.transaction(async (tx) => {
+      // Step 0: Create or get category within transaction (if categoryName provided)
+      let categoryId = insertEvent.categoryId;
+      if (categoryName) {
+        const category = await this.getOrCreateCategoryTx(tx, categoryName);
+        categoryId = category.id;
+      }
+      
       // Step 1: Create event
-      const [event] = await tx.insert(events).values(insertEvent).returning();
+      const [event] = await tx.insert(events).values({ ...insertEvent, categoryId }).returning();
       
       // Step 2: Create initial version
       await tx.insert(eventVersions).values({
         ...versionData,
+        categoryId,
         eventId: event.id,
       });
       
@@ -559,20 +594,29 @@ export class DatabaseStorage implements IStorage {
 
   async updateEventWithVersionAndStatuses(
     id: number,
-    updates: UpdateEventRequest,
+    updates: any,
     versionData: Omit<InsertEventVersion, 'eventId'>,
-    platforms: string[]
+    platforms: string[],
+    categoryName?: string
   ): Promise<Event> {
     return await db.transaction(async (tx) => {
+      // Step 0: Create or get category within transaction (if categoryName provided)
+      let categoryId = updates.categoryId;
+      if (categoryName) {
+        const category = await this.getOrCreateCategoryTx(tx, categoryName);
+        categoryId = category.id;
+      }
+      
       // Step 1: Update event
       const [event] = await tx.update(events)
-        .set({ ...updates, updatedAt: new Date() })
+        .set({ ...updates, categoryId, updatedAt: new Date() })
         .where(eq(events.id, id))
         .returning();
       
       // Step 2: Create new version snapshot
       await tx.insert(eventVersions).values({
         ...versionData,
+        categoryId,
         eventId: event.id,
       });
       
@@ -615,6 +659,31 @@ export class DatabaseStorage implements IStorage {
       // Step 5: Delete event
       await tx.delete(events).where(eq(events.id, id));
     });
+  }
+
+  // Category operations
+  async getCategories(): Promise<EventCategory[]> {
+    return db.select().from(eventCategories).orderBy(eventCategories.name);
+  }
+
+  async getCategoryByName(name: string): Promise<EventCategory | undefined> {
+    const [category] = await db.select()
+      .from(eventCategories)
+      .where(eq(eventCategories.name, name));
+    return category;
+  }
+
+  async createCategory(category: InsertEventCategory): Promise<EventCategory> {
+    const [newCategory] = await db.insert(eventCategories)
+      .values(category)
+      .returning();
+    return newCategory;
+  }
+
+  async getOrCreateCategory(name: string): Promise<EventCategory> {
+    const existing = await this.getCategoryByName(name);
+    if (existing) return existing;
+    return this.createCategory({ name });
   }
 }
 

@@ -109,9 +109,24 @@ export type PlatformStatus = {
 // Type for platform statuses object
 export type PlatformStatuses = Record<string, PlatformStatus>;
 
+// Event Categories table
+export const eventCategories = pgTable("event_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEventCategorySchema = createInsertSchema(eventCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type EventCategory = typeof eventCategories.$inferSelect;
+export type InsertEventCategory = z.infer<typeof insertEventCategorySchema>;
+
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
-  category: text("category").notNull(), // Event Category (Required)
+  categoryId: integer("category_id").notNull(), // Foreign key to event_categories
   block: text("block").default(""), // Block - where on the page the event occurs
   action: text("action").notNull(), // Event Action (Required)
   actionDescription: text("action_description").notNull().default(""), // Description for Event Action
@@ -247,7 +262,7 @@ export const eventVersions = pgTable("event_versions", {
   version: integer("version").notNull(), // v1, v2, v3...
   
   // Snapshot of event data at this version
-  category: text("category").notNull(),
+  categoryId: integer("category_id").notNull(), // Foreign key to event_categories
   block: text("block").default(""),
   action: text("action").notNull(),
   actionDescription: text("action_description").notNull().default(""),
@@ -278,13 +293,20 @@ export const insertEventVersionSchema = createInsertSchema(eventVersions).omit({
 export type EventVersion = typeof eventVersions.$inferSelect;
 export type InsertEventVersion = z.infer<typeof insertEventVersionSchema>;
 
-export const insertEventSchema = createInsertSchema(events).omit({ 
+// Base schema from events table, omitting auto-generated fields
+const baseInsertEventSchema = createInsertSchema(events).omit({ 
   id: true, 
   createdAt: true, 
-  updatedAt: true 
+  updatedAt: true,
+  categoryId: true, // categoryId is set server-side from category string
 });
 
-export type Event = typeof events.$inferSelect;
+// Client sends "category" string, server converts to categoryId
+export const insertEventSchema = baseInsertEventSchema.extend({
+  category: z.string().min(1, "Event Category обязательна"),
+});
+
+export type Event = typeof events.$inferSelect & { category?: string };
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 
 export type CreateEventRequest = InsertEvent;

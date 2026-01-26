@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { insertEventSchema, PLATFORMS, type InsertEvent, type PropertyTemplate } from "@shared/schema";
+import { insertEventSchema, PLATFORMS, type InsertEvent, type PropertyTemplate, type EventCategory } from "@shared/schema";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,6 +79,17 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
       return res.json();
     }
   });
+  
+  // Fetch categories for autocomplete
+  const { data: categories = [] } = useQuery<EventCategory[]>({
+    queryKey: ["/api/categories"],
+    queryFn: async () => {
+      const res = await fetch("/api/categories");
+      return res.json();
+    }
+  });
+  
+  const categoryNames = useMemo(() => categories.map(c => c.name), [categories]);
   
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -157,7 +168,20 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                   <FormItem>
                     <FormLabel>Event Category *</FormLabel>
                     <FormControl>
-                      <Input placeholder="например, Авторизация" data-testid="input-event-category" {...field} />
+                      <>
+                        <Input 
+                          placeholder="например, Авторизация" 
+                          data-testid="input-event-category" 
+                          list="category-suggestions"
+                          autoComplete="off"
+                          {...field} 
+                        />
+                        <datalist id="category-suggestions">
+                          {categoryNames.map((name) => (
+                            <option key={name} value={name} />
+                          ))}
+                        </datalist>
+                      </>
                     </FormControl>
                     <FormDescription>Верхнеуровневая категория событий.</FormDescription>
                     <FormMessage />

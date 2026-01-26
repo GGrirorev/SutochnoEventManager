@@ -163,6 +163,29 @@ export async function registerRoutes(
   // Apply CSRF protection globally for all state-changing requests
   app.use(csrfProtection);
   
+  // Categories API
+  app.get("/api/categories", requireAuth, async (req, res) => {
+    try {
+      const categories = await storage.getCategories();
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/categories", requireAuth, requirePermission("canCreateEvents"), async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ message: "Category name is required" });
+      }
+      const category = await storage.getOrCreateCategory(name.trim());
+      res.json(category);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+  
   // Events - Read (requires auth + canViewEvents)
   app.get(api.events.list.path, requireAuth, requirePermission("canViewEvents"), async (req, res) => {
     try {
@@ -194,16 +217,22 @@ export async function registerRoutes(
   // Events - Create (requires auth + canCreateEvents)
   app.post(api.events.create.path, requireAuth, requirePermission("canCreateEvents"), async (req, res) => {
     try {
-      const input = api.events.create.input.parse(req.body);
+      const { category: categoryName, ...inputData } = req.body;
+      const input = api.events.create.input.parse({ ...inputData, category: categoryName });
       const platforms = input.platforms || [];
       const authorId = (req as any).user?.id;
       
-      // Atomic transaction: create event + version + platform statuses
+      // Validate category name
+      const trimmedCategoryName = (categoryName || "").trim();
+      if (!trimmedCategoryName) {
+        return res.status(400).json({ message: "Event Category обязательна", field: "category" });
+      }
+      
+      // Atomic transaction: create category + event + version + platform statuses
       const event = await storage.createEventWithVersionAndStatuses(
-        { ...input, authorId },
+        { ...inputData, authorId },
         {
           version: 1,
-          category: input.category,
           block: input.block || "",
           action: input.action,
           actionDescription: input.actionDescription || "",
@@ -218,7 +247,8 @@ export async function registerRoutes(
           changeDescription: "Начальная версия",
           authorId,
         },
-        platforms
+        platforms,
+        trimmedCategoryName
       );
       
       res.status(201).json(event);
@@ -242,21 +272,26 @@ export async function registerRoutes(
         return res.status(404).json({ message: 'Event not found' });
       }
 
-      const { changeDescription, ...updateData } = req.body;
-      const input = api.events.update.input.parse(updateData);
+      const { changeDescription, category: categoryName, ...updateData } = req.body;
+      const input = api.events.update.input.parse({ ...updateData, category: categoryName });
       const versionAuthorId = (req as any).user?.id;
+      
+      // Validate category name
+      const trimmedCategoryName = (categoryName || "").trim();
+      if (!trimmedCategoryName) {
+        return res.status(400).json({ message: "Event Category обязательна", field: "category" });
+      }
       
       // Increment version
       const newVersion = (existing.currentVersion || 1) + 1;
       const platforms = input.platforms || [];
       
-      // Atomic transaction: update event + create version + platform statuses
+      // Atomic transaction: update category + event + version + platform statuses
       const event = await storage.updateEventWithVersionAndStatuses(
         id,
-        { ...input, currentVersion: newVersion },
+        { ...updateData, currentVersion: newVersion },
         {
           version: newVersion,
-          category: input.category,
           block: input.block || "",
           action: input.action,
           actionDescription: input.actionDescription || "",
@@ -271,7 +306,8 @@ export async function registerRoutes(
           changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
           authorId: versionAuthorId,
         },
-        platforms
+        platforms,
+        trimmedCategoryName
       );
       
       res.json(event);
@@ -1149,19 +1185,18 @@ async function seedPlugins() {
 
 async function seedDatabase() {
   const existing = await storage.getEvents();
-  if (existing.length > 0) return;
+  if (existing.events.length > 0) return;
 
   const sampleEvents = [
     {
-      category: "Авторизация",
+      categoryName: "Авторизация",
       action: "finish_signup",
       actionDescription: "Пользователь успешно завершил процесс регистрации, заполнив все поля",
       name: "signup_completed",
-      value: 1,
       valueDescription: "Количество успешных регистраций",
       platforms: ["все"],
-      implementationStatus: "внедрено",
-      validationStatus: "корректно",
+      implementationStatus: "внедрено" as const,
+      validationStatus: "корректно" as const,
       owner: "Команда Авторизации",
       properties: [
         { name: "userId", type: "string", required: true, description: "Уникальный идентификатор пользователя" },
@@ -1170,15 +1205,14 @@ async function seedDatabase() {
       ]
     },
     {
-      category: "E-commerce",
+      categoryName: "E-commerce",
       action: "click_checkout",
       actionDescription: "Нажатие на кнопку оформления заказа в корзине",
       name: "checkout_started",
-      value: 100,
       valueDescription: "Предварительная стоимость корзины",
       platforms: ["web", "ios", "android"],
-      implementationStatus: "в_разработке",
-      validationStatus: "ожидает_проверки",
+      implementationStatus: "в_разработке" as const,
+      validationStatus: "ожидает_проверки" as const,
       owner: "Команда Оформления",
       properties: [
         { name: "cartValue", type: "number", required: true, description: "Общая стоимость корзины" },
@@ -1186,15 +1220,14 @@ async function seedDatabase() {
       ]
     },
     {
-      category: "Стабильность",
+      categoryName: "Стабильность",
       action: "crash",
       actionDescription: "Автоматическое событие при возникновении критического исключения",
       name: "app_crashed",
-      value: -1,
       valueDescription: "Код ошибки",
       platforms: ["ios", "android"],
-      implementationStatus: "внедрено",
-      validationStatus: "ошибка",
+      implementationStatus: "внедрено" as const,
+      validationStatus: "ошибка" as const,
       owner: "Платформенная команда",
       notes: "В данный момент отсутствует свойство stack trace в продакшене",
       properties: [
@@ -1205,7 +1238,11 @@ async function seedDatabase() {
   ];
 
   for (const event of sampleEvents) {
-    // @ts-ignore
-    await storage.createEvent(event);
+    const { categoryName, ...eventData } = event;
+    const category = await storage.getOrCreateCategory(categoryName);
+    await storage.createEvent({
+      ...eventData,
+      categoryId: category.id
+    });
   }
 }
