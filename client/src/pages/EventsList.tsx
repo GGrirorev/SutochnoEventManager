@@ -567,8 +567,8 @@ export default function EventsList() {
   return (
     <div className="flex min-h-screen bg-muted/5">
       <Sidebar />
-      <main className="flex-1 md:ml-64 p-6 lg:p-10 space-y-6">
-        
+      <main className="flex-1 md:ml-64 flex flex-col h-screen overflow-hidden">
+        <div className="p-6 lg:p-10 pb-0 space-y-6">
         {/* Header Area */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -629,11 +629,13 @@ export default function EventsList() {
             )}
           </div>
         </div>
+        </div>
 
         {/* Table */}
+        <div className="flex-1 overflow-auto p-6 lg:px-10 pt-4">
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <Table>
-            <TableHeader className="bg-muted/30">
+            <TableHeader className="bg-muted/30 sticky top-0 z-10">
               <TableRow>
                 <TableHead>Event Category</TableHead>
                 <TableHead>Блок</TableHead>
@@ -768,6 +770,7 @@ export default function EventsList() {
               )}
             </TableBody>
           </Table>
+        </div>
         </div>
 
         {/* Create/Edit Sheet */}
