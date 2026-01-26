@@ -445,6 +445,9 @@ export default function EventsList() {
   const [status, setStatus] = useState<string>("all");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   
+  // Check if platform statuses plugin is enabled
+  const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
+  
   // Sheet state for creating/editing
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -531,20 +534,22 @@ export default function EventsList() {
               </SelectContent>
             </Select>
 
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-[180px] border-none bg-muted/50">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                   <Filter className="w-4 h-4" />
-                   <SelectValue placeholder="Статус" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все статусы</SelectItem>
-                {IMPLEMENTATION_STATUS.map(s => (
-                  <SelectItem key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isPlatformStatusesEnabled && (
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="w-[180px] border-none bg-muted/50">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                     <Filter className="w-4 h-4" />
+                     <SelectValue placeholder="Статус" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  {IMPLEMENTATION_STATUS.map(s => (
+                    <SelectItem key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
 
@@ -558,7 +563,7 @@ export default function EventsList() {
                 <TableHead>Event Action</TableHead>
                 <TableHead className="w-[200px]">Event Name</TableHead>
                 <TableHead>Event Value</TableHead>
-                <TableHead>Платформы и статусы</TableHead>
+                <TableHead>{isPlatformStatusesEnabled ? "Платформы и статусы" : "Платформы"}</TableHead>
                 <TableHead className="w-[60px]">Версия</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -634,7 +639,7 @@ export default function EventsList() {
                                 {getPlatformIcon(p)}
                                 {p}
                               </Badge>
-                              {platformStatus && (
+                              {isPlatformStatusesEnabled && platformStatus && (
                                 <div className="flex gap-0.5">
                                   <StatusBadge status={platformStatus.implementationStatus} size="sm" />
                                   <StatusBadge status={platformStatus.validationStatus} size="sm" />

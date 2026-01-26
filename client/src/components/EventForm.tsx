@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { insertEventSchema, IMPLEMENTATION_STATUS, PLATFORMS, VALIDATION_STATUS, type InsertEvent, type PropertyTemplate, type PlatformStatuses, type PlatformStatus } from "@shared/schema";
-import { useCreateEvent, useUpdateEvent, useCreatePlatformStatus, useUpdatePlatformStatus, useDeletePlatformStatus, useEventPlatformStatuses } from "@/hooks/use-events";
+import { insertEventSchema, PLATFORMS, type InsertEvent, type PropertyTemplate } from "@shared/schema";
+import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,48 +62,15 @@ const storageFormatToType: Record<string, string> = {
   "объект": "object"
 };
 
-// Helper to create default platform status
-const createDefaultPlatformStatus = (): PlatformStatus => ({
-  implementationStatus: "черновик",
-  validationStatus: "ожидает_проверки",
-  implementationHistory: [{ status: "черновик", timestamp: new Date().toISOString() }],
-  validationHistory: [{ status: "ожидает_проверки", timestamp: new Date().toISOString() }]
-});
-
-// Helper to update platform status with history
-const updatePlatformStatus = (
-  currentStatus: PlatformStatus | undefined,
-  statusType: "implementationStatus" | "validationStatus",
-  newStatus: string
-): PlatformStatus => {
-  const base = currentStatus || createDefaultPlatformStatus();
-  const historyKey = statusType === "implementationStatus" ? "implementationHistory" : "validationHistory";
-  
-  return {
-    ...base,
-    [statusType]: newStatus,
-    [historyKey]: [
-      ...base[historyKey],
-      { status: newStatus, timestamp: new Date().toISOString() }
-    ]
-  };
-};
-
 export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
   const queryClient = useQueryClient();
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
-  const createPlatformStatusMutation = useCreatePlatformStatus();
-  const updatePlatformStatusMutation = useUpdatePlatformStatus();
-  const deletePlatformStatusMutation = useDeletePlatformStatus();
   
   // State for version confirmation dialog
   const [showVersionConfirm, setShowVersionConfirm] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<InsertEvent | null>(null);
   const [changeDescription, setChangeDescription] = useState("");
-  
-  // Fetch existing platform statuses when editing
-  const { data: existingPlatformStatuses = [], refetch: refetchPlatformStatuses } = useEventPlatformStatuses(initialData?.id || 0);
 
   const { data: propertyTemplates = [] } = useQuery<PropertyTemplate[]>({
     queryKey: ["/api/property-templates"],
@@ -138,7 +105,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
     name: "properties" as never, // Typings for dynamic jsonb are tricky with Zod
   });
 
-  const isPending = createMutation.isPending || updateMutation.isPending || createPlatformStatusMutation.isPending || updatePlatformStatusMutation.isPending || deletePlatformStatusMutation.isPending;
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   // Handler that's triggered by form submission
   const onSubmit = async (data: InsertEvent) => {
@@ -296,10 +263,9 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                   <div className="space-y-3 pt-1">
                     {PLATFORMS.map((p) => {
                       const isSelected = field.value?.includes(p);
-                      const platformStatus = form.watch("platformStatuses")?.[p];
                       return (
                         <div key={p} className={`p-3 rounded-lg border transition-colors ${isSelected ? 'bg-primary/5 border-primary/30' : 'bg-muted/30 border-transparent'}`}>
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="flex items-center gap-3">
                             <Checkbox
                               id={`platform-${p}`}
                               checked={isSelected}
@@ -307,23 +273,12 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                                 const current = field.value || [];
                                 if (checked) {
                                   field.onChange([...current, p]);
-                                  // Initialize platform status
-                                  const currentStatuses = form.getValues("platformStatuses") || {};
-                                  if (!currentStatuses[p]) {
-                                    form.setValue("platformStatuses", {
-                                      ...currentStatuses,
-                                      [p]: createDefaultPlatformStatus()
-                                    });
-                                  }
                                 } else {
                                   field.onChange(current.filter((v: string) => v !== p));
-                                  // Remove Jira link and status when platform is unchecked
+                                  // Remove Jira link when platform is unchecked
                                   const currentLinks = form.getValues("platformJiraLinks") || {};
                                   const { [p]: removedLink, ...restLinks } = currentLinks;
                                   form.setValue("platformJiraLinks", restLinks);
-                                  const currentStatuses = form.getValues("platformStatuses") || {};
-                                  const { [p]: removedStatus, ...restStatuses } = currentStatuses;
-                                  form.setValue("platformStatuses", restStatuses);
                                 }
                               }}
                             />
@@ -336,8 +291,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                           </div>
                           
                           {isSelected && (
-                            <div className="ml-6 space-y-3">
-                              {/* Jira Link */}
+                            <div className="ml-6 mt-2">
                               <div className="flex items-center gap-2">
                                 <Link2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                                 <Input
@@ -352,58 +306,6 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                                     });
                                   }}
                                 />
-                              </div>
-                              
-                              {/* Platform-specific statuses */}
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="text-xs text-muted-foreground mb-1 block">Внедрение</label>
-                                  <Select
-                                    value={platformStatus?.implementationStatus || "черновик"}
-                                    onValueChange={(value) => {
-                                      const currentStatuses = form.getValues("platformStatuses") || {};
-                                      form.setValue("platformStatuses", {
-                                        ...currentStatuses,
-                                        [p]: updatePlatformStatus(currentStatuses[p], "implementationStatus", value)
-                                      });
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs bg-background">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {IMPLEMENTATION_STATUS.map(s => (
-                                        <SelectItem key={s} value={s} className="text-xs">
-                                          {s.replace('_', ' ').toUpperCase()}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <label className="text-xs text-muted-foreground mb-1 block">Валидация</label>
-                                  <Select
-                                    value={platformStatus?.validationStatus || "ожидает_проверки"}
-                                    onValueChange={(value) => {
-                                      const currentStatuses = form.getValues("platformStatuses") || {};
-                                      form.setValue("platformStatuses", {
-                                        ...currentStatuses,
-                                        [p]: updatePlatformStatus(currentStatuses[p], "validationStatus", value)
-                                      });
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs bg-background">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {VALIDATION_STATUS.map(s => (
-                                        <SelectItem key={s} value={s} className="text-xs">
-                                          {s.replace('_', ' ').toUpperCase()}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
                               </div>
                             </div>
                           )}
