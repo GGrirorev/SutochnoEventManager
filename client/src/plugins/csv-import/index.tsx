@@ -61,11 +61,38 @@ export function CsvImportButton() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const parseCsvLine = useCallback((line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ";" && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  }, []);
+
   const parseCsv = useCallback((content: string): ParsedEvent[] => {
     const lines = content.split("\n").filter(line => line.trim());
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(";").map(h => h.trim());
+    const headers = parseCsvLine(lines[0]);
     const events: ParsedEvent[] = [];
 
     const platformIndex = headers.findIndex(h => h.toLowerCase().includes("платформа"));
@@ -84,7 +111,7 @@ export function CsvImportButton() {
     });
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(";").map(v => v.trim().replace(/^"|"$/g, ""));
+      const values = parseCsvLine(lines[i]);
       
       if (!values[categoryIndex] || !values[actionIndex]) continue;
 
@@ -131,7 +158,7 @@ export function CsvImportButton() {
     }
 
     return events;
-  }, []);
+  }, [parseCsvLine]);
 
   const previewMutation = useMutation({
     mutationFn: async (parsedEvents: ParsedEvent[]): Promise<ImportPreview> => {

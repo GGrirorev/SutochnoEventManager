@@ -189,6 +189,11 @@ Each plugin is a self-contained folder in `client/src/plugins/<plugin-id>/`:
   - Cache management: Clear cache button in plugin settings
 - `platform-statuses` - Platform implementation and validation status management with history
 - `comments` - Event discussion and commenting system
+- `csv-import` - Bulk import events from CSV file
+  - Parses CSV with semicolon delimiter
+  - Maps columns: Платформа, Блок, Действие, Event Category, Event Action, Event Name, Event Value, dimension*
+  - Detects duplicates by Category+Action and offers: update (new version) or skip
+  - Uses transactions for atomic import
 
 **Plugin Management UI:**
 - Accessible at `/plugins` (admin-only page)
