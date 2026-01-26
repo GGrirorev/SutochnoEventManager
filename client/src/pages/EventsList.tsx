@@ -4,6 +4,7 @@ import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { MatomoCodeGenerator } from "@/plugins/code-generator";
 import { PlatformStatuses } from "@/plugins/platform-statuses";
 import Comments from "@/plugins/comments";
+import { CsvImportButton } from "@/plugins/csv-import";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
@@ -444,8 +445,9 @@ export default function EventsList() {
   const [status, setStatus] = useState<string>("all");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   
-  // Check if platform statuses plugin is enabled
+  // Check if plugins are enabled
   const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
+  const { isEnabled: isCsvImportEnabled } = useIsPluginEnabled("csv-import");
   
   // Sheet state for creating/editing
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -500,10 +502,13 @@ export default function EventsList() {
             <h1 className="text-3xl font-bold tracking-tight">Схема событий</h1>
             <p className="text-muted-foreground mt-1">Управление определениями аналитических событий продукта.</p>
           </div>
-          <Button onClick={handleCreate} className="shadow-md hover:shadow-lg transition-all">
-            <Plus className="w-4 h-4 mr-2" />
-            Новое событие
-          </Button>
+          <div className="flex gap-2">
+            {isCsvImportEnabled && <CsvImportButton />}
+            <Button onClick={handleCreate} className="shadow-md hover:shadow-lg transition-all">
+              <Plus className="w-4 h-4 mr-2" />
+              Новое событие
+            </Button>
+          </div>
         </div>
 
         {/* Filters & Search */}
