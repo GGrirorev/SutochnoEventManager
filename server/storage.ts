@@ -91,6 +91,7 @@ export interface IStorage {
   getPlugin(id: string): Promise<Plugin | undefined>;
   upsertPlugin(plugin: InsertPlugin): Promise<Plugin>;
   updatePluginEnabled(id: string, isEnabled: boolean): Promise<Plugin>;
+  updatePluginConfig(id: string, config: any): Promise<Plugin>;
   deletePlugin(id: string): Promise<void>;
 }
 
@@ -398,6 +399,14 @@ export class DatabaseStorage implements IStorage {
   async updatePluginEnabled(id: string, isEnabled: boolean): Promise<Plugin> {
     const [plugin] = await db.update(plugins)
       .set({ isEnabled, updatedAt: new Date() })
+      .where(eq(plugins.id, id))
+      .returning();
+    return plugin;
+  }
+  
+  async updatePluginConfig(id: string, config: any): Promise<Plugin> {
+    const [plugin] = await db.update(plugins)
+      .set({ config, updatedAt: new Date() })
       .where(eq(plugins.id, id))
       .returning();
     return plugin;

@@ -508,22 +508,45 @@ export async function registerRoutes(
       
       const { label, platform, startDate, endDate } = validated.data;
       
-      // Map platform name to idSite
-      const platformToSiteId: Record<string, number> = {
+      // Default to last 30 days (excluding today for complete data)
+      const defaultEndDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const defaultStartDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const actualStartDate = startDate || defaultStartDate;
+      const actualEndDate = endDate || defaultEndDate;
+      const dateRange = `${actualStartDate},${actualEndDate}`;
+      
+      // Get plugin config for analytics-chart
+      const plugin = await storage.getPlugin("analytics-chart");
+      const config = (plugin?.config as any) || {};
+      
+      // Get platform to siteId mapping from config or use defaults
+      const platformSiteMapping: Record<string, number> = config.platformSiteMapping || {
         "web": 1,
         "ios": 2,
         "android": 3
       };
       
-      const idSite = platform ? platformToSiteId[platform] : 1;
-      const dateRange = `${startDate || '2025-11-24'},${endDate || new Date().toISOString().split('T')[0]}`;
+      const idSite = platform ? (platformSiteMapping[platform] || 1) : 1;
       
-      const token = process.env.ANALYTICS_API_TOKEN;
+      // Get API URL from config or use default
+      const apiUrl = config.apiUrl || "https://analytics.sutochno.ru/index.php";
+      
+      // Get token from config or environment
+      const token = config.apiToken || process.env.ANALYTICS_API_TOKEN;
       if (!token) {
         return res.status(500).json({ message: "Analytics API token not configured" });
       }
       
-      const url = new URL("https://analytics.sutochno.ru/index.php");
+      // Check cache first
+      const { analyticsCache } = await import("./analyticsCache");
+      const cacheKey = analyticsCache.generateKey(label, platform || "all", actualStartDate, actualEndDate);
+      const cachedData = analyticsCache.get(cacheKey);
+      
+      if (cachedData) {
+        return res.json(cachedData);
+      }
+      
+      const url = new URL(apiUrl);
       url.searchParams.set("module", "API");
       url.searchParams.set("format", "JSON");
       url.searchParams.set("idSite", String(idSite));
@@ -551,11 +574,41 @@ export async function registerRoutes(
         return res.status(502).json({ message: data.message || "Analytics API error" });
       }
       
+      // Store in cache
+      analyticsCache.set(cacheKey, data);
+      
       res.json(data);
     } catch (error: any) {
       console.error("Analytics API error:", error);
       res.status(500).json({ message: error.message || "Failed to fetch analytics data" });
     }
+  });
+  
+  // Analytics cache stats endpoint (admin only)
+  app.get("/api/analytics/cache-stats", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ message: "Доступ запрещен" });
+    }
+    const { analyticsCache } = await import("./analyticsCache");
+    res.json(analyticsCache.getStats());
+  });
+  
+  // Clear analytics cache endpoint (admin only)
+  app.post("/api/analytics/clear-cache", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const user = await storage.getUser(req.session.userId);
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ message: "Доступ запрещен" });
+    }
+    const { analyticsCache } = await import("./analyticsCache");
+    analyticsCache.clear();
+    res.json({ message: "Cache cleared" });
   });
 
   // Users API
@@ -783,7 +836,7 @@ export async function registerRoutes(
     res.json(plugin);
   });
 
-  // Toggle plugin enabled state (admin only)
+  // Update plugin settings (admin only)
   app.patch(api.plugins.toggle.path, async (req, res) => {
     try {
       if (!req.session.userId) {
@@ -799,7 +852,17 @@ export async function registerRoutes(
       if (!plugin) {
         return res.status(404).json({ message: "Plugin not found" });
       }
-      const updated = await storage.updatePluginEnabled(req.params.id, input.isEnabled);
+      
+      let updated = plugin;
+      
+      if (input.isEnabled !== undefined) {
+        updated = await storage.updatePluginEnabled(req.params.id, input.isEnabled);
+      }
+      
+      if (input.config !== undefined) {
+        updated = await storage.updatePluginConfig(req.params.id, input.config);
+      }
+      
       res.json(updated);
     } catch (err) {
       if (err instanceof z.ZodError) {

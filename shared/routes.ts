@@ -175,7 +175,8 @@ export const api = {
       method: 'PATCH' as const,
       path: '/api/plugins/:id',
       input: z.object({
-        isEnabled: z.boolean(),
+        isEnabled: z.boolean().optional(),
+        config: z.record(z.any()).optional(),
       }),
       responses: {
         200: z.custom<typeof plugins.$inferSelect>(),
