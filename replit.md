@@ -78,6 +78,41 @@ Auth API endpoints:
 
 Required environment variable: `SESSION_SECRET` (mandatory in production)
 
+### Security Middleware (server/routes.ts)
+All API endpoints are protected with server-side authentication and authorization:
+
+**CSRF Protection** (applied globally):
+- Validates Origin/Referer headers for all state-changing requests (POST, PATCH, DELETE)
+- Requires Content-Type: application/json for requests with body
+- Allows localhost and Replit domains in development
+
+**Authentication Middleware** (`requireAuth`):
+- Validates session userId exists
+- Checks user exists and is active in database
+- Destroys invalid sessions
+- Attaches user object to request
+
+**Role-Based Access Control** (`requirePermission`):
+- Factory function checking user role permissions from ROLE_PERMISSIONS (shared/schema.ts)
+- Permissions: canViewEvents, canCreateEvents, canEditEvents, canDeleteEvents, canComment, canChangeStatuses, canManageProperties, canManageUsers, canManagePlugins
+
+**Admin-Only Middleware** (`requireAdmin`):
+- Shortcut for admin role check
+
+**Endpoint Protection Matrix**:
+| Endpoint | Permission Required |
+|----------|-------------------|
+| GET /api/events | canViewEvents |
+| POST /api/events | canCreateEvents |
+| PATCH /api/events/:id | canEditEvents |
+| DELETE /api/events/:id | canDeleteEvents |
+| POST /api/events/:id/comments | canComment |
+| /api/property-templates/* | canManageProperties |
+| PATCH /api/events/:id/platform-statuses/* | canChangeStatuses |
+| /api/users/* | canManageUsers (admin) |
+| PATCH /api/plugins/:id | canManagePlugins (admin) |
+| /api/analytics/cache-* | admin only |
+
 ### Initial Setup (Setup Wizard)
 When the system is first deployed with no users, it redirects to `/setup` page where the first administrator account can be created. After setup completion:
 - The administrator is automatically logged in
