@@ -96,7 +96,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { AnalyticsChart } from "@/plugins/analytics-chart";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, type Event } from "@shared/schema";
+import { IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, type Event, type EventCategory } from "@shared/schema";
 
 function CopyableText({ text, className = "" }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false);
@@ -524,9 +524,15 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
 
 export default function EventsList() {
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
   const [status, setStatus] = useState<string>("all");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  
+  // Fetch categories for filter (uses default fetcher from queryClient)
+  const { data: categories = [] } = useQuery<EventCategory[]>({
+    queryKey: ["/api/categories"],
+  });
   
   // Check if plugins are enabled
   const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
@@ -547,6 +553,7 @@ export default function EventsList() {
     isFetchingNextPage 
   } = useEvents({ 
     search, 
+    category: categoryFilter === "all" ? undefined : categoryFilter,
     platform: platform,
     status: status === "all" ? undefined : status 
   });
@@ -618,10 +625,25 @@ export default function EventsList() {
 
         {/* Filters & Search */}
         <div className="flex flex-col md:flex-row gap-4 bg-card p-4 rounded-xl border shadow-sm">
+          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
+            <SelectTrigger className="w-[200px] border-none bg-muted/50" data-testid="select-category-filter">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Layout className="w-4 h-4" />
+                <SelectValue placeholder="Все категории" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" data-testid="option-all-categories">Все категории</SelectItem>
+              {categories.map(c => (
+                <SelectItem key={c.id} value={c.name} data-testid={`option-category-${c.id}`}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
-              placeholder="Поиск по названию или категории..." 
+              placeholder="Поиск по названию..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 border-none bg-muted/50 focus-visible:ring-1"
