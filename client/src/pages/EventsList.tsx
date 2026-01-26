@@ -636,15 +636,15 @@ export default function EventsList() {
         <div className="rounded-xl border bg-card shadow-sm h-full overflow-auto">
           <Table className="relative">
             <TableHeader className="sticky top-0 z-10">
-              <TableRow className="bg-card">
-                <TableHead className="bg-card">Event Category</TableHead>
-                <TableHead className="bg-card">Блок</TableHead>
-                <TableHead className="bg-card">Event Action</TableHead>
-                <TableHead className="bg-card w-[200px]">Event Name</TableHead>
-                <TableHead className="bg-card">Event Value</TableHead>
-                <TableHead className="bg-card">{isPlatformStatusesEnabled ? "Платформы и статусы" : "Платформы"}</TableHead>
-                <TableHead className="bg-card w-[60px]">Версия</TableHead>
-                <TableHead className="bg-card w-[50px]"></TableHead>
+              <TableRow className="bg-muted">
+                <TableHead className="bg-muted">Event Category</TableHead>
+                <TableHead className="bg-muted">Блок</TableHead>
+                <TableHead className="bg-muted">Event Action</TableHead>
+                <TableHead className="bg-muted w-[200px]">Event Name</TableHead>
+                <TableHead className="bg-muted">Event Value</TableHead>
+                <TableHead className="bg-muted">{isPlatformStatusesEnabled ? "Платформы и статусы" : "Платформы"}</TableHead>
+                <TableHead className="bg-muted w-[60px]">Версия</TableHead>
+                <TableHead className="bg-muted w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
