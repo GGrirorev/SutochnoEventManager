@@ -141,7 +141,7 @@ function PlatformWithStatus({ eventId, platform, currentVersion }: { eventId: nu
   
   const status = statuses?.find((s: any) => s.platform === platform && s.versionNumber === currentVersion);
   
-  const getStatusColor = (implStatus?: string) => {
+  const getImplStatusColor = (implStatus?: string) => {
     switch (implStatus) {
       case "внедрено": return "bg-green-500";
       case "в_разработке": return "bg-blue-500";
@@ -150,23 +150,41 @@ function PlatformWithStatus({ eventId, platform, currentVersion }: { eventId: nu
       default: return "bg-gray-400";
     }
   };
+
+  const getValidationStatusColor = (valStatus?: string) => {
+    switch (valStatus) {
+      case "корректно": return "bg-green-500";
+      case "ошибка": return "bg-red-500";
+      case "предупреждение": return "bg-yellow-500";
+      case "ожидает_проверки": return "bg-gray-400";
+      default: return "bg-gray-400";
+    }
+  };
   
   return (
     <div className="flex items-center gap-1.5">
-      <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px] min-w-[70px]">
+      <Badge variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px] w-[75px] justify-start">
         {getPlatformIcon(platform)}
         {platform}
       </Badge>
-      {status && (
+      <div className="flex items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className={`w-2 h-2 rounded-full ${getStatusColor(status.implementationStatus)}`} />
+            <div className={`w-2 h-2 rounded-full ${getImplStatusColor(status?.implementationStatus)}`} />
           </TooltipTrigger>
-          <TooltipContent side="right" className="text-xs">
-            <div>{status.implementationStatus || "черновик"}</div>
+          <TooltipContent side="top" className="text-xs">
+            <div>Внедрение: {status?.implementationStatus || "черновик"}</div>
           </TooltipContent>
         </Tooltip>
-      )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={`w-2 h-2 rounded-full ${getValidationStatusColor(status?.validationStatus)}`} />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            <div>Валидация: {status?.validationStatus || "ожидает_проверки"}</div>
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }
