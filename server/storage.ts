@@ -58,6 +58,7 @@ export interface IStorage {
   // Comment operations
   getComments(eventId: number): Promise<Comment[]>;
   createComment(comment: InsertComment): Promise<Comment>;
+  deleteComment(id: number): Promise<void>;
   
   // Property template operations
   getPropertyTemplates(category?: string): Promise<PropertyTemplate[]>;
@@ -266,6 +267,10 @@ export class DatabaseStorage implements IStorage {
   async createComment(comment: InsertComment): Promise<Comment> {
     const [newComment] = await db.insert(comments).values(comment).returning();
     return newComment;
+  }
+
+  async deleteComment(id: number): Promise<void> {
+    await db.delete(comments).where(eq(comments.id, id));
   }
 
   // Property template operations

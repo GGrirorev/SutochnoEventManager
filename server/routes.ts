@@ -583,6 +583,12 @@ export async function registerRoutes(
     }
   });
 
+  // Comments - Delete (requires admin role)
+  app.delete("/api/comments/:id", requireAuth, requireAdmin, async (req, res) => {
+    await storage.deleteComment(Number(req.params.id));
+    res.status(204).send();
+  });
+
   // Property Templates API
   // Read - requires auth only (any authenticated user can view properties)
   app.get("/api/property-templates", requireAuth, async (req, res) => {

@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { MessageSquare, Calendar, Send } from "lucide-react";
+import { MessageSquare, Calendar, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 interface CommentsProps {
   eventId: number;
   canComment?: boolean;
+  isAdmin?: boolean;
 }
 
 interface Comment {
@@ -19,7 +20,7 @@ interface Comment {
   createdAt: string;
 }
 
-export default function Comments({ eventId, canComment = true }: CommentsProps) {
+export default function Comments({ eventId, canComment = true, isAdmin = false }: CommentsProps) {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
 
@@ -49,6 +50,18 @@ export default function Comments({ eventId, canComment = true }: CommentsProps) 
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (commentId: number) => {
+      await fetch(`/api/comments/${commentId}`, {
+        method: "DELETE",
+        credentials: 'include'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "comments"] });
+    }
+  });
+
   return (
     <div className="border-t pt-6" data-testid="plugin-comments">
       <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -58,13 +71,27 @@ export default function Comments({ eventId, canComment = true }: CommentsProps) 
       
       <div className="space-y-4 mb-6">
         {comments.map((c) => (
-          <div key={c.id} className="bg-muted/30 p-3 rounded-lg border border-border/50" data-testid={`comment-${c.id}`}>
+          <div key={c.id} className="bg-muted/30 p-3 rounded-lg border border-border/50 group" data-testid={`comment-${c.id}`}>
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-semibold">{c.author}</span>
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {format(new Date(c.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {format(new Date(c.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
+                </span>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(c.id)}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-comment-${c.id}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
             </div>
             <p className="text-sm text-foreground/90">{c.content}</p>
           </div>
