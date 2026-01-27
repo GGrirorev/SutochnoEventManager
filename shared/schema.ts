@@ -158,6 +158,9 @@ export const events = pgTable("events", {
   // Versioning
   currentVersion: integer("current_version").notNull().default(1),
   
+  // Monitoring
+  excludeFromMonitoring: boolean("exclude_from_monitoring").notNull().default(false),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -386,3 +389,35 @@ export const insertPluginSchema = createInsertSchema(plugins).omit({
 
 export type Plugin = typeof plugins.$inferSelect;
 export type InsertPlugin = z.infer<typeof insertPluginSchema>;
+
+// Event Alerts table - stores alerts when event counts drop significantly
+export const eventAlerts = pgTable("event_alerts", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(),
+  platform: text("platform", { enum: PLATFORMS }).notNull(),
+  eventCategory: text("event_category").notNull(),
+  eventAction: text("event_action").notNull(),
+  yesterdayCount: integer("yesterday_count").notNull(),
+  dayBeforeCount: integer("day_before_count").notNull(),
+  dropPercent: integer("drop_percent").notNull(), // e.g., 35 means 35% drop
+  checkedAt: timestamp("checked_at").defaultNow().notNull(),
+  isResolved: boolean("is_resolved").notNull().default(false),
+  resolvedBy: text("resolved_by"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEventAlertSchema = createInsertSchema(eventAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type EventAlert = typeof eventAlerts.$inferSelect;
+export type InsertEventAlert = z.infer<typeof insertEventAlertSchema>;
+
+// Extended type for alerts with event details
+export type EventAlertWithEvent = EventAlert & {
+  eventCategory: string;
+  eventAction: string;
+  eventName?: string;
+};
