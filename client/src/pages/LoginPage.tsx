@@ -73,7 +73,7 @@ export default function LoginPage() {
             Вход в систему
           </CardTitle>
           <CardDescription>
-            Suточно.ру Analytics Event Schema Manager
+            Sutochno.ru Analytics Event Schema Manager
           </CardDescription>
         </CardHeader>
         <CardContent>

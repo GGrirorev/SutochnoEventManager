@@ -1,8 +1,8 @@
-# Suточно.ру Analytics Event Schema Manager
+# Sutochno.ru Analytics Event Schema Manager
 
 ## Overview
 
-This is an analytics event schema management application for Suточно.ру (a Russian vacation rental platform). The system allows teams to define, track, and validate analytics events across multiple platforms (web, iOS, Android, backend). It provides a dashboard for monitoring event implementation status, a comprehensive event catalog with property definitions, and a reusable property template library.
+This is an analytics event schema management application for Sutochno.ru (a Russian vacation rental platform). The system allows teams to define, track, and validate analytics events across multiple platforms (web, iOS, Android, backend). It provides a dashboard for monitoring event implementation status, a comprehensive event catalog with property definitions, and a reusable property template library.
 
 ## User Preferences
 

@@ -31,7 +31,7 @@ export function Sidebar() {
     <div className="w-64 h-screen border-r bg-card flex flex-col fixed left-0 top-0 z-30 hidden md:flex">
       {/* Brand */}
       <div className="h-20 flex items-center px-4 border-b">
-        <img src={logoHeader} alt="Суточно.ру Аналитика" className="h-10 w-auto object-contain" />
+        <img src={logoHeader} alt="Sutochno.ru Аналитика" className="h-10 w-auto object-contain" />
       </div>
 
       {/* Navigation */}
