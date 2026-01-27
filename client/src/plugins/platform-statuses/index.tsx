@@ -211,7 +211,9 @@ export function PlatformStatuses({
   const { data: platformStatuses = [] } = useQuery<PlatformStatus[]>({
     queryKey: ["/api/events", eventId, "platform-statuses", displayVersion],
     queryFn: async () => {
-      const res = await fetch(`/api/events/${eventId}/platform-statuses?version=${displayVersion}`);
+      const res = await fetch(`/api/events/${eventId}/platform-statuses?version=${displayVersion}`, {
+        credentials: 'include'
+      });
       if (!res.ok) return [];
       return res.json();
     },
