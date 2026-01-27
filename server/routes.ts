@@ -416,7 +416,9 @@ export async function registerRoutes(
 
       res.json({ newEvents, existingEvents, errors });
     } catch (err) {
-      res.status(500).json({ message: "Ошибка при анализе файла" });
+      console.error("Import preview error:", err);
+      const message = err instanceof Error ? err.message : "Ошибка при анализе файла";
+      res.status(500).json({ message });
     }
   });
 
