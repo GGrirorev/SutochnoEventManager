@@ -29,6 +29,7 @@ interface StatusHistoryEntry {
   oldStatus: string;
   newStatus: string;
   createdAt: string;
+  changedByUserName?: string;
 }
 
 function getStatusColor(status: string | undefined): string {
@@ -188,7 +189,7 @@ export function PlatformStatuses({
                     </summary>
                     <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
                       {ps.history.slice().reverse().map((h: StatusHistoryEntry, i: number) => (
-                        <div key={`hist-${i}`} className="flex items-center gap-2 text-muted-foreground py-1">
+                        <div key={`hist-${i}`} className="flex flex-wrap items-center gap-2 text-muted-foreground py-1">
                           {h.statusType === 'implementation' ? (
                             <Rocket className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                           ) : (
@@ -204,7 +205,10 @@ export function PlatformStatuses({
                           <span className={getStatusColor(h.newStatus)}>
                             {h.newStatus?.replace(/_/g, ' ')}
                           </span>
-                          <span className="ml-auto opacity-70 whitespace-nowrap">
+                          <span className="ml-auto flex items-center gap-2 opacity-70 whitespace-nowrap">
+                            {h.changedByUserName && (
+                              <span className="text-foreground/80">{h.changedByUserName}</span>
+                            )}
                             {h.createdAt ? new Date(h.createdAt).toLocaleDateString('ru-RU') : ''}
                           </span>
                         </div>

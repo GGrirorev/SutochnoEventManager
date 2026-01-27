@@ -203,6 +203,7 @@ export const statusHistory = pgTable("status_history", {
   oldStatus: text("old_status"),
   newStatus: text("new_status").notNull(),
   changedBy: text("changed_by"),
+  changedByUserId: integer("changed_by_user_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

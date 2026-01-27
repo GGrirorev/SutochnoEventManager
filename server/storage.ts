@@ -385,9 +385,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Status history operations
-  async getStatusHistory(eventPlatformStatusId: number): Promise<StatusHistory[]> {
-    return await db.select()
+  async getStatusHistory(eventPlatformStatusId: number): Promise<(StatusHistory & { changedByUserName?: string })[]> {
+    return await db.select({
+      id: statusHistory.id,
+      eventPlatformStatusId: statusHistory.eventPlatformStatusId,
+      statusType: statusHistory.statusType,
+      oldStatus: statusHistory.oldStatus,
+      newStatus: statusHistory.newStatus,
+      changedBy: statusHistory.changedBy,
+      changedByUserId: statusHistory.changedByUserId,
+      createdAt: statusHistory.createdAt,
+      changedByUserName: users.name,
+    })
       .from(statusHistory)
+      .leftJoin(users, eq(statusHistory.changedByUserId, users.id))
       .where(eq(statusHistory.eventPlatformStatusId, eventPlatformStatusId))
       .orderBy(desc(statusHistory.createdAt));
   }

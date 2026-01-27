@@ -692,7 +692,8 @@ export async function registerRoutes(
           eventPlatformStatusId: existing.id,
           statusType: "implementation",
           oldStatus: existing.implementationStatus,
-          newStatus: validated.implementationStatus
+          newStatus: validated.implementationStatus,
+          changedByUserId: user.id
         });
       }
       
@@ -701,7 +702,8 @@ export async function registerRoutes(
           eventPlatformStatusId: existing.id,
           statusType: "validation",
           oldStatus: existing.validationStatus,
-          newStatus: validated.validationStatus
+          newStatus: validated.validationStatus,
+          changedByUserId: user.id
         });
       }
       
