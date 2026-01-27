@@ -52,6 +52,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
   canChangeStatuses: boolean;
   canManageUsers: boolean;
   canManageProperties: boolean;
+  canComment: boolean;
 }> = {
   viewer: {
     canViewEvents: true,
@@ -60,7 +61,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canDeleteEvents: false,
     canChangeStatuses: false,
     canManageUsers: false,
-    canManageProperties: false
+    canManageProperties: false,
+    canComment: false
   },
   developer: {
     canViewEvents: true,
@@ -69,7 +71,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canDeleteEvents: false,
     canChangeStatuses: true,
     canManageUsers: false,
-    canManageProperties: false
+    canManageProperties: false,
+    canComment: true
   },
   analyst: {
     canViewEvents: true,
@@ -78,7 +81,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canDeleteEvents: false,
     canChangeStatuses: true,
     canManageUsers: false,
-    canManageProperties: true
+    canManageProperties: true,
+    canComment: true
   },
   admin: {
     canViewEvents: true,
@@ -87,7 +91,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canDeleteEvents: true,
     canChangeStatuses: true,
     canManageUsers: true,
-    canManageProperties: true
+    canManageProperties: true,
+    canComment: true
   }
 };
 
