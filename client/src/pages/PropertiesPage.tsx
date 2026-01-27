@@ -41,7 +41,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Database, Loader2 } from "lucide-react";
 import { PROPERTY_CATEGORIES, PROPERTY_TYPES, ROLE_PERMISSIONS, type PropertyTemplate } from "@shared/schema";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { useCurrentUser } from "@/hooks/useAuth";
 
 function PropertyForm({ 
   initialData, 
