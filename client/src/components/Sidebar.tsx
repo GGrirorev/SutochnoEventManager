@@ -26,6 +26,9 @@ const ADMIN_ITEMS = [
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { data: currentUser } = useCurrentUser();
+  
+  const isAdmin = currentUser?.role === "admin";
 
   return (
     <div className="w-64 h-screen border-r bg-card flex flex-col fixed left-0 top-0 z-30 hidden md:flex">
@@ -61,30 +64,34 @@ export function Sidebar() {
           })}
         </div>
 
-        <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
-          Администрирование
-        </div>
-        <div className="space-y-1">
-          {ADMIN_ITEMS.map((item) => {
-            const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
-            return (
-              <Link key={item.href} href={item.href}>
-                <div
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
-                    isActive 
-                      ? "bg-primary/10 text-primary shadow-sm" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                  data-testid={`nav-${item.href.slice(1)}`}
-                >
-                  <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
-                  {item.label}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        {isAdmin && (
+          <>
+            <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+              Администрирование
+            </div>
+            <div className="space-y-1">
+              {ADMIN_ITEMS.map((item) => {
+                const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+                return (
+                  <Link key={item.href} href={item.href}>
+                    <div
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                        isActive 
+                          ? "bg-primary/10 text-primary shadow-sm" 
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                      data-testid={`nav-${item.href.slice(1)}`}
+                    >
+                      <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
+                      {item.label}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       {/* User / Footer */}

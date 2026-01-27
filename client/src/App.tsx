@@ -11,7 +11,7 @@ import UsersPage from "@/pages/UsersPage";
 import PluginsPage from "@/pages/PluginsPage";
 import LoginPage from "@/pages/LoginPage";
 import SetupPage from "@/pages/SetupPage";
-import { useIsAuthenticated } from "@/hooks/useAuth";
+import { useIsAuthenticated, useCurrentUser } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
 function useSetupStatus() {
@@ -85,6 +85,35 @@ function SetupRoute({ component: Component }: { component: React.ComponentType }
   return <Component />;
 }
 
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isLoading: authLoading } = useIsAuthenticated();
+  const { data: currentUser, isLoading: userLoading } = useCurrentUser();
+  const { data: setupStatus, isLoading: setupLoading } = useSetupStatus();
+
+  if (authLoading || setupLoading || userLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!setupStatus?.isConfigured) {
+    return <Redirect to="/setup" />;
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
+  // Only admins can access these routes
+  if (currentUser?.role !== "admin") {
+    return <Redirect to="/" />;
+  }
+
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -104,10 +133,10 @@ function Router() {
         <ProtectedRoute component={PropertiesPage} />
       </Route>
       <Route path="/users">
-        <ProtectedRoute component={UsersPage} />
+        <AdminRoute component={UsersPage} />
       </Route>
       <Route path="/plugins">
-        <ProtectedRoute component={PluginsPage} />
+        <AdminRoute component={PluginsPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>
