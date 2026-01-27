@@ -388,7 +388,7 @@ export async function registerRoutes(
         properties: { name: string; type: string; required: boolean; description: string }[];
       }> };
 
-      const allEvents = await storage.getEvents({});
+      const { events: allEvents } = await storage.getEvents({});
       const newEvents: typeof events = [];
       const existingEvents: Array<{ parsed: typeof events[0]; existingId: number; existingVersion: number }> = [];
       const errors: string[] = [];
