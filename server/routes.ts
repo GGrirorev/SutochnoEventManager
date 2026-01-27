@@ -543,7 +543,8 @@ export async function registerRoutes(
               changeDescription: "Обновление из CSV импорта",
               authorId,
             },
-            parsed.platforms
+            parsed.platforms,
+            parsed.category
           );
           updated++;
         } catch (err) {
