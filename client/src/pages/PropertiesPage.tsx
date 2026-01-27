@@ -40,7 +40,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Database, Loader2 } from "lucide-react";
-import { PROPERTY_CATEGORIES, PROPERTY_TYPES, type PropertyTemplate } from "@shared/schema";
+import { PROPERTY_CATEGORIES, PROPERTY_TYPES, ROLE_PERMISSIONS, type PropertyTemplate } from "@shared/schema";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 function PropertyForm({ 
   initialData, 
@@ -204,6 +205,11 @@ export default function PropertiesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<PropertyTemplate | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  
+  // Check user permissions
+  const { data: currentUser } = useCurrentUser();
+  const userPermissions = currentUser ? ROLE_PERMISSIONS[currentUser.role] : null;
+  const canManageProperties = userPermissions?.canManageProperties ?? false;
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["/api/property-templates", categoryFilter],
@@ -262,10 +268,12 @@ export default function PropertiesPage() {
               Управление глобальными свойствами событий. Используйте их для быстрого добавления к событиям.
             </p>
           </div>
-          <Button onClick={handleCreate} className="shadow-md">
-            <Plus className="w-4 h-4 mr-2" />
-            Новое свойство
-          </Button>
+          {canManageProperties && (
+            <Button onClick={handleCreate} className="shadow-md">
+              <Plus className="w-4 h-4 mr-2" />
+              Новое свойство
+            </Button>
+          )}
         </div>
 
         <div className="flex gap-4 bg-card p-4 rounded-xl border shadow-sm">
@@ -298,7 +306,7 @@ export default function PropertiesPage() {
                       <TableHead>Описание</TableHead>
                       <TableHead>Пример данных</TableHead>
                       <TableHead>Формат хранения</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
+                      {canManageProperties && <TableHead className="w-[100px]"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -323,26 +331,28 @@ export default function PropertiesPage() {
                         <TableCell>
                           <Badge variant="secondary">{template.storageFormat}</Badge>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => handleEdit(template)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => setDeleteId(template.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {canManageProperties && (
+                          <TableCell>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8"
+                                onClick={() => handleEdit(template)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => setDeleteId(template.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -359,13 +369,13 @@ export default function PropertiesPage() {
                   <TableHead>Описание</TableHead>
                   <TableHead>Пример данных</TableHead>
                   <TableHead>Формат хранения</TableHead>
-                  <TableHead className="w-[100px]"></TableHead>
+                  {canManageProperties && <TableHead className="w-[100px]"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {templates.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={canManageProperties ? 5 : 4} className="h-32 text-center text-muted-foreground">
                       Нет свойств в этой категории
                     </TableCell>
                   </TableRow>
@@ -391,26 +401,28 @@ export default function PropertiesPage() {
                       <TableCell>
                         <Badge variant="secondary">{template.storageFormat}</Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => handleEdit(template)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setDeleteId(template.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {canManageProperties && (
+                        <TableCell>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(template)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => setDeleteId(template.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}

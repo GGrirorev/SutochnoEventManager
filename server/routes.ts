@@ -584,19 +584,19 @@ export async function registerRoutes(
   });
 
   // Property Templates API
-  // Read - requires auth
-  app.get("/api/property-templates", requireAuth, requirePermission("canManageProperties"), async (req, res) => {
+  // Read - requires auth only (any authenticated user can view properties)
+  app.get("/api/property-templates", requireAuth, async (req, res) => {
     const category = req.query.category as string | undefined;
     const templates = await storage.getPropertyTemplates(category);
     res.json(templates);
   });
 
-  app.get("/api/property-templates/next-dimension", requireAuth, requirePermission("canManageProperties"), async (req, res) => {
+  app.get("/api/property-templates/next-dimension", requireAuth, async (req, res) => {
     const nextDimension = await storage.getNextDimension();
     res.json({ nextDimension });
   });
 
-  app.get("/api/property-templates/:id", requireAuth, requirePermission("canManageProperties"), async (req, res) => {
+  app.get("/api/property-templates/:id", requireAuth, async (req, res) => {
     const template = await storage.getPropertyTemplate(Number(req.params.id));
     if (!template) {
       return res.status(404).json({ message: "Template not found" });
