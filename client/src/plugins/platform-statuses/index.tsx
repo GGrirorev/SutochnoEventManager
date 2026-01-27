@@ -44,6 +44,12 @@ interface StatusHistoryEntry {
   jiraLink?: string;
 }
 
+function formatStatus(status: string | undefined): string {
+  if (!status) return "-";
+  const formatted = status.replace(/_/g, ' ');
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
 function getStatusColor(status: string | undefined): string {
   if (!status) return "text-muted-foreground";
   
@@ -113,7 +119,7 @@ function StatusEditor({
           data-testid={`${testIdPrefix}-${platform}`}
         >
           <span className={getStatusColor(currentStatus)}>
-            {currentStatus.replace(/_/g, ' ')}
+            {formatStatus(currentStatus)}
           </span>
           <Edit2 className="w-3 h-3 ml-2 opacity-50" />
         </Button>
@@ -131,7 +137,7 @@ function StatusEditor({
               <SelectContent>
                 {statusOptions.map((s) => (
                   <SelectItem key={s} value={s} className="text-xs">
-                    {s.replace(/_/g, ' ')}
+                    {formatStatus(s)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -338,11 +344,11 @@ export function PlatformStatuses({
                               {h.statusType === 'implementation' ? 'Внедрение:' : 'Валидация:'}
                             </span>
                             <span className={getStatusColor(h.oldStatus)}>
-                              {h.oldStatus?.replace(/_/g, ' ') || '-'}
+                              {formatStatus(h.oldStatus)}
                             </span>
                             <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
                             <span className={getStatusColor(h.newStatus)}>
-                              {h.newStatus?.replace(/_/g, ' ')}
+                              {formatStatus(h.newStatus)}
                             </span>
                             <span className="ml-auto flex items-center gap-2 opacity-70 whitespace-nowrap">
                               {h.changedByUserName && (
