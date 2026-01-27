@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useCurrentUser } from "@/hooks/useAuth";
 import type { EventAlert } from "@shared/schema";
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -70,7 +70,7 @@ function formatRelativeTime(date: string | Date | null): string {
 }
 
 export default function AlertsPage() {
-  const { user } = useAuth();
+  const { data: user } = useCurrentUser();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [deleteAlert, setDeleteAlert] = useState<EventAlert | null>(null);

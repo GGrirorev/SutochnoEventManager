@@ -6,7 +6,8 @@ import {
   Database,
   Users,
   LogOut,
-  Puzzle
+  Puzzle,
+  Bell
 } from "lucide-react";
 import logoHeader from "@assets/logo-header_1769085215107.png";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
@@ -17,6 +18,10 @@ const NAV_ITEMS = [
   { label: "Обзор", icon: LayoutDashboard, href: "/" },
   { label: "Схема событий", icon: List, href: "/events" },
   { label: "Свойства событий", icon: Database, href: "/properties" },
+];
+
+const MONITORING_ITEMS = [
+  { label: "Алерты", icon: Bell, href: "/alerts" },
 ];
 
 const ADMIN_ITEMS = [
@@ -55,6 +60,31 @@ export function Sidebar() {
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                   data-testid={`nav-${item.href.slice(1) || 'dashboard'}`}
+                >
+                  <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
+                  {item.label}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+          Мониторинг
+        </div>
+        <div className="space-y-1">
+          {MONITORING_ITEMS.map((item) => {
+            const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+            return (
+              <Link key={item.href} href={item.href}>
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                    isActive 
+                      ? "bg-primary/10 text-primary shadow-sm" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                  data-testid={`nav-${item.href.slice(1)}`}
                 >
                   <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
                   {item.label}

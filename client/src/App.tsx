@@ -9,6 +9,7 @@ import EventsList from "@/pages/EventsList";
 import PropertiesPage from "@/pages/PropertiesPage";
 import UsersPage from "@/pages/UsersPage";
 import PluginsPage from "@/pages/PluginsPage";
+import AlertsPage from "@/pages/AlertsPage";
 import LoginPage from "@/pages/LoginPage";
 import SetupPage from "@/pages/SetupPage";
 import { useIsAuthenticated, useCurrentUser } from "@/hooks/useAuth";
@@ -131,6 +132,9 @@ function Router() {
       </Route>
       <Route path="/properties">
         <ProtectedRoute component={PropertiesPage} />
+      </Route>
+      <Route path="/alerts">
+        <ProtectedRoute component={AlertsPage} />
       </Route>
       <Route path="/users">
         <AdminRoute component={UsersPage} />
