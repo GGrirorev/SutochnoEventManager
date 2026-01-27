@@ -128,6 +128,31 @@ function CopyableText({ text, className = "" }: { text: string; className?: stri
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  
+  return (
+    <button
+      onClick={handleCopy}
+      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-muted rounded"
+      data-testid={`button-copy-${text.replace(/\s+/g, '-').toLowerCase()}`}
+    >
+      {copied ? (
+        <Check className="w-3 h-3 text-green-500" />
+      ) : (
+        <Copy className="w-3 h-3 text-muted-foreground" />
+      )}
+    </button>
+  );
+}
+
 const getPlatformIcon = (p: string) => {
   switch (p) {
     case 'web': return <Globe className="w-3.5 h-3.5" />;
@@ -441,9 +466,12 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Category</h4>
-                <p className="text-sm font-mono bg-muted p-2 rounded">
-                  <CopyableText text={displayData.category || "-"} />
-                </p>
+                <div className="flex items-center gap-2 group">
+                  <p className="text-sm font-mono bg-muted p-2 rounded">
+                    {displayData.category || "-"}
+                  </p>
+                  <CopyButton text={displayData.category || "-"} />
+                </div>
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Action</h4>
@@ -752,9 +780,12 @@ export default function EventsList() {
                 events?.map((event) => (
                   <TableRow key={event.id} className="group hover:bg-muted/30 transition-colors">
                     <TableCell>
-                      <Badge variant="outline" className="font-normal">
-                        <CopyableText text={event.category} />
-                      </Badge>
+                      <div className="flex items-center gap-1 group">
+                        <Badge variant="outline" className="font-normal">
+                          {event.category}
+                        </Badge>
+                        <CopyButton text={event.category || ""} />
+                      </div>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground/80">{event.block || '-'}</span>
