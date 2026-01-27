@@ -484,6 +484,30 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                 </FormItem>
               )}
             />
+            
+            {mode === "edit" && (
+              <FormField
+                control={form.control}
+                name="excludeFromMonitoring"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Исключить из мониторинга</FormLabel>
+                      <FormDescription>
+                        Событие не будет проверяться на падение количества событий
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value || false}
+                        onCheckedChange={field.onChange}
+                        data-testid="toggle-exclude-from-monitoring"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
         </div>
 
