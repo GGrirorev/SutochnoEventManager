@@ -333,13 +333,24 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   role: text("role", { enum: USER_ROLES }).notNull().default("viewer"),
   isActive: boolean("is_active").notNull().default(true),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Login logs table for tracking user login history
+export const userLoginLogs = pgTable("user_login_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  loginAt: timestamp("login_at").defaultNow().notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   passwordHash: true,
+  lastLoginAt: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -353,6 +364,8 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type UserLoginLog = typeof userLoginLogs.$inferSelect;
 
 // Plugins table - tracks installed plugins and their enabled state
 export const plugins = pgTable("plugins", {

@@ -51,8 +51,50 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Edit, Trash2, Users, Loader2, Shield, Eye, Code, BarChart3 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Edit, Trash2, Users, Loader2, Shield, Eye, Code, BarChart3, Clock, History } from "lucide-react";
 import { USER_ROLES, ROLE_LABELS, insertUserSchema, type User, type UserRole, type InsertUser } from "@shared/schema";
+
+type UserLoginLogWithUser = {
+  id: number;
+  userId: number;
+  loginAt: Date;
+  ipAddress: string | null;
+  userAgent: string | null;
+  userName: string;
+  userEmail: string;
+};
+
+function formatRelativeTime(date: Date | string | null): string {
+  if (!date) return "Никогда";
+  const d = new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  
+  if (diffMinutes < 1) return "Только что";
+  if (diffMinutes < 60) return `${diffMinutes} мин. назад`;
+  if (diffHours < 24) return `${diffHours} ч. назад`;
+  if (diffDays === 1) return "Вчера";
+  if (diffDays < 7) return `${diffDays} дн. назад`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} нед. назад`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} мес. назад`;
+  return `${Math.floor(diffDays / 365)} г. назад`;
+}
+
+function formatDateTime(date: Date | string | null): string {
+  if (!date) return "";
+  const d = new Date(date);
+  return d.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
 
 const createUserFormSchema = insertUserSchema.extend({
   email: z.string().email("Введите корректный email"),
@@ -299,6 +341,10 @@ export default function UsersPage() {
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"]
   });
+  
+  const { data: loginLogsData, isLoading: isLoadingLogs } = useQuery<{ logs: UserLoginLogWithUser[]; total: number }>({
+    queryKey: ["/api/login-logs"]
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -357,6 +403,19 @@ export default function UsersPage() {
             </Dialog>
           </div>
 
+          <Tabs defaultValue="users" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="users" data-testid="tab-users">
+                <Users className="h-4 w-4 mr-2" />
+                Пользователи
+              </TabsTrigger>
+              <TabsTrigger value="logs" data-testid="tab-login-logs">
+                <History className="h-4 w-4 mr-2" />
+                Журнал входов
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="users">
           {isLoading ? (
             <div className="flex items-center justify-center h-64" data-testid="loading-users">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -379,6 +438,7 @@ export default function UsersPage() {
                     <TableHead>Имя</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Роль</TableHead>
+                    <TableHead>Последний вход</TableHead>
                     <TableHead>Статус</TableHead>
                     <TableHead className="w-[100px]">Действия</TableHead>
                   </TableRow>
@@ -399,6 +459,18 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <RoleBadge role={user.role} />
+                      </TableCell>
+                      <TableCell data-testid={`text-user-last-login-${user.id}`}>
+                        {user.lastLoginAt ? (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            <span title={formatDateTime(user.lastLoginAt)}>
+                              {formatRelativeTime(user.lastLoginAt)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Никогда</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge 
@@ -438,6 +510,62 @@ export default function UsersPage() {
               </Table>
             </div>
           )}
+            </TabsContent>
+            
+            <TabsContent value="logs">
+              {isLoadingLogs ? (
+                <div className="flex items-center justify-center h-64" data-testid="loading-logs">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : !loginLogsData?.logs?.length ? (
+                <div className="text-center py-12 border rounded-lg bg-muted/50" data-testid="empty-logs">
+                  <History className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Нет записей</h3>
+                  <p className="text-muted-foreground">Журнал входов пуст</p>
+                </div>
+              ) : (
+                <div className="border rounded-lg" data-testid="login-logs-table">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Пользователь</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Время входа</TableHead>
+                        <TableHead>IP-адрес</TableHead>
+                        <TableHead>Браузер / Устройство</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loginLogsData.logs.map((log) => (
+                        <TableRow key={log.id} data-testid={`row-log-${log.id}`}>
+                          <TableCell className="font-medium" data-testid={`text-log-user-${log.id}`}>
+                            {log.userName}
+                          </TableCell>
+                          <TableCell data-testid={`text-log-email-${log.id}`}>
+                            {log.userEmail}
+                          </TableCell>
+                          <TableCell data-testid={`text-log-time-${log.id}`}>
+                            <div className="flex flex-col">
+                              <span>{formatDateTime(log.loginAt)}</span>
+                              <span className="text-xs text-muted-foreground">{formatRelativeTime(log.loginAt)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm" data-testid={`text-log-ip-${log.id}`}>
+                            {log.ipAddress || "—"}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate text-sm" title={log.userAgent || ""} data-testid={`text-log-agent-${log.id}`}>
+                            {log.userAgent ? (
+                              log.userAgent.length > 50 ? log.userAgent.substring(0, 50) + "..." : log.userAgent
+                            ) : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
           <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
             <DialogContent>

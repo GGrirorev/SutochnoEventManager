@@ -1019,6 +1019,19 @@ export async function registerRoutes(
     await storage.deleteUser(id);
     res.status(204).send();
   });
+  
+  // User login logs API (admin only)
+  app.get("/api/login-logs", requireAuth, requirePermission("canManageUsers"), async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const result = await storage.getLoginLogs(limit, offset);
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to fetch login logs:", error);
+      res.status(500).json({ message: "Failed to fetch login logs" });
+    }
+  });
 
   // Initial seed data
   await seedDatabase();
@@ -1050,6 +1063,11 @@ export async function registerRoutes(
       }
 
       req.session.userId = user.id;
+      
+      // Record login log
+      const ipAddress = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || undefined;
+      const userAgent = req.headers['user-agent'] || undefined;
+      await storage.recordLoginLog(user.id, ipAddress, userAgent);
       
       const { passwordHash, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword });

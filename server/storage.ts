@@ -8,6 +8,7 @@ import {
   eventVersions,
   eventCategories,
   users,
+  userLoginLogs,
   plugins,
   type Event,
   type InsertEvent,
@@ -27,6 +28,7 @@ import {
   type InsertEventCategory,
   type User,
   type InsertUser,
+  type UserLoginLog,
   type Plugin,
   type InsertPlugin,
   IMPLEMENTATION_STATUS,
@@ -36,6 +38,7 @@ import { eq, ilike, and, or, desc, sql } from "drizzle-orm";
 
 export type EventWithAuthor = Event & { authorName?: string | null; category?: string };
 export type EventVersionWithAuthor = EventVersion & { authorName?: string | null };
+export type UserLoginLogWithUser = UserLoginLog & { userName: string; userEmail: string };
 
 export interface IStorage {
   getEvents(filters?: {
@@ -94,6 +97,11 @@ export interface IStorage {
   createUserWithPassword(user: InsertUser, passwordHash: string): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>, passwordHash?: string): Promise<User>;
   deleteUser(id: number): Promise<void>;
+  
+  // User login log operations
+  recordLoginLog(userId: number, ipAddress?: string, userAgent?: string): Promise<void>;
+  getLoginLogs(limit?: number, offset?: number): Promise<{ logs: UserLoginLogWithUser[]; total: number }>;
+  getUserLoginLogs(userId: number, limit?: number): Promise<UserLoginLog[]>;
   
   // Plugin operations
   getPlugins(): Promise<Plugin[]>;
@@ -523,6 +531,64 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: number): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
+  }
+  
+  // User login log operations
+  async recordLoginLog(userId: number, ipAddress?: string, userAgent?: string): Promise<void> {
+    const now = new Date();
+    // Record login log
+    await db.insert(userLoginLogs).values({
+      userId,
+      loginAt: now,
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+    });
+    // Update user's lastLoginAt
+    await db.update(users)
+      .set({ lastLoginAt: now })
+      .where(eq(users.id, userId));
+  }
+  
+  async getLoginLogs(limit: number = 100, offset: number = 0): Promise<{ logs: UserLoginLogWithUser[]; total: number }> {
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(userLoginLogs);
+    
+    const total = countResult?.count || 0;
+    
+    const logs = await db
+      .select({
+        id: userLoginLogs.id,
+        userId: userLoginLogs.userId,
+        loginAt: userLoginLogs.loginAt,
+        ipAddress: userLoginLogs.ipAddress,
+        userAgent: userLoginLogs.userAgent,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(userLoginLogs)
+      .leftJoin(users, eq(userLoginLogs.userId, users.id))
+      .orderBy(desc(userLoginLogs.loginAt))
+      .limit(limit)
+      .offset(offset);
+    
+    return {
+      logs: logs.map(log => ({
+        ...log,
+        userName: log.userName || "Удаленный пользователь",
+        userEmail: log.userEmail || "",
+      })),
+      total,
+    };
+  }
+  
+  async getUserLoginLogs(userId: number, limit: number = 10): Promise<UserLoginLog[]> {
+    return await db
+      .select()
+      .from(userLoginLogs)
+      .where(eq(userLoginLogs.userId, userId))
+      .orderBy(desc(userLoginLogs.loginAt))
+      .limit(limit);
   }
 
   // Plugin operations
