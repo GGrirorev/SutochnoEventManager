@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle, XCircle, Loader2, Download, Info } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -50,12 +50,17 @@ interface ImportResult {
   errors: string[];
 }
 
+const EXAMPLE_CSV = `Платформа;Блок;Действие;Event Category;Event Action;Event Name;Event Value;dimension1;dimension2
+WEB, iOS, Android;Авторизация;Пользователь нажал кнопку входа;auth;login_click;login_button;;user_type;
+WEB;Поиск;Пользователь выполнил поиск;search;search_submit;search_form;search_query;search_type;results_count
+iOS, Android;Бронирование;Пользователь начал оформление;booking;start_checkout;checkout_form;;object_id;price`;
+
 export function CsvImportButton() {
   const [isOpen, setIsOpen] = useState(false);
+  const [step, setStep] = useState<"instructions" | "preview" | "result">("instructions");
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [duplicateAction, setDuplicateAction] = useState<"update" | "skip">("skip");
   const [selectedDuplicates, setSelectedDuplicates] = useState<Set<number>>(new Set());
-  const [isProcessing, setIsProcessing] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -168,6 +173,7 @@ export function CsvImportButton() {
     onSuccess: (data) => {
       setPreview(data);
       setSelectedDuplicates(new Set(data.existingEvents.map((_, i) => i)));
+      setStep("preview");
     },
     onError: (error: Error) => {
       toast({
@@ -188,6 +194,7 @@ export function CsvImportButton() {
     },
     onSuccess: (result) => {
       setImportResult(result);
+      setStep("result");
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({
         title: "Импорт завершен",
@@ -214,13 +221,11 @@ export function CsvImportButton() {
       if (parsed.length === 0) {
         toast({
           title: "Ошибка",
-          description: "Не удалось найти события в CSV файле",
+          description: "Не удалось найти события в CSV файле. Проверьте формат файла.",
           variant: "destructive",
         });
         return;
       }
-      setIsOpen(true);
-      setImportResult(null);
       previewMutation.mutate(parsed);
     };
     reader.readAsText(file, "UTF-8");
@@ -247,10 +252,20 @@ export function CsvImportButton() {
 
   const handleClose = () => {
     setIsOpen(false);
+    setStep("instructions");
     setPreview(null);
     setImportResult(null);
     setDuplicateAction("skip");
     setSelectedDuplicates(new Set());
+  };
+
+  const handleDownloadExample = () => {
+    const blob = new Blob([EXAMPLE_CSV], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "events_example.csv";
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const toggleDuplicate = (index: number) => {
@@ -275,7 +290,7 @@ export function CsvImportButton() {
       />
       <Button
         variant="outline"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => setIsOpen(true)}
         data-testid="button-import-csv"
       >
         <Upload className="w-4 h-4 mr-2" />
@@ -283,61 +298,112 @@ export function CsvImportButton() {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-4xl max-h-[90vh]" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5" />
               Импорт событий из CSV
             </DialogTitle>
             <DialogDescription>
-              Просмотрите события перед импортом
+              {step === "instructions" && "Загрузите CSV файл для импорта событий"}
+              {step === "preview" && "Просмотрите события перед импортом"}
+              {step === "result" && "Результаты импорта"}
             </DialogDescription>
           </DialogHeader>
 
-          {previewMutation.isPending && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-muted-foreground">Анализ файла...</span>
-            </div>
-          )}
+          {step === "instructions" && (
+            <div className="space-y-6">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-3">
+                <div className="flex items-center gap-2 font-medium text-blue-700 dark:text-blue-300">
+                  <Info className="w-5 h-5" />
+                  Требования к файлу
+                </div>
+                <ul className="text-sm space-y-2 text-blue-600 dark:text-blue-400">
+                  <li>• Формат файла: CSV с разделителем <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">;</code> (точка с запятой)</li>
+                  <li>• Кодировка: UTF-8</li>
+                  <li>• Обязательные колонки: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">Event Category</code>, <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">Event Action</code></li>
+                  <li>• Дополнительные колонки: Платформа, Блок, Действие, Event Name, Event Value, dimension1, dimension2...</li>
+                  <li>• Платформы указываются через запятую: WEB, iOS, Android, Backend</li>
+                </ul>
+              </div>
 
-          {importResult && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-lg font-medium">
-                <CheckCircle className="w-6 h-6 text-green-500" />
-                Импорт завершен
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <div className="font-medium">Структура колонок</div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Платформа</TableHead>
+                        <TableHead className="text-xs">Блок</TableHead>
+                        <TableHead className="text-xs">Действие</TableHead>
+                        <TableHead className="text-xs">Event Category</TableHead>
+                        <TableHead className="text-xs">Event Action</TableHead>
+                        <TableHead className="text-xs">Event Name</TableHead>
+                        <TableHead className="text-xs">Event Value</TableHead>
+                        <TableHead className="text-xs">dimension*</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-xs text-muted-foreground">WEB, iOS</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">Авторизация</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">Клик по кнопке</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">auth</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">login_click</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">login_btn</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">-</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">user_type</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-green-600">{importResult.created}</div>
-                  <div className="text-sm text-muted-foreground">Создано</div>
+
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg space-y-2">
+                <div className="flex items-center gap-2 font-medium text-yellow-700 dark:text-yellow-300">
+                  <AlertTriangle className="w-5 h-5" />
+                  Ограничения
                 </div>
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-blue-600">{importResult.updated}</div>
-                  <div className="text-sm text-muted-foreground">Обновлено</div>
-                </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-gray-600">{importResult.skipped}</div>
-                  <div className="text-sm text-muted-foreground">Пропущено</div>
-                </div>
+                <ul className="text-sm space-y-1 text-yellow-600 dark:text-yellow-400">
+                  <li>• Дубликаты определяются по совпадению Event Category + Event Action</li>
+                  <li>• При обновлении существующего события создается новая версия</li>
+                  <li>• Пустые строки и строки без Category/Action пропускаются</li>
+                </ul>
               </div>
-              {importResult.errors.length > 0 && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <div className="font-medium text-red-600 mb-2">Ошибки:</div>
-                  <ul className="text-sm text-red-600 list-disc pl-4">
-                    {importResult.errors.map((err, i) => (
-                      <li key={i}>{err}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <DialogFooter>
-                <Button onClick={handleClose} data-testid="button-close-import">Закрыть</Button>
+
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadExample}
+                  className="w-full sm:w-auto"
+                  data-testid="button-download-example"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Скачать пример
+                </Button>
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full sm:w-auto"
+                  disabled={previewMutation.isPending}
+                  data-testid="button-select-file"
+                >
+                  {previewMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Анализ файла...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Выбрать файл
+                    </>
+                  )}
+                </Button>
               </DialogFooter>
             </div>
           )}
 
-          {preview && !importResult && (
+          {step === "preview" && preview && (
             <div className="space-y-4">
               <div className="flex gap-4 text-sm">
                 <div className="flex items-center gap-2">
@@ -453,8 +519,8 @@ export function CsvImportButton() {
               )}
 
               <DialogFooter>
-                <Button variant="outline" onClick={handleClose} data-testid="button-cancel-import">
-                  Отмена
+                <Button variant="outline" onClick={() => setStep("instructions")} data-testid="button-back">
+                  Назад
                 </Button>
                 <Button 
                   onClick={handleImport}
@@ -464,6 +530,42 @@ export function CsvImportButton() {
                   {importMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Импортировать
                 </Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {step === "result" && importResult && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-lg font-medium">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+                Импорт завершен
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-green-600">{importResult.created}</div>
+                  <div className="text-sm text-muted-foreground">Создано</div>
+                </div>
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-blue-600">{importResult.updated}</div>
+                  <div className="text-sm text-muted-foreground">Обновлено</div>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-gray-600">{importResult.skipped}</div>
+                  <div className="text-sm text-muted-foreground">Пропущено</div>
+                </div>
+              </div>
+              {importResult.errors.length > 0 && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <div className="font-medium text-red-600 mb-2">Ошибки:</div>
+                  <ul className="text-sm text-red-600 list-disc pl-4">
+                    {importResult.errors.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <DialogFooter>
+                <Button onClick={handleClose} data-testid="button-close-import">Закрыть</Button>
               </DialogFooter>
             </div>
           )}
