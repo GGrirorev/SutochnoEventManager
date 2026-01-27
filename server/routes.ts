@@ -1221,6 +1221,17 @@ async function seedPlugins() {
       config: {},
     });
   }
+
+  if (!existingIds.includes("csv-import")) {
+    await storage.upsertPlugin({
+      id: "csv-import",
+      name: "Импорт из CSV",
+      description: "Массовый импорт событий из CSV файла",
+      version: "1.0.0",
+      isEnabled: true,
+      config: {},
+    });
+  }
 }
 
 async function seedDatabase() {
