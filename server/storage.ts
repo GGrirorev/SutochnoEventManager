@@ -10,6 +10,7 @@ import {
   users,
   userLoginLogs,
   plugins,
+  eventAlerts,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
@@ -31,6 +32,8 @@ import {
   type UserLoginLog,
   type Plugin,
   type InsertPlugin,
+  type EventAlert,
+  type InsertEventAlert,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
@@ -116,6 +119,12 @@ export interface IStorage {
   getCategoryByName(name: string): Promise<EventCategory | undefined>;
   createCategory(category: InsertEventCategory): Promise<EventCategory>;
   getOrCreateCategory(name: string): Promise<EventCategory>;
+  
+  // Alert operations
+  getAlerts(limit?: number, offset?: number): Promise<{ alerts: EventAlert[]; total: number }>;
+  createAlert(alert: InsertEventAlert): Promise<EventAlert>;
+  deleteAlert(id: number): Promise<void>;
+  getEventsForMonitoring(): Promise<{ id: number; category: string; action: string; platforms: string[] }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -847,6 +856,53 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getCategoryByName(name);
     if (existing) return existing;
     return this.createCategory({ name });
+  }
+
+  // Alert operations
+  async getAlerts(limit = 100, offset = 0): Promise<{ alerts: EventAlert[]; total: number }> {
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(eventAlerts);
+    
+    const total = countResult?.count ?? 0;
+    
+    const alerts = await db.select()
+      .from(eventAlerts)
+      .orderBy(desc(eventAlerts.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    return { alerts, total };
+  }
+
+  async createAlert(alert: InsertEventAlert): Promise<EventAlert> {
+    const [newAlert] = await db.insert(eventAlerts)
+      .values(alert)
+      .returning();
+    return newAlert;
+  }
+
+  async deleteAlert(id: number): Promise<void> {
+    await db.delete(eventAlerts).where(eq(eventAlerts.id, id));
+  }
+
+  async getEventsForMonitoring(): Promise<{ id: number; category: string; action: string; platforms: string[] }[]> {
+    const result = await db.select({
+      id: events.id,
+      category: eventCategories.name,
+      action: events.action,
+      platforms: events.platforms,
+    })
+      .from(events)
+      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
+      .where(eq(events.excludeFromMonitoring, false));
+    
+    return result.map(r => ({
+      id: r.id,
+      category: r.category || '',
+      action: r.action,
+      platforms: r.platforms as string[],
+    }));
   }
 }
 
