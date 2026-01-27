@@ -204,6 +204,8 @@ export const statusHistory = pgTable("status_history", {
   newStatus: text("new_status").notNull(),
   changedBy: text("changed_by"),
   changedByUserId: integer("changed_by_user_id"),
+  comment: text("comment"),
+  jiraLink: text("jira_link"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

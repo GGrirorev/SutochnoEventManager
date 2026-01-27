@@ -29,6 +29,8 @@ const updatePlatformStatusSchema = z.object({
   jiraLink: z.string().optional(),
   implementationStatus: z.enum(IMPLEMENTATION_STATUS).optional(),
   validationStatus: z.enum(VALIDATION_STATUS).optional(),
+  statusComment: z.string().optional(),
+  statusJiraLink: z.string().optional(),
 });
 
 const createCommentSchema = insertCommentSchema
@@ -693,7 +695,9 @@ export async function registerRoutes(
           statusType: "implementation",
           oldStatus: existing.implementationStatus,
           newStatus: validated.implementationStatus,
-          changedByUserId: user.id
+          changedByUserId: user.id,
+          comment: validated.statusComment || null,
+          jiraLink: validated.statusJiraLink || null
         });
       }
       
@@ -703,7 +707,9 @@ export async function registerRoutes(
           statusType: "validation",
           oldStatus: existing.validationStatus,
           newStatus: validated.validationStatus,
-          changedByUserId: user.id
+          changedByUserId: user.id,
+          comment: validated.statusComment || null,
+          jiraLink: validated.statusJiraLink || null
         });
       }
       

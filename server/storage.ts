@@ -394,6 +394,8 @@ export class DatabaseStorage implements IStorage {
       newStatus: statusHistory.newStatus,
       changedBy: statusHistory.changedBy,
       changedByUserId: statusHistory.changedByUserId,
+      comment: statusHistory.comment,
+      jiraLink: statusHistory.jiraLink,
       createdAt: statusHistory.createdAt,
       changedByUserName: users.name,
     })
