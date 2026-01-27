@@ -239,6 +239,7 @@ export function PlatformStatuses({
       const res = await fetch(`/api/events/${eventId}/platform-statuses/${platform}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ implementationStatus, validationStatus, versionNumber, statusComment, statusJiraLink }),
       });
       if (!res.ok) throw new Error('Failed to update status');
