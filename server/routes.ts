@@ -284,33 +284,65 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Event Category обязательна", field: "category" });
       }
       
-      // Increment version
-      const newVersion = (existing.currentVersion || 1) + 1;
       const platforms = input.platforms || [];
       
-      // Atomic transaction: update category + event + version + platform statuses
-      const event = await storage.updateEventWithVersionAndStatuses(
-        id,
-        { ...updateData, currentVersion: newVersion },
-        {
-          version: newVersion,
-          block: input.block || "",
-          action: input.action,
-          actionDescription: input.actionDescription || "",
-          name: input.name,
-          valueDescription: input.valueDescription || "",
-          owner: input.owner,
-          platforms: platforms,
-          implementationStatus: "черновик",
-          validationStatus: "ожидает_проверки",
-          properties: input.properties || [],
-          notes: input.notes,
-          changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
-          authorId: versionAuthorId,
-        },
-        platforms,
-        trimmedCategoryName
-      );
+      // Get current version data to compare
+      const currentVersionData = await storage.getEventVersion(id, existing.currentVersion || 1);
+      
+      // Determine if versioned fields changed (requires new version)
+      // Versioned fields: category, action, name, valueDescription, properties
+      const categoryChanged = existing.category !== trimmedCategoryName;
+      const actionChanged = existing.action !== input.action;
+      const nameChanged = existing.name !== input.name;
+      const valueDescriptionChanged = existing.valueDescription !== (input.valueDescription || "");
+      const propertiesChanged = JSON.stringify(existing.properties || []) !== JSON.stringify(input.properties || []);
+      
+      const requiresNewVersion = categoryChanged || actionChanged || nameChanged || valueDescriptionChanged || propertiesChanged;
+      
+      let event;
+      
+      if (requiresNewVersion) {
+        // Create new version
+        const newVersion = (existing.currentVersion || 1) + 1;
+        
+        event = await storage.updateEventWithVersionAndStatuses(
+          id,
+          { ...updateData, currentVersion: newVersion },
+          {
+            version: newVersion,
+            block: input.block || "",
+            action: input.action,
+            actionDescription: input.actionDescription || "",
+            name: input.name,
+            valueDescription: input.valueDescription || "",
+            owner: input.owner,
+            platforms: platforms,
+            implementationStatus: "черновик",
+            validationStatus: "ожидает_проверки",
+            properties: input.properties || [],
+            notes: input.notes,
+            changeDescription: changeDescription || `Обновление до версии ${newVersion}`,
+            authorId: versionAuthorId,
+          },
+          platforms,
+          trimmedCategoryName
+        );
+      } else {
+        // Update current version without creating new one
+        event = await storage.updateEventWithoutNewVersion(
+          id,
+          {
+            ...updateData,
+            block: input.block || "",
+            actionDescription: input.actionDescription || "",
+            owner: input.owner,
+            platforms: platforms,
+            notes: input.notes,
+          },
+          existing.currentVersion || 1,
+          trimmedCategoryName
+        );
+      }
       
       res.json(event);
     } catch (err) {

@@ -655,6 +655,79 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async updateEventWithoutNewVersion(
+    id: number,
+    updates: any,
+    currentVersion: number,
+    categoryName?: string
+  ): Promise<Event> {
+    return await db.transaction(async (tx) => {
+      // Step 0: Create or get category within transaction (if categoryName provided)
+      let categoryId = updates.categoryId;
+      if (categoryName) {
+        const category = await this.getOrCreateCategoryTx(tx, categoryName);
+        categoryId = category.id;
+      }
+      
+      // Step 1: Update event (without changing currentVersion)
+      const [event] = await tx.update(events)
+        .set({ ...updates, categoryId, updatedAt: new Date() })
+        .where(eq(events.id, id))
+        .returning();
+      
+      // Step 2: Update current version snapshot with non-versioned fields
+      await tx.update(eventVersions)
+        .set({
+          categoryId,
+          block: updates.block,
+          actionDescription: updates.actionDescription,
+          owner: updates.owner,
+          platforms: updates.platforms,
+          notes: updates.notes,
+        })
+        .where(and(
+          eq(eventVersions.eventId, id),
+          eq(eventVersions.version, currentVersion)
+        ));
+      
+      // Step 3: Update platform statuses if platforms changed
+      if (updates.platforms) {
+        const existingStatuses = await tx.select()
+          .from(eventPlatformStatuses)
+          .where(and(
+            eq(eventPlatformStatuses.eventId, id),
+            eq(eventPlatformStatuses.versionNumber, currentVersion)
+          ));
+        
+        const existingPlatforms = existingStatuses.map(s => s.platform);
+        const newPlatforms = updates.platforms as string[];
+        
+        // Add new platforms
+        for (const platform of newPlatforms) {
+          if (!existingPlatforms.includes(platform)) {
+            await tx.insert(eventPlatformStatuses).values({
+              eventId: id,
+              versionNumber: currentVersion,
+              platform: platform as any,
+              implementationStatus: "черновик",
+              validationStatus: "ожидает_проверки"
+            });
+          }
+        }
+        
+        // Remove platforms that are no longer in the list
+        for (const status of existingStatuses) {
+          if (!newPlatforms.includes(status.platform)) {
+            await tx.delete(eventPlatformStatuses)
+              .where(eq(eventPlatformStatuses.id, status.id));
+          }
+        }
+      }
+      
+      return event;
+    });
+  }
+
   async deleteEventWithRelatedData(id: number): Promise<void> {
     await db.transaction(async (tx) => {
       // Step 1: Delete status history for all platform statuses

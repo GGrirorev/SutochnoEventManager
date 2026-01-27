@@ -116,13 +116,34 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  // Check if versioned fields changed (requires new version)
+  const requiresNewVersion = (data: InsertEvent): boolean => {
+    if (!initialData) return false;
+    
+    // Versioned fields: category, action, name, valueDescription, properties
+    const categoryChanged = initialData.category !== data.category;
+    const actionChanged = initialData.action !== data.action;
+    const nameChanged = initialData.name !== data.name;
+    const valueDescriptionChanged = (initialData.valueDescription || "") !== (data.valueDescription || "");
+    const propertiesChanged = JSON.stringify(initialData.properties || []) !== JSON.stringify(data.properties || []);
+    
+    return categoryChanged || actionChanged || nameChanged || valueDescriptionChanged || propertiesChanged;
+  };
+
   // Handler that's triggered by form submission
   const onSubmit = async (data: InsertEvent) => {
-    // In edit mode, show confirmation dialog first
+    // In edit mode, check if versioned fields changed
     if (mode === "edit" && initialData?.id) {
-      setPendingFormData(data);
-      setShowVersionConfirm(true);
-      return;
+      if (requiresNewVersion(data)) {
+        // Show confirmation dialog for new version
+        setPendingFormData(data);
+        setShowVersionConfirm(true);
+        return;
+      } else {
+        // No version change needed, save directly
+        await performSubmit(data);
+        return;
+      }
     }
     // In create mode, proceed directly
     await performSubmit(data);
