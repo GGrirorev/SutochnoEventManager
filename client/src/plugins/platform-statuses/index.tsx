@@ -24,6 +24,7 @@ interface PlatformStatusesProps {
   eventId: number;
   platforms: string[];
   displayVersion: number;
+  canChangeStatuses?: boolean;
 }
 
 interface PlatformStatus {
@@ -202,7 +203,8 @@ function StatusEditor({
 export function PlatformStatuses({ 
   eventId, 
   platforms, 
-  displayVersion
+  displayVersion,
+  canChangeStatuses = true
 }: PlatformStatusesProps) {
   const queryClient = useQueryClient();
 
@@ -302,27 +304,39 @@ export function PlatformStatuses({
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <span className="text-xs text-muted-foreground mb-1 block">Внедрение:</span>
-                    <StatusEditor
-                      platform={p}
-                      statusType="implementation"
-                      currentStatus={ps.implementationStatus || "черновик"}
-                      statusOptions={IMPLEMENTATION_STATUS}
-                      onUpdate={(status, comment, jira) => handleImplementationUpdate(p, status, comment, jira)}
-                      isPending={updateStatusMutation.isPending}
-                      testIdPrefix="btn-implementation"
-                    />
+                    {canChangeStatuses ? (
+                      <StatusEditor
+                        platform={p}
+                        statusType="implementation"
+                        currentStatus={ps.implementationStatus || "черновик"}
+                        statusOptions={IMPLEMENTATION_STATUS}
+                        onUpdate={(status, comment, jira) => handleImplementationUpdate(p, status, comment, jira)}
+                        isPending={updateStatusMutation.isPending}
+                        testIdPrefix="btn-implementation"
+                      />
+                    ) : (
+                      <span className={`text-sm font-medium ${getStatusColor(ps.implementationStatus)}`}>
+                        {formatStatus(ps.implementationStatus || "черновик")}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1">
                     <span className="text-xs text-muted-foreground mb-1 block">Валидация:</span>
-                    <StatusEditor
-                      platform={p}
-                      statusType="validation"
-                      currentStatus={ps.validationStatus || "ожидает_проверки"}
-                      statusOptions={VALIDATION_STATUS}
-                      onUpdate={(status, comment, jira) => handleValidationUpdate(p, status, comment, jira)}
-                      isPending={updateStatusMutation.isPending}
-                      testIdPrefix="btn-validation"
-                    />
+                    {canChangeStatuses ? (
+                      <StatusEditor
+                        platform={p}
+                        statusType="validation"
+                        currentStatus={ps.validationStatus || "ожидает_проверки"}
+                        statusOptions={VALIDATION_STATUS}
+                        onUpdate={(status, comment, jira) => handleValidationUpdate(p, status, comment, jira)}
+                        isPending={updateStatusMutation.isPending}
+                        testIdPrefix="btn-validation"
+                      />
+                    ) : (
+                      <span className={`text-sm font-medium ${getStatusColor(ps.validationStatus)}`}>
+                        {formatStatus(ps.validationStatus || "ожидает_проверки")}
+                      </span>
+                    )}
                   </div>
                 </div>
                 {ps.history && ps.history.length > 0 && (

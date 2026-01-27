@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useEvents, useDeleteEvent, useEventVersions, useEventPlatformStatuses } from "@/hooks/use-events";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
+import { useCurrentUser } from "@/hooks/useAuth";
+import { ROLE_PERMISSIONS } from "@shared/schema";
 import { MatomoCodeGenerator } from "@/plugins/code-generator";
 import { PlatformStatuses } from "@/plugins/platform-statuses";
 import Comments from "@/plugins/comments";
@@ -234,6 +236,11 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
   const { isEnabled: isAnalyticsChartEnabled } = useIsPluginEnabled("analytics-chart");
   const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
   const { isEnabled: isCommentsEnabled } = useIsPluginEnabled("comments");
+  
+  // Get current user permissions
+  const { data: currentUser } = useCurrentUser();
+  const userPermissions = currentUser ? ROLE_PERMISSIONS[currentUser.role] : null;
+  const canChangeStatuses = userPermissions?.canChangeStatuses ?? false;
 
   // Fetch fresh event data to get updated statuses
   const { data: event = initialEvent } = useQuery({
@@ -505,6 +512,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
               eventId={event.id}
               platforms={displayData.platforms || []}
               displayVersion={displayVersion}
+              canChangeStatuses={canChangeStatuses}
             />
           )}
 
@@ -528,6 +536,13 @@ export default function EventsList() {
   const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
   const [status, setStatus] = useState<string>("all");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  
+  // Get current user permissions
+  const { data: currentUser } = useCurrentUser();
+  const userPermissions = currentUser ? ROLE_PERMISSIONS[currentUser.role] : null;
+  const canCreate = userPermissions?.canCreateEvents ?? false;
+  const canEdit = userPermissions?.canEditEvents ?? false;
+  const canChangeStatuses = userPermissions?.canChangeStatuses ?? false;
   
   // Fetch categories for filter (uses default fetcher from queryClient)
   const { data: categories = [] } = useQuery<EventCategory[]>({
@@ -614,13 +629,15 @@ export default function EventsList() {
             <h1 className="text-3xl font-bold tracking-tight">Схема событий</h1>
             <p className="text-muted-foreground mt-1">Управление определениями аналитических событий продукта.</p>
           </div>
-          <div className="flex gap-2">
-            {isCsvImportEnabled && <CsvImportButton />}
-            <Button onClick={handleCreate} className="shadow-md hover:shadow-lg transition-all">
-              <Plus className="w-4 h-4 mr-2" />
-              Новое событие
-            </Button>
-          </div>
+          {canCreate && (
+            <div className="flex gap-2">
+              {isCsvImportEnabled && <CsvImportButton />}
+              <Button onClick={handleCreate} className="shadow-md hover:shadow-lg transition-all">
+                <Plus className="w-4 h-4 mr-2" />
+                Новое событие
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Filters & Search */}
@@ -699,7 +716,7 @@ export default function EventsList() {
                 <TableHead className="bg-muted">Event Value</TableHead>
                 <TableHead className="bg-muted">{isPlatformStatusesEnabled ? "Платформы и статусы" : "Платформы"}</TableHead>
                 <TableHead className="bg-muted w-[60px]">Версия</TableHead>
-                <TableHead className="bg-muted w-[50px]"></TableHead>
+                {canEdit && <TableHead className="bg-muted w-[50px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -787,39 +804,41 @@ export default function EventsList() {
                     <TableCell>
                       <VersionBadge event={event} />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          data-testid={`button-edit-event-${event.id}`}
-                          onClick={() => handleEdit(event)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Действия</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(JSON.stringify(event, null, 2))}>
-                              Копировать JSON
+                    {canEdit && (
+                      <TableCell>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            data-testid={`button-edit-event-${event.id}`}
+                            onClick={() => handleEdit(event)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Действия</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(JSON.stringify(event, null, 2))}>
+                                Копировать JSON
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeleteId(event.id)}
+                              >
+                              Удалить
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setDeleteId(event.id)}
-                            >
-                            Удалить
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableCell>
+                          </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
