@@ -494,7 +494,8 @@ export async function registerRoutes(
               changeDescription: "Импорт из CSV",
               authorId,
             },
-            event.platforms
+            event.platforms,
+            event.category
           );
           created++;
         } catch (err) {
