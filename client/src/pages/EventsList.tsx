@@ -266,6 +266,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
   const { data: currentUser } = useCurrentUser();
   const userPermissions = currentUser ? ROLE_PERMISSIONS[currentUser.role] : null;
   const canChangeStatuses = userPermissions?.canChangeStatuses ?? false;
+  const canComment = userPermissions?.canComment ?? false;
 
   // Fetch fresh event data to get updated statuses
   const { data: event = initialEvent } = useQuery({
@@ -526,7 +527,7 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
           {isCodeGeneratorEnabled && <MatomoCodeGenerator event={displayData} />}
 
           {/* Comments Plugin */}
-          {isCommentsEnabled && <Comments eventId={event.id} />}
+          {isCommentsEnabled && <Comments eventId={event.id} canComment={canComment} />}
         </TabsContent>
 
         {/* Tab 2: Здоровье */}

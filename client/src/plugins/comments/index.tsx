@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface CommentsProps {
   eventId: number;
+  canComment?: boolean;
 }
 
 interface Comment {
@@ -18,14 +19,16 @@ interface Comment {
   createdAt: string;
 }
 
-export default function Comments({ eventId }: CommentsProps) {
+export default function Comments({ eventId, canComment = true }: CommentsProps) {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
 
   const { data: comments = [] } = useQuery<Comment[]>({
     queryKey: ["/api/events", eventId, "comments"],
     queryFn: async () => {
-      const res = await fetch(`/api/events/${eventId}/comments`);
+      const res = await fetch(`/api/events/${eventId}/comments`, {
+        credentials: 'include'
+      });
       return res.json();
     }
   });
@@ -35,6 +38,7 @@ export default function Comments({ eventId }: CommentsProps) {
       const res = await fetch(`/api/events/${eventId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'include',
         body: JSON.stringify({ content, author: "Пользователь" })
       });
       return res.json();
@@ -66,28 +70,32 @@ export default function Comments({ eventId }: CommentsProps) {
           </div>
         ))}
         {comments.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">Нет комментариев. Будьте первым!</p>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            {canComment ? "Нет комментариев. Будьте первым!" : "Нет комментариев."}
+          </p>
         )}
       </div>
 
-      <div className="flex gap-2">
-        <Textarea 
-          placeholder="Оставьте комментарий к событию..." 
-          className="min-h-[80px] text-sm"
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          data-testid="input-comment"
-        />
-        <Button 
-          size="icon" 
-          className="self-end" 
-          disabled={!comment.trim() || commentMutation.isPending}
-          onClick={() => commentMutation.mutate(comment)}
-          data-testid="button-send-comment"
-        >
-          <Send className="w-4 h-4" />
-        </Button>
-      </div>
+      {canComment && (
+        <div className="flex gap-2">
+          <Textarea 
+            placeholder="Оставьте комментарий к событию..." 
+            className="min-h-[80px] text-sm"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            data-testid="input-comment"
+          />
+          <Button 
+            size="icon" 
+            className="self-end" 
+            disabled={!comment.trim() || commentMutation.isPending}
+            onClick={() => commentMutation.mutate(comment)}
+            data-testid="button-send-comment"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
