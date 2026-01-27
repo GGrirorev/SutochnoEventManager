@@ -466,12 +466,9 @@ function EventDetailsModal({ event: initialEvent }: { event: any }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Category</h4>
-                <div className="flex items-center gap-2 group">
-                  <p className="text-sm font-mono bg-muted p-2 rounded">
-                    {displayData.category || "-"}
-                  </p>
-                  <CopyButton text={displayData.category || "-"} />
-                </div>
+                <p className="text-sm font-mono bg-muted p-2 rounded">
+                  <CopyableText text={displayData.category || "-"} />
+                </p>
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Action</h4>
