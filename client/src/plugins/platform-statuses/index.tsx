@@ -341,14 +341,14 @@ export function PlatformStatuses({
                     )}
                   </div>
                 </div>
-                {ps.history && ps.history.length > 0 && (
-                  <details className="text-xs">
-                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      История изменений ({ps.history.length})
-                    </summary>
-                    <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
-                      {ps.history.slice().reverse().map((h: StatusHistoryEntry, i: number) => (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    История изменений ({ps.history?.length || 0})
+                  </summary>
+                  <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
+                    {ps.history && ps.history.length > 0 ? (
+                      ps.history.slice().reverse().map((h: StatusHistoryEntry, i: number) => (
                         <div key={`hist-${i}`} className="py-1.5 border-b border-muted/50 last:border-b-0">
                           <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
                             {h.statusType === 'implementation' ? (
@@ -397,10 +397,12 @@ export function PlatformStatuses({
                             </div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  </details>
-                )}
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground py-2">Нет записей об изменениях статусов</p>
+                    )}
+                  </div>
+                </details>
               </div>
             </div>
           );
