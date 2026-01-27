@@ -1033,6 +1033,183 @@ export async function registerRoutes(
     }
   });
 
+  // ============ Alerts API ============
+  
+  // Get all alerts (viewable by all authenticated users)
+  app.get("/api/alerts", requireAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const result = await storage.getAlerts(limit, offset);
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to fetch alerts:", error);
+      res.status(500).json({ message: "Failed to fetch alerts" });
+    }
+  });
+
+  // Delete an alert (admin and analyst only)
+  app.delete("/api/alerts/:id", requireAuth, async (req, res) => {
+    try {
+      const user = req.user!;
+      const permissions = ROLE_PERMISSIONS[user.role as UserRole];
+      
+      // Only admin and analyst can delete alerts
+      if (user.role !== "admin" && user.role !== "analyst") {
+        return res.status(403).json({ message: "Только администратор и аналитик могут удалять алерты" });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid alert ID" });
+      }
+      
+      await storage.deleteAlert(id);
+      res.json({ message: "Alert deleted" });
+    } catch (error) {
+      console.error("Failed to delete alert:", error);
+      res.status(500).json({ message: "Failed to delete alert" });
+    }
+  });
+
+  // Check events for alerts (cron job endpoint)
+  app.post("/api/alerts/check", async (req, res) => {
+    try {
+      // Get plugin config for analytics-chart
+      const plugin = await storage.getPlugin("analytics-chart");
+      if (!plugin || !plugin.isEnabled) {
+        return res.status(400).json({ message: "Analytics chart plugin is not enabled" });
+      }
+      
+      const config = (plugin.config as any) || {};
+      const apiUrl = config.apiUrl || "https://analytics.sutochno.ru/index.php";
+      const token = config.apiToken || process.env.ANALYTICS_API_TOKEN;
+      
+      if (!token) {
+        return res.status(500).json({ message: "Analytics API token not configured" });
+      }
+      
+      const platformSiteMapping: Record<string, number> = config.platformSiteMapping || {
+        "web": 1,
+        "ios": 2,
+        "android": 3
+      };
+      
+      // Calculate dates: yesterday from 23:00 and day before yesterday from 23:00
+      const now = new Date();
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const dayBefore = new Date(now);
+      dayBefore.setDate(dayBefore.getDate() - 2);
+      
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const dayBeforeStr = dayBefore.toISOString().split('T')[0];
+      
+      // Get all events for monitoring
+      const eventsToMonitor = await storage.getEventsForMonitoring();
+      
+      const alertsCreated: any[] = [];
+      const platformsToCheck = ["web", "ios", "android"];
+      
+      for (const event of eventsToMonitor) {
+        const label = `${event.category} > @${event.action}`;
+        
+        for (const platform of platformsToCheck) {
+          // Skip if event is not on this platform
+          if (!event.platforms.map(p => p.toLowerCase()).includes(platform)) {
+            continue;
+          }
+          
+          const idSite = platformSiteMapping[platform] || 1;
+          
+          // Fetch yesterday's data
+          const urlYesterday = new URL(apiUrl);
+          urlYesterday.searchParams.set("module", "API");
+          urlYesterday.searchParams.set("format", "JSON");
+          urlYesterday.searchParams.set("idSite", String(idSite));
+          urlYesterday.searchParams.set("period", "day");
+          urlYesterday.searchParams.set("date", yesterdayStr);
+          urlYesterday.searchParams.set("method", "Events.getCategory");
+          urlYesterday.searchParams.set("label", label);
+          urlYesterday.searchParams.set("filter_limit", "100");
+          urlYesterday.searchParams.set("token_auth", token);
+          
+          // Fetch day before yesterday's data
+          const urlDayBefore = new URL(apiUrl);
+          urlDayBefore.searchParams.set("module", "API");
+          urlDayBefore.searchParams.set("format", "JSON");
+          urlDayBefore.searchParams.set("idSite", String(idSite));
+          urlDayBefore.searchParams.set("period", "day");
+          urlDayBefore.searchParams.set("date", dayBeforeStr);
+          urlDayBefore.searchParams.set("method", "Events.getCategory");
+          urlDayBefore.searchParams.set("label", label);
+          urlDayBefore.searchParams.set("filter_limit", "100");
+          urlDayBefore.searchParams.set("token_auth", token);
+          
+          try {
+            const [resYesterday, resDayBefore] = await Promise.all([
+              fetch(urlYesterday.toString()),
+              fetch(urlDayBefore.toString())
+            ]);
+            
+            if (!resYesterday.ok || !resDayBefore.ok) continue;
+            
+            const dataYesterday = await resYesterday.json();
+            const dataDayBefore = await resDayBefore.json();
+            
+            // Extract event count
+            let yesterdayCount = 0;
+            let dayBeforeCount = 0;
+            
+            if (Array.isArray(dataYesterday) && dataYesterday.length > 0) {
+              yesterdayCount = dataYesterday[0]?.nb_events || 0;
+            } else if (dataYesterday && typeof dataYesterday === 'object') {
+              yesterdayCount = dataYesterday.nb_events || 0;
+            }
+            
+            if (Array.isArray(dataDayBefore) && dataDayBefore.length > 0) {
+              dayBeforeCount = dataDayBefore[0]?.nb_events || 0;
+            } else if (dataDayBefore && typeof dataDayBefore === 'object') {
+              dayBeforeCount = dataDayBefore.nb_events || 0;
+            }
+            
+            // Check for 30% or more drop
+            if (dayBeforeCount > 0) {
+              const dropPercent = Math.round((1 - yesterdayCount / dayBeforeCount) * 100);
+              
+              if (dropPercent >= 30) {
+                // Create alert
+                const alert = await storage.createAlert({
+                  eventId: event.id,
+                  platform: platform as any,
+                  eventCategory: event.category,
+                  eventAction: event.action,
+                  yesterdayCount,
+                  dayBeforeCount,
+                  dropPercent,
+                  checkedAt: new Date(),
+                  isResolved: false,
+                });
+                alertsCreated.push(alert);
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to check event ${event.id} platform ${platform}:`, err);
+          }
+        }
+      }
+      
+      res.json({
+        message: `Check completed. ${alertsCreated.length} alerts created.`,
+        alertsCreated: alertsCreated.length,
+        eventsChecked: eventsToMonitor.length,
+      });
+    } catch (error: any) {
+      console.error("Failed to check alerts:", error);
+      res.status(500).json({ message: error.message || "Failed to check alerts" });
+    }
+  });
+
   // Initial seed data
   await seedDatabase();
 
