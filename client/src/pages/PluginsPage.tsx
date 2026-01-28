@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Sidebar } from "@/components/Sidebar";
@@ -219,6 +220,17 @@ export default function PluginsPage() {
                           >
                             <Settings className="h-4 w-4" />
                           </Button>
+                        )}
+                        {plugin.id === "alerts" && (
+                          <Link href="/alerts/settings">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              data-testid="button-alerts-settings"
+                            >
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          </Link>
                         )}
                         <Switch
                           checked={plugin.isEnabled}
