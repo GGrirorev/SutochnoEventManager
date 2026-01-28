@@ -23,6 +23,74 @@ interface AuthenticatedRequest extends Request {
   user: User;
 }
 
+type RateLimitEntry = {
+  attempts: number[];
+  blockedUntil?: number;
+};
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+const getClientIp = (req: Request): string => {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.length > 0) {
+    return forwardedFor.split(",")[0].trim();
+  }
+  if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
+    return forwardedFor[0].trim();
+  }
+  return req.socket.remoteAddress || "unknown";
+};
+
+const createRateLimiter = (options: {
+  windowMs: number;
+  maxAttempts: number;
+  blockMs: number;
+  scope: string;
+}) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const now = Date.now();
+    const ip = getClientIp(req);
+    const key = `${options.scope}:${ip}`;
+    const entry = rateLimitStore.get(key) ?? { attempts: [] };
+
+    if (entry.blockedUntil && entry.blockedUntil > now) {
+      console.warn(
+        `Brute force blocked (${options.scope}) from ${ip} on ${req.method} ${req.path}`
+      );
+      return res.status(429).json({ message: "Слишком много попыток. Попробуйте позже." });
+    }
+
+    entry.attempts = entry.attempts.filter((timestamp) => now - timestamp < options.windowMs);
+    entry.attempts.push(now);
+
+    if (entry.attempts.length > options.maxAttempts) {
+      entry.blockedUntil = now + options.blockMs;
+      console.warn(
+        `Brute force detected (${options.scope}) from ${ip} on ${req.method} ${req.path}`
+      );
+      rateLimitStore.set(key, entry);
+      return res.status(429).json({ message: "Слишком много попыток. Попробуйте позже." });
+    }
+
+    rateLimitStore.set(key, entry);
+    next();
+  };
+};
+
+const loginRateLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  maxAttempts: 10,
+  blockMs: 15 * 60 * 1000,
+  scope: "auth-login",
+});
+
+const setupRateLimiter = createRateLimiter({
+  windowMs: 30 * 60 * 1000,
+  maxAttempts: 5,
+  blockMs: 60 * 60 * 1000,
+  scope: "auth-setup",
+});
+
 // Zod schemas for platform status API validation
 const createPlatformStatusSchema = z.object({
   platform: z.enum(PLATFORMS),
@@ -1502,7 +1570,7 @@ export async function registerRoutes(
   // ============ Auth Routes ============
   
   // Login
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginRateLimiter, async (req, res) => {
     try {
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
@@ -1579,7 +1647,7 @@ export async function registerRoutes(
   });
 
   // Complete initial setup - create first admin
-  app.post(api.setup.complete.path, async (req, res) => {
+  app.post(api.setup.complete.path, setupRateLimiter, async (req, res) => {
     try {
       const users = await storage.getUsers();
       if (users.length > 0) {
