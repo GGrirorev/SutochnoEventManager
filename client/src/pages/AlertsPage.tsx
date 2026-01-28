@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/Sidebar";
-import { EventDetailsModal } from "@/pages/EventsList";
+import { EventDetailsModal } from "@/components/EventDetailsModal";
 import { EventEditSheet } from "@/components/EventEditSheet";
 import {
   Table,
