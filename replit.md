@@ -53,14 +53,30 @@ A modular architecture allows extending functionality with plugins.
     - `comments`: Provides event discussion.
     - `csv-import`: Bulk event import from CSV with duplicate handling.
 
-### Event Monitoring & Alerts
-Monitors analytics events for significant count drops (30%+) between yesterday and the day before.
-- **Mechanism**: Utilizes `analytics-chart` plugin's Matomo integration.
-- **Database**: `event_alerts` table stores alert details; `events.excludeFromMonitoring` allows excluding events.
-- **API Endpoints**:
-  - `GET /api/alerts` — Список всех алертов (доступно всем авторизованным пользователям)
-  - `DELETE /api/alerts/:id` — Удаление алерта (только admin и analyst)
-  - `POST /api/alerts/check` — Запуск проверки событий (для cron-заданий, без авторизации)
+### Event Monitoring & Alerts (Independent Module)
+Monitors analytics events for significant count drops between yesterday and the day before. This is an independent module with its own configuration.
+
+**Configuration** (Admin only via `/alerts/settings`):
+- **matomoUrl**: Base URL for Matomo API
+- **matomoToken**: API authentication token (falls back to ANALYTICS_API_TOKEN env var)
+- **matomoSiteId**: Platform to site ID mapping (format: `web:1,ios:2,android:3`)
+- **dropThreshold**: Minimum drop percentage to trigger alert (default: 30%)
+- **maxConcurrency**: Max parallel requests to API (default: 5)
+- **isEnabled**: Enable/disable the module
+
+**Database**: 
+- `event_alerts` table stores alert details
+- `alert_settings` table stores module configuration
+- `events.excludeFromMonitoring` allows excluding events
+
+**API Endpoints**:
+  - `GET /api/alerts` — List alerts (all authenticated users)
+  - `DELETE /api/alerts/:id` — Delete alert (admin and analyst only)
+  - `POST /api/alerts/bulk-delete` — Bulk delete alerts (admin and analyst only)
+  - `GET /api/alerts/settings` — Get alert settings (admin only)
+  - `PUT /api/alerts/settings` — Update alert settings (admin only)
+  - `GET /api/alerts/check-stream` — SSE stream for real-time check progress (authenticated users)
+  - `POST /api/alerts/check` — Trigger check (for cron jobs, no auth required)
 
 #### Настройка автоматической проверки (Cron)
 Для ежедневной автоматической проверки падения событий настройте cron-задание:
