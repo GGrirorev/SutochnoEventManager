@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useEvents, useDeleteEvent, useEventVersions, useEventPlatformStatuses } from "@/hooks/use-events";
+import type { EventFormData } from "@/components/EventForm";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { ROLE_PERMISSIONS } from "@shared/schema";
@@ -39,13 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+import { EventEditSheet } from "@/components/EventEditSheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -597,7 +592,7 @@ export default function EventsList() {
   
   // Sheet state for creating/editing
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventFormData | null>(null);
 
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -673,7 +668,10 @@ export default function EventsList() {
     if (editEventId && events.length > 0) {
       const eventToEdit = events.find(e => e.id === editEventId);
       if (eventToEdit) {
-        setEditingEvent(eventToEdit);
+        setEditingEvent({
+          ...eventToEdit,
+          category: eventToEdit.category || "",
+        });
         setSheetOpen(true);
         setEditEventId(null);
         // Clear the query parameter from URL
@@ -685,7 +683,10 @@ export default function EventsList() {
   const deleteMutation = useDeleteEvent();
 
   const handleEdit = (event: Event) => {
-    setEditingEvent(event);
+    setEditingEvent({
+      ...event,
+      category: event.category || "",
+    });
     setSheetOpen(true);
   };
 
@@ -857,7 +858,7 @@ export default function EventsList() {
                             )}
                           </div>
                         </DialogTrigger>
-                        {selectedEvent && <EventDetailsModal event={selectedEvent} onEdit={(e) => { setSelectedEvent(null); setEditingEvent(e); setSheetOpen(true); }} />}
+                        {selectedEvent && <EventDetailsModal event={selectedEvent} onEdit={(e) => { setSelectedEvent(null); setEditingEvent({ ...e, category: e.category || "" }); setSheetOpen(true); }} />}
                       </Dialog>
                     </TableCell>
                     <TableCell>
@@ -869,7 +870,7 @@ export default function EventsList() {
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         {isPlatformStatusesEnabled ? (
-                          event.platforms?.map((p) => (
+                          event.platforms?.map((p: string) => (
                             <PlatformWithStatus
                               key={p}
                               eventId={event.id}
@@ -878,7 +879,7 @@ export default function EventsList() {
                             />
                           ))
                         ) : (
-                          event.platforms?.map((p) => (
+                          event.platforms?.map((p: string) => (
                             <Badge key={p} variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px] min-w-[70px]">
                               {getPlatformIcon(p)}
                               {p}
@@ -944,24 +945,12 @@ export default function EventsList() {
         </div>
         </div>
 
-        {/* Create/Edit Sheet */}
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetContent className="sm:max-w-2xl w-full flex flex-col h-full" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <SheetHeader className="mb-6 px-1">
-              <SheetTitle>{editingEvent ? "Редактировать событие" : "Создать новое событие"}</SheetTitle>
-              <SheetDescription>
-                Определите схему и свойства вашего аналитического события.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="flex-1 overflow-y-auto overflow-x-visible -mx-6 px-7 py-1">
-              <EventForm 
-                mode={editingEvent ? "edit" : "create"}
-                initialData={editingEvent || undefined}
-                onSuccess={() => setSheetOpen(false)}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
+        <EventEditSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          event={editingEvent}
+          mode={editingEvent ? "edit" : "create"}
+        />
 
         {/* Delete Confirmation */}
         <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

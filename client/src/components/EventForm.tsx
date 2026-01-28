@@ -46,8 +46,10 @@ import { Switch } from "@/components/ui/switch";
 import { Trash2, Plus, Loader2, Library } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+export type EventFormData = InsertEvent & { id?: number };
+
 interface EventFormProps {
-  initialData?: InsertEvent & { id?: number };
+  initialData?: EventFormData;
   onSuccess?: () => void;
   mode: "create" | "edit";
 }

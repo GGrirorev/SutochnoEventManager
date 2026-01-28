@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/Sidebar";
 import { EventDetailsModal } from "@/pages/EventsList";
-import { EventForm } from "@/components/EventForm";
+import { EventEditSheet } from "@/components/EventEditSheet";
 import {
   Table,
   TableBody,
@@ -22,12 +22,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -389,23 +383,13 @@ export default function AlertsPage() {
             {viewEvent && <EventDetailsModal event={viewEvent} onEdit={(e) => { setViewEventId(null); setEditingEvent(e); setSheetOpen(true); }} />}
           </Dialog>
 
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetContent className="sm:max-w-xl overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Редактировать событие</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6">
-                <EventForm
-                  mode="edit"
-                  initialData={editingEvent || undefined}
-                  onSuccess={() => {
-                    setSheetOpen(false);
-                    setEditingEvent(null);
-                  }}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <EventEditSheet
+            open={sheetOpen}
+            onOpenChange={setSheetOpen}
+            event={editingEvent}
+            mode="edit"
+            onSuccess={() => setEditingEvent(null)}
+          />
         </div>
       </main>
     </div>
