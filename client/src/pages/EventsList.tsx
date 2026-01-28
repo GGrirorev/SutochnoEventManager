@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useEvents, useDeleteEvent, useEventVersions, useEventPlatformStatuses } from "@/hooks/use-events";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -91,7 +91,8 @@ import {
   Copy,
   Check,
   History,
-  ChevronDown
+  ChevronDown,
+  Pencil
 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -268,6 +269,7 @@ export function EventDetailsModal({ event: initialEvent }: { event: any }) {
   const userPermissions = currentUser ? ROLE_PERMISSIONS[currentUser.role] : null;
   const canChangeStatuses = userPermissions?.canChangeStatuses ?? false;
   const canComment = userPermissions?.canComment ?? false;
+  const canEditEvents = userPermissions?.canEditEvents ?? false;
   const isAdmin = currentUser?.role === 'admin';
 
   // Fetch fresh event data to get updated statuses
@@ -328,6 +330,19 @@ export function EventDetailsModal({ event: initialEvent }: { event: any }) {
             {displayData.action}
           </DialogTitle>
           <div className="flex items-center gap-2">
+            {/* Edit Button */}
+            {canEditEvents && (
+              <Link href={`/events/${event.id}/edit`}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-testid="button-edit-event"
+                  title="Редактировать событие"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
             {/* Version Badge */}
             <Badge variant="secondary" className="text-xs">
               v{event.currentVersion || 1}
