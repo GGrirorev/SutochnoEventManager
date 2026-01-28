@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useEventVersions } from "@/hooks/use-events";
-import { useIsPluginEnabled } from "@/hooks/usePlugins";
+import { usePlugins } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { ROLE_PERMISSIONS } from "@shared/schema";
-import { MatomoCodeGenerator } from "@/plugins/code-generator";
-import { PlatformStatuses } from "@/plugins/platform-statuses";
-import Comments from "@/plugins/comments";
-import { AnalyticsChart } from "@/plugins/analytics-chart";
+import { getPluginsForSlot, type EventDetailsPluginContext } from "@/plugins/registry";
 import {
   DialogContent,
   DialogHeader,
@@ -74,10 +71,7 @@ function CopyableText({ text, className = "" }: { text: string; className?: stri
 
 export function EventDetailsModal({ event: initialEvent, onEdit }: { event: any; onEdit?: (event: any) => void }) {
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
-  const { isEnabled: isCodeGeneratorEnabled } = useIsPluginEnabled("code-generator");
-  const { isEnabled: isAnalyticsChartEnabled } = useIsPluginEnabled("analytics-chart");
-  const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
-  const { isEnabled: isCommentsEnabled } = useIsPluginEnabled("comments");
+  const { data: plugins = [] } = usePlugins();
   
   const { data: currentUser } = useCurrentUser();
   const userPermissions = currentUser ? ROLE_PERMISSIONS[currentUser.role] : null;
@@ -106,6 +100,24 @@ export function EventDetailsModal({ event: initialEvent, onEdit }: { event: any;
   
   const displayData = displayedVersion || event;
 
+  const enabledPluginIds = new Set(
+    plugins.filter((plugin) => plugin.isEnabled).map((plugin) => plugin.id)
+  );
+
+  const pluginContext: EventDetailsPluginContext = {
+    event: {
+      ...displayData,
+      id: event.id,
+      category: displayData.category ?? event.category,
+      action: displayData.action ?? event.action,
+      platforms: displayData.platforms ?? event.platforms,
+    },
+    displayVersion,
+    canChangeStatuses,
+    canComment,
+    isAdmin,
+  };
+
   const getStatusColor = (status: string | null) => {
     if (!status) return "text-muted-foreground";
     const normalized = status.toLowerCase().replace(/ /g, '_');
@@ -126,6 +138,15 @@ export function EventDetailsModal({ event: initialEvent, onEdit }: { event: any;
         return "text-slate-600 dark:text-slate-400";
     }
   };
+
+  const renderPluginSlot = (slot: Parameters<typeof getPluginsForSlot>[0]) =>
+    getPluginsForSlot(slot)
+      .filter((plugin) => enabledPluginIds.has(plugin.id))
+      .map((plugin) => {
+        const renderer = plugin.renderers[slot];
+        if (!renderer) return null;
+        return <div key={plugin.id}>{renderer(pluginContext)}</div>;
+      });
 
   return (
     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -342,28 +363,11 @@ export function EventDetailsModal({ event: initialEvent, onEdit }: { event: any;
             </div>
           )}
 
-          {isCodeGeneratorEnabled && <MatomoCodeGenerator event={displayData} />}
-
-          {isCommentsEnabled && <Comments eventId={event.id} canComment={canComment} isAdmin={isAdmin} />}
+          {renderPluginSlot("event-details-details")}
         </TabsContent>
 
         <TabsContent value="health" className="space-y-6 pt-4">
-          {isPlatformStatusesEnabled && (
-            <PlatformStatuses
-              eventId={event.id}
-              platforms={displayData.platforms || []}
-              displayVersion={displayVersion}
-              canChangeStatuses={canChangeStatuses}
-            />
-          )}
-
-          {isAnalyticsChartEnabled && (
-            <AnalyticsChart 
-              eventAction={event.action} 
-              eventCategory={event.category}
-              platforms={event.platforms || []}
-            />
-          )}
+          {renderPluginSlot("event-details-health")}
         </TabsContent>
       </Tabs>
     </DialogContent>

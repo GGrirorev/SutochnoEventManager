@@ -2,10 +2,10 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useEvents, useDeleteEvent, useEventPlatformStatuses } from "@/hooks/use-events";
 import type { EventFormData } from "@/components/EventForm";
-import { useIsPluginEnabled } from "@/hooks/usePlugins";
+import { usePlugins } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { ROLE_PERMISSIONS } from "@shared/schema";
-import { CsvImportButton } from "@/plugins/csv-import";
+import { getPluginsForSlot, type EventsListPluginContext } from "@/plugins/registry";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
@@ -266,8 +266,7 @@ export default function EventsList() {
   });
   
   // Check if plugins are enabled
-  const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
-  const { isEnabled: isCsvImportEnabled } = useIsPluginEnabled("csv-import");
+  const { data: plugins = [] } = usePlugins();
   
   // Sheet state for creating/editing
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -361,6 +360,21 @@ export default function EventsList() {
   
   const deleteMutation = useDeleteEvent();
 
+  const enabledPluginIds = new Set(
+    plugins.filter((plugin) => plugin.isEnabled).map((plugin) => plugin.id)
+  );
+  const pluginContext: EventsListPluginContext = { canCreate };
+  const isPlatformStatusesEnabled = enabledPluginIds.has("platform-statuses");
+
+  const renderHeaderPlugins = () =>
+    getPluginsForSlot("events-list-header-actions")
+      .filter((plugin) => enabledPluginIds.has(plugin.id))
+      .map((plugin) => {
+        const renderer = plugin.renderers["events-list-header-actions"];
+        if (!renderer) return null;
+        return <div key={plugin.id}>{renderer(pluginContext)}</div>;
+      });
+
   const handleEdit = (event: Event) => {
     setEditingEvent({
       ...event,
@@ -394,7 +408,7 @@ export default function EventsList() {
           </div>
           {canCreate && (
             <div className="flex gap-2">
-              {isCsvImportEnabled && <CsvImportButton />}
+              {renderHeaderPlugins()}
               <Button onClick={handleCreate} className="shadow-md hover:shadow-lg transition-all">
                 <Plus className="w-4 h-4 mr-2" />
                 Новое событие
