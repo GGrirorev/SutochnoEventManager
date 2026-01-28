@@ -421,3 +421,23 @@ export type EventAlertWithEvent = EventAlert & {
   eventAction: string;
   eventName?: string;
 };
+
+// Alert Settings table - stores independent configuration for alerts module
+export const alertSettings = pgTable("alert_settings", {
+  id: serial("id").primaryKey(),
+  matomoUrl: text("matomo_url").notNull().default(""),
+  matomoToken: text("matomo_token").notNull().default(""),
+  matomoSiteId: text("matomo_site_id").notNull().default(""),
+  dropThreshold: integer("drop_threshold").notNull().default(30), // percentage
+  maxConcurrency: integer("max_concurrency").notNull().default(5), // parallel requests
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAlertSettingsSchema = createInsertSchema(alertSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type AlertSettings = typeof alertSettings.$inferSelect;
+export type InsertAlertSettings = z.infer<typeof insertAlertSettingsSchema>;
