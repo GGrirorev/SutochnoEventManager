@@ -1,0 +1,32 @@
+{
+  "id": "alerts",
+  "name": "Event Monitoring & Alerts",
+  "version": "1.0.0",
+  "description": "Независимый модуль мониторинга событий аналитики. Отслеживает падение количества событий и создаёт алерты при значительном снижении.",
+  "author": "Sutochno.ru",
+  "category": "monitoring",
+  "hasSettings": true,
+  "settingsPath": "/alerts/settings",
+  "dependencies": [],
+  "features": [
+    "Мониторинг падения событий по платформам (web, iOS, Android)",
+    "Настраиваемый порог падения в процентах",
+    "Ограничение параллельных запросов к API",
+    "SSE-прогресс проверки в реальном времени",
+    "Массовое удаление алертов",
+    "Фильтрация по категории и платформе",
+    "Поддержка cron-заданий для автоматической проверки"
+  ],
+  "endpoints": {
+    "list": "GET /api/alerts",
+    "delete": "DELETE /api/alerts/:id",
+    "bulkDelete": "POST /api/alerts/bulk-delete",
+    "settings": "GET /api/alerts/settings",
+    "updateSettings": "PUT /api/alerts/settings",
+    "checkStream": "GET /api/alerts/check-stream",
+    "check": "POST /api/alerts/check"
+  },
+  "database": {
+    "tables": ["event_alerts", "alert_settings"]
+  }
+}
