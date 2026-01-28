@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/Sidebar";
 import { EventDetailsModal } from "@/pages/EventsList";
 import {
@@ -30,77 +30,32 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink, Settings } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import type { EventAlert } from "@shared/schema";
-
-const PLATFORM_LABELS: Record<string, string> = {
-  web: "WEB",
-  ios: "iOS",
-  android: "Android",
-  backend: "Backend"
-};
-
-const PLATFORM_COLORS: Record<string, string> = {
-  web: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-  ios: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
-  android: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-  backend: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-};
-
-function formatDateTime(date: string | Date | null): string {
-  if (!date) return "—";
-  const d = new Date(date);
-  return d.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-function formatRelativeTime(date: string | Date | null): string {
-  if (!date) return "";
-  const now = new Date();
-  const d = new Date(date);
-  const diffMs = now.getTime() - d.getTime();
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
-  if (diffMinutes < 1) return "только что";
-  if (diffMinutes < 60) return `${diffMinutes} мин. назад`;
-  if (diffHours < 24) return `${diffHours} ч. назад`;
-  if (diffDays < 7) return `${diffDays} дн. назад`;
-  return "";
-}
+import {
+  PLATFORM_LABELS,
+  PLATFORM_COLORS,
+  formatDateTime,
+  formatRelativeTime,
+  useAlertCheck,
+  useAlerts,
+  AlertCheckProgress
+} from "@/plugins/alerts";
 
 export default function AlertsPage() {
   const { data: user } = useCurrentUser();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [deleteAlert, setDeleteAlert] = useState<EventAlert | null>(null);
   const [viewEventId, setViewEventId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
-  const [checkProgress, setCheckProgress] = useState<{
-    isRunning: boolean;
-    completed: number;
-    total: number;
-    alertsFound: number;
-  } | null>(null);
 
-  const { data: alertsData, isLoading, refetch: refetchAlerts } = useQuery<{ alerts: EventAlert[]; total: number }>({
-    queryKey: ["/api/alerts"]
-  });
+  const { checkProgress, startCheck } = useAlertCheck();
+  const { alerts: allAlerts, isLoading, deleteMutation, bulkDeleteMutation } = useAlerts();
 
   const { data: viewEvent } = useQuery<any>({
     queryKey: ["/api/events", viewEventId],
@@ -109,115 +64,6 @@ export default function AlertsPage() {
       return res.json();
     },
     enabled: !!viewEventId,
-  });
-
-  const startCheck = async () => {
-    if (checkProgress?.isRunning) return;
-    
-    setCheckProgress({ isRunning: true, completed: 0, total: 0, alertsFound: 0 });
-    
-    try {
-      const eventSource = new EventSource("/api/alerts/check-stream");
-      
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.error) {
-          eventSource.close();
-          setCheckProgress(null);
-          toast({
-            title: "Ошибка",
-            description: data.error,
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        if (data.status === "started") {
-          setCheckProgress({
-            isRunning: true,
-            completed: 0,
-            total: data.total,
-            alertsFound: 0,
-          });
-        } else if (data.status === "progress") {
-          setCheckProgress({
-            isRunning: true,
-            completed: data.completed,
-            total: data.total,
-            alertsFound: data.alertsFound || 0,
-          });
-        } else if (data.status === "completed") {
-          eventSource.close();
-          setCheckProgress(null);
-          queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-          toast({
-            title: "Проверка завершена",
-            description: `Проверено: ${data.total} проверок. Создано алертов: ${data.alertsCreated}.`,
-          });
-        }
-      };
-      
-      eventSource.onerror = () => {
-        eventSource.close();
-        setCheckProgress(null);
-        toast({
-          title: "Ошибка",
-          description: "Соединение прервано",
-          variant: "destructive",
-        });
-      };
-    } catch (error: any) {
-      setCheckProgress(null);
-      toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось выполнить проверку",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/alerts/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-      setDeleteAlert(null);
-      toast({
-        title: "Алерт удалён",
-        description: "Запись успешно удалена из журнала.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось удалить алерт",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: number[]) => {
-      await apiRequest("POST", "/api/alerts/bulk-delete", { ids });
-    },
-    onSuccess: (_, ids) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-      setSelectedIds(new Set());
-      setShowBulkDelete(false);
-      toast({
-        title: "Алерты удалены",
-        description: `Удалено записей: ${ids.length}`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось удалить алерты",
-        variant: "destructive",
-      });
-    }
   });
 
   const canDelete = user?.role === "admin" || user?.role === "analyst";
@@ -239,7 +85,19 @@ export default function AlertsPage() {
     }
     setSelectedIds(newSet);
   };
-  const allAlerts = alertsData?.alerts || [];
+
+  const handleDelete = async () => {
+    if (deleteAlert) {
+      await deleteMutation.mutateAsync(deleteAlert.id);
+      setDeleteAlert(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    await bulkDeleteMutation.mutateAsync(Array.from(selectedIds));
+    setSelectedIds(new Set());
+    setShowBulkDelete(false);
+  };
   
   // Get unique categories and platforms for filters
   const categories = Array.from(new Set(allAlerts.map(a => a.eventCategory))).sort();
@@ -294,24 +152,7 @@ export default function AlertsPage() {
           </div>
 
           {/* Progress bar */}
-          {checkProgress?.isRunning && checkProgress.total > 0 && (
-            <div className="border rounded-lg p-4 bg-muted/50" data-testid="check-progress">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Проверка событий...</span>
-                <span className="text-sm text-muted-foreground">
-                  {checkProgress.completed} / {checkProgress.total}
-                </span>
-              </div>
-              <Progress 
-                value={(checkProgress.completed / checkProgress.total) * 100} 
-                className="h-2"
-              />
-              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                <span>Найдено алертов: {checkProgress.alertsFound}</span>
-                <span>{Math.round((checkProgress.completed / checkProgress.total) * 100)}%</span>
-              </div>
-            </div>
-          )}
+          {checkProgress && <AlertCheckProgress progress={checkProgress} />}
 
           {/* Filters */}
           {allAlerts.length > 0 && (
@@ -504,11 +345,10 @@ export default function AlertsPage() {
               <AlertDialogFooter>
                 <AlertDialogCancel data-testid="button-cancel-delete">Отмена</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => deleteAlert && deleteMutation.mutate(deleteAlert.id)}
+                  onClick={handleDelete}
                   className="bg-destructive text-destructive-foreground"
                   data-testid="button-confirm-delete"
                 >
-                  {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Удалить
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -526,11 +366,10 @@ export default function AlertsPage() {
               <AlertDialogFooter>
                 <AlertDialogCancel data-testid="button-cancel-bulk-delete">Отмена</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => bulkDeleteMutation.mutate(Array.from(selectedIds))}
+                  onClick={handleBulkDelete}
                   className="bg-destructive text-destructive-foreground"
                   data-testid="button-confirm-bulk-delete"
                 >
-                  {bulkDeleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Удалить ({selectedIds.size})
                 </AlertDialogAction>
               </AlertDialogFooter>
