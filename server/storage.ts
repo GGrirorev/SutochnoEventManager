@@ -11,6 +11,7 @@ import {
   userLoginLogs,
   plugins,
   eventAlerts,
+  alertSettings,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
@@ -34,6 +35,8 @@ import {
   type InsertPlugin,
   type EventAlert,
   type InsertEventAlert,
+  type AlertSettings,
+  type InsertAlertSettings,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
@@ -125,6 +128,10 @@ export interface IStorage {
   createAlert(alert: InsertEventAlert): Promise<EventAlert>;
   deleteAlert(id: number): Promise<void>;
   getEventsForMonitoring(): Promise<{ id: number; category: string; action: string; platforms: string[] }[]>;
+  
+  // Alert settings operations
+  getAlertSettings(): Promise<AlertSettings | undefined>;
+  updateAlertSettings(settings: Partial<InsertAlertSettings>): Promise<AlertSettings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -903,6 +910,35 @@ export class DatabaseStorage implements IStorage {
       action: r.action,
       platforms: r.platforms as string[],
     }));
+  }
+
+  async getAlertSettings(): Promise<AlertSettings | undefined> {
+    const [settings] = await db.select().from(alertSettings).limit(1);
+    return settings;
+  }
+
+  async updateAlertSettings(updates: Partial<InsertAlertSettings>): Promise<AlertSettings> {
+    const existing = await this.getAlertSettings();
+    
+    if (existing) {
+      const [updated] = await db.update(alertSettings)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(alertSettings.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(alertSettings)
+        .values({
+          matomoUrl: updates.matomoUrl || '',
+          matomoToken: updates.matomoToken || '',
+          matomoSiteId: updates.matomoSiteId || '',
+          dropThreshold: updates.dropThreshold || 30,
+          maxConcurrency: updates.maxConcurrency || 5,
+          isEnabled: updates.isEnabled ?? true,
+        })
+        .returning();
+      return created;
+    }
   }
 }
 

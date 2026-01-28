@@ -1099,6 +1099,55 @@ export async function registerRoutes(
     }
   });
 
+  // Get alert settings (admin only)
+  app.get("/api/alerts/settings", requireAuth, async (req, res) => {
+    try {
+      const user = req.user!;
+      if (user.role !== "admin") {
+        return res.status(403).json({ message: "Только администратор может просматривать настройки алертов" });
+      }
+      
+      const settings = await storage.getAlertSettings();
+      res.json(settings || {
+        matomoUrl: "",
+        matomoToken: "",
+        matomoSiteId: "",
+        dropThreshold: 30,
+        maxConcurrency: 5,
+        isEnabled: true
+      });
+    } catch (error) {
+      console.error("Failed to get alert settings:", error);
+      res.status(500).json({ message: "Failed to get alert settings" });
+    }
+  });
+
+  // Update alert settings (admin only)
+  app.put("/api/alerts/settings", requireAuth, async (req, res) => {
+    try {
+      const user = req.user!;
+      if (user.role !== "admin") {
+        return res.status(403).json({ message: "Только администратор может изменять настройки алертов" });
+      }
+      
+      const { matomoUrl, matomoToken, matomoSiteId, dropThreshold, maxConcurrency, isEnabled } = req.body;
+      
+      const settings = await storage.updateAlertSettings({
+        matomoUrl,
+        matomoToken,
+        matomoSiteId,
+        dropThreshold: dropThreshold ? parseInt(dropThreshold) : undefined,
+        maxConcurrency: maxConcurrency ? parseInt(maxConcurrency) : undefined,
+        isEnabled
+      });
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Failed to update alert settings:", error);
+      res.status(500).json({ message: "Failed to update alert settings" });
+    }
+  });
+
   // Helper function to process items with concurrency limit
   async function processWithConcurrency<T, R>(
     items: T[],
