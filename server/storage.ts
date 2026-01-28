@@ -160,9 +160,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.platform) {
       conditions.push(sql`${events.platforms} @> ARRAY[${filters.platform}]::text[]`);
     }
-    if (filters?.status) {
-      conditions.push(eq(events.implementationStatus, filters.status));
-    }
+    // Note: status filter removed - statuses now managed per-platform in event_platform_statuses table
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const limit = filters?.limit ?? 50;
@@ -189,8 +187,6 @@ export class DatabaseStorage implements IStorage {
       authorId: events.authorId,
       authorName: users.name,
       platforms: events.platforms,
-      implementationStatus: events.implementationStatus,
-      validationStatus: events.validationStatus,
       properties: events.properties,
       notes: events.notes,
       currentVersion: events.currentVersion,
@@ -227,8 +223,6 @@ export class DatabaseStorage implements IStorage {
       authorId: events.authorId,
       authorName: users.name,
       platforms: events.platforms,
-      implementationStatus: events.implementationStatus,
-      validationStatus: events.validationStatus,
       properties: events.properties,
       notes: events.notes,
       currentVersion: events.currentVersion,
@@ -278,21 +272,25 @@ export class DatabaseStorage implements IStorage {
     byImplementationStatus: Record<string, number>;
     byValidationStatus: Record<string, number>;
   }> {
-    const allEvents = await db.select().from(events);
+    // Count total events
+    const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(events);
+    const total = countResult?.count ?? 0;
     
+    // Count statuses from event_platform_statuses table
     const byImplementationStatus: Record<string, number> = {};
     IMPLEMENTATION_STATUS.forEach(s => byImplementationStatus[s] = 0);
     
     const byValidationStatus: Record<string, number> = {};
     VALIDATION_STATUS.forEach(s => byValidationStatus[s] = 0);
 
-    allEvents.forEach(event => {
-      byImplementationStatus[event.implementationStatus] = (byImplementationStatus[event.implementationStatus] || 0) + 1;
-      byValidationStatus[event.validationStatus] = (byValidationStatus[event.validationStatus] || 0) + 1;
+    const platformStatuses = await db.select().from(eventPlatformStatuses);
+    platformStatuses.forEach(ps => {
+      byImplementationStatus[ps.implementationStatus] = (byImplementationStatus[ps.implementationStatus] || 0) + 1;
+      byValidationStatus[ps.validationStatus] = (byValidationStatus[ps.validationStatus] || 0) + 1;
     });
 
     return {
-      total: allEvents.length,
+      total,
       byImplementationStatus,
       byValidationStatus
     };
@@ -469,8 +467,6 @@ export class DatabaseStorage implements IStorage {
       valueDescription: eventVersions.valueDescription,
       owner: eventVersions.owner,
       platforms: eventVersions.platforms,
-      implementationStatus: eventVersions.implementationStatus,
-      validationStatus: eventVersions.validationStatus,
       properties: eventVersions.properties,
       notes: eventVersions.notes,
       changeDescription: eventVersions.changeDescription,
@@ -499,8 +495,6 @@ export class DatabaseStorage implements IStorage {
       valueDescription: eventVersions.valueDescription,
       owner: eventVersions.owner,
       platforms: eventVersions.platforms,
-      implementationStatus: eventVersions.implementationStatus,
-      validationStatus: eventVersions.validationStatus,
       properties: eventVersions.properties,
       notes: eventVersions.notes,
       changeDescription: eventVersions.changeDescription,

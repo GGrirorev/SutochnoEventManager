@@ -142,10 +142,6 @@ export const events = pgTable("events", {
   authorId: integer("author_id"),
   platforms: text("platforms").array().notNull().default(sql`ARRAY[]::text[]`),
   
-  // Legacy global statuses (kept for display, actual statuses in event_platform_statuses table)
-  implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("черновик"),
-  validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("ожидает_проверки"),
-  
   properties: jsonb("properties").$type<{
     name: string;
     type: string;
@@ -281,8 +277,6 @@ export const eventVersions = pgTable("event_versions", {
   valueDescription: text("value_description").default(""),
   owner: text("owner"),
   platforms: text("platforms").array().notNull().default(sql`ARRAY[]::text[]`),
-  implementationStatus: text("implementation_status", { enum: IMPLEMENTATION_STATUS }).notNull().default("черновик"),
-  validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("ожидает_проверки"),
   properties: jsonb("properties").$type<{
     name: string;
     type: string;
