@@ -200,7 +200,7 @@ export default function AlertsPage() {
                     <TableRow key={alert.id} data-testid={`row-alert-${alert.id}`}>
                       <TableCell data-testid={`text-alert-event-${alert.id}`}>
                         <Link 
-                          href={`/events/${alert.eventId}`}
+                          href={`/events?open=${alert.eventId}`}
                           className="group block hover-elevate rounded-md p-1 -m-1"
                           data-testid={`link-event-${alert.id}`}
                         >

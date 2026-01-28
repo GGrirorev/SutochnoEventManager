@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useEvents, useDeleteEvent, useEventVersions, useEventPlatformStatuses } from "@/hooks/use-events";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -586,6 +587,14 @@ export default function EventsList() {
 
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  
+  // Handle ?open=ID query parameter to auto-open event details
+  const [location, setLocation] = useLocation();
+  const [openEventId, setOpenEventId] = useState<number | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("open");
+    return id ? parseInt(id, 10) : null;
+  });
 
     const { 
     data, 
@@ -625,6 +634,19 @@ export default function EventsList() {
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
+  
+  // Auto-open event from query parameter
+  useEffect(() => {
+    if (openEventId && events.length > 0) {
+      const eventToOpen = events.find(e => e.id === openEventId);
+      if (eventToOpen) {
+        setSelectedEvent(eventToOpen);
+        setOpenEventId(null);
+        // Clear the query parameter from URL
+        setLocation("/events", { replace: true });
+      }
+    }
+  }, [openEventId, events, setLocation]);
   
   const deleteMutation = useDeleteEvent();
 
