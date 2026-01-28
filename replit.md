@@ -135,9 +135,9 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 - **Type Safety Improvements**: Added `AuthenticatedRequest` interface in routes.ts for proper user type handling
 - **Category Handling**: Updated storage methods to properly convert category string to categoryId internally
 - **Form Data Types**: Created `EventFormData` type for proper form handling
+- **Legacy Fields Removed**: Removed deprecated `implementationStatus` and `validationStatus` columns from events/event_versions tables. Status tracking now exclusively uses event_platform_statuses table.
 
 ## Known Technical Debt
 
-1. **Legacy Fields**: `implementationStatus` and `validationStatus` columns in events/event_versions tables are deprecated (use platform statuses instead) - requires DB migration to remove
-2. **N+1 Queries**: `deleteEventPlatformStatuses` and `getStats()` could be optimized
-3. **Large Components**: EventDetailsModal should be extracted from EventsList.tsx to a separate file
+1. **N+1 Queries**: `deleteEventPlatformStatuses` and `getStats()` could be optimized
+2. **Large Components**: EventDetailsModal should be extracted from EventsList.tsx to a separate file
