@@ -139,6 +139,5 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 ## Known Technical Debt
 
 1. **Legacy Fields**: `implementationStatus` and `validationStatus` columns in events/event_versions tables are deprecated (use platform statuses instead) - requires DB migration to remove
-2. **Storage Type Mismatches**: Some drizzle-orm/drizzle-zod type incompatibilities remain in storage.ts (16 LSP errors) - these don't affect runtime
-3. **N+1 Queries**: `deleteEventPlatformStatuses` and `getStats()` could be optimized
-4. **Large Components**: EventDetailsModal should be extracted from EventsList.tsx to a separate file
+2. **N+1 Queries**: `deleteEventPlatformStatuses` and `getStats()` could be optimized
+3. **Large Components**: EventDetailsModal should be extracted from EventsList.tsx to a separate file
