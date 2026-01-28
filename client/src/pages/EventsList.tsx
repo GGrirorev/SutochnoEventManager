@@ -1,13 +1,10 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useEvents, useDeleteEvent, useEventVersions, useEventPlatformStatuses } from "@/hooks/use-events";
+import { useEvents, useDeleteEvent, useEventPlatformStatuses } from "@/hooks/use-events";
 import type { EventFormData } from "@/components/EventForm";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { ROLE_PERMISSIONS } from "@shared/schema";
-import { MatomoCodeGenerator } from "@/plugins/code-generator";
-import { PlatformStatuses } from "@/plugins/platform-statuses";
-import Comments from "@/plugins/comments";
 import { CsvImportButton } from "@/plugins/csv-import";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -41,7 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EventEditSheet } from "@/components/EventEditSheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EventDetailsModal } from "@/components/EventDetailsModal";
 import {
   Tooltip,
   TooltipContent,
@@ -81,8 +78,6 @@ import {
   Rocket,
   ShieldCheck,
   ArrowRight,
-  FileText,
-  Activity,
   Copy,
   Check,
   History,
@@ -92,7 +87,6 @@ import {
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Sidebar } from "@/components/Sidebar";
-import { AnalyticsChart } from "@/plugins/analytics-chart";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { IMPLEMENTATION_STATUS, VALIDATION_STATUS, PLATFORMS, type Event, type EventCategory } from "@shared/schema";
@@ -249,321 +243,6 @@ function VersionBadge({ event }: { event: any }) {
         </div>
       </TooltipContent>
     </Tooltip>
-  );
-}
-
-export function EventDetailsModal({ event: initialEvent, onEdit }: { event: any; onEdit?: (event: any) => void }) {
-  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
-  const { isEnabled: isCodeGeneratorEnabled } = useIsPluginEnabled("code-generator");
-  const { isEnabled: isAnalyticsChartEnabled } = useIsPluginEnabled("analytics-chart");
-  const { isEnabled: isPlatformStatusesEnabled } = useIsPluginEnabled("platform-statuses");
-  const { isEnabled: isCommentsEnabled } = useIsPluginEnabled("comments");
-  
-  // Get current user permissions
-  const { data: currentUser } = useCurrentUser();
-  const userPermissions = currentUser ? ROLE_PERMISSIONS[currentUser.role] : null;
-  const canChangeStatuses = userPermissions?.canChangeStatuses ?? false;
-  const canComment = userPermissions?.canComment ?? false;
-  const canEditEvents = userPermissions?.canEditEvents ?? false;
-  const isAdmin = currentUser?.role === 'admin';
-
-  // Fetch fresh event data to get updated statuses
-  const { data: event = initialEvent } = useQuery({
-    queryKey: ["/api/events", initialEvent.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/events/${initialEvent.id}`);
-      return res.json();
-    }
-  });
-
-  // Determine the version to display
-  const displayVersion = selectedVersion || event.currentVersion || 1;
-
-  // Fetch event versions
-  const { data: versions = [] } = useEventVersions(event.id);
-  
-  // Get the currently displayed version data
-  const currentVersionNumber = selectedVersion || event.currentVersion || 1;
-  const currentVersionData = versions.find((v: any) => v.version === (event.currentVersion || 1));
-  const displayedVersion = selectedVersion 
-    ? versions.find((v: any) => v.version === selectedVersion) 
-    : currentVersionData;
-  
-  // Use version data if viewing an old version, otherwise use current event data
-  const displayData = displayedVersion || event;
-
-  // Helper function to get status color class
-  const getStatusColor = (status: string | null) => {
-    if (!status) return "text-muted-foreground";
-    const normalized = status.toLowerCase().replace(/ /g, '_');
-    switch (normalized) {
-      case 'внедрено':
-      case 'корректно':
-        return "text-emerald-600 dark:text-emerald-400 font-medium";
-      case 'в_разработке':
-      case 'предупреждение':
-        return "text-amber-600 dark:text-amber-400 font-medium";
-      case 'черновик':
-        return "text-blue-600 dark:text-blue-400 font-medium";
-      case 'ошибка':
-        return "text-rose-600 dark:text-rose-400 font-medium";
-      case 'архив':
-      case 'ожидает_проверки':
-      default:
-        return "text-slate-600 dark:text-slate-400";
-    }
-  };
-
-  return (
-    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <div className="flex items-center justify-between pr-8">
-          <DialogTitle className="text-2xl flex items-center gap-3">
-            <Badge variant="outline" className="text-base font-normal">
-              {displayData.category}
-            </Badge>
-            {displayData.action}
-          </DialogTitle>
-          <div className="flex items-center gap-2">
-            {/* Edit Button */}
-            {canEditEvents && onEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                data-testid="button-edit-event"
-                title="Редактировать событие"
-                onClick={() => onEdit(event)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
-            {/* Version Badge */}
-            <Badge variant="secondary" className="text-xs">
-              v{event.currentVersion || 1}
-            </Badge>
-            
-            {/* Version Selector */}
-            {versions.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 gap-1">
-                    <History className="w-3 h-3" />
-                    {selectedVersion ? `v${selectedVersion}` : 'История'}
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Версии</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => setSelectedVersion(null)}
-                    className={!selectedVersion ? "bg-accent" : ""}
-                  >
-                    Текущая (v{event.currentVersion || 1})
-                  </DropdownMenuItem>
-                  {/* Filter out current version to avoid duplicate */}
-                  {versions.filter((v: any) => v.version !== (event.currentVersion || 1)).map((v: any) => (
-                    <DropdownMenuItem 
-                      key={v.version}
-                      onClick={() => setSelectedVersion(v.version)}
-                      className={selectedVersion === v.version ? "bg-accent" : ""}
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">v{v.version}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {v.createdAt && format(new Date(v.createdAt), "dd.MM.yyyy HH:mm", { locale: ru })}
-                          </span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {v.changeDescription || `Версия ${v.version}`}
-                        </span>
-                        {v.authorName && (
-                          <span className="text-[10px] text-muted-foreground/70">
-                            Автор: {v.authorName}
-                          </span>
-                        )}
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
-        {selectedVersion && displayedVersion && (
-          <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-sm text-amber-700 dark:text-amber-300">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span>Просмотр версии v{selectedVersion}</span>
-              {displayedVersion.createdAt && (
-                <span className="text-xs opacity-80">
-                  от {format(new Date(displayedVersion.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
-                </span>
-              )}
-              {displayedVersion.authorName && (
-                <span className="text-xs opacity-80">
-                  • Автор: {displayedVersion.authorName}
-                </span>
-              )}
-              {displayData.owner && (
-                <span className="text-xs opacity-80">
-                  • Ответственный: {displayData.owner}
-                </span>
-              )}
-              <button className="underline ml-auto" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
-            </div>
-            {displayedVersion.changeDescription && displayedVersion.version > 1 && (
-              <div className="text-xs opacity-80 mt-1">
-                Изменения: {displayedVersion.changeDescription}
-              </div>
-            )}
-          </div>
-        )}
-        {!selectedVersion && currentVersionData && (
-          <div className="mt-2 p-2 bg-muted/50 rounded text-sm text-muted-foreground">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span>Текущая версия v{event.currentVersion || 1}</span>
-              {currentVersionData.createdAt && (
-                <span className="text-xs opacity-80">
-                  от {format(new Date(currentVersionData.createdAt), "d MMMM yyyy, HH:mm", { locale: ru })}
-                </span>
-              )}
-              {currentVersionData.authorName && (
-                <span className="text-xs opacity-80">
-                  • Автор: {currentVersionData.authorName}
-                </span>
-              )}
-              {displayData.owner && (
-                <span className="text-xs opacity-80">
-                  • Ответственный: {displayData.owner}
-                </span>
-              )}
-            </div>
-            {currentVersionData.changeDescription && currentVersionData.version > 1 && (
-              <div className="text-xs opacity-70 mt-1">
-                Изменения: {currentVersionData.changeDescription}
-              </div>
-            )}
-          </div>
-        )}
-      </DialogHeader>
-
-      <Tabs defaultValue="description" className="pt-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="description" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Описание
-          </TabsTrigger>
-          <TabsTrigger value="health" className="flex items-center gap-2">
-            <Activity className="w-4 h-4" />
-            Здоровье
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Tab 1: Описание */}
-        <TabsContent value="description" className="space-y-6 pt-4">
-          <div className="space-y-4">
-            {displayData.block && (
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Блок</h4>
-                <p className="text-sm">{displayData.block}</p>
-              </div>
-            )}
-            <div>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-1">Описание действия</h4>
-              <p className="text-sm">
-                {displayData.actionDescription || "Нет описания"}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Category</h4>
-                <p className="text-sm font-mono bg-muted p-2 rounded">
-                  <CopyableText text={displayData.category || "-"} />
-                </p>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Action</h4>
-                <p className="text-sm font-mono bg-muted p-2 rounded">
-                  <CopyableText text={displayData.action || "-"} />
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Event Name</h4>
-                <p className="text-sm font-mono bg-muted p-2 rounded">{displayData.name || "-"}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Значение (Value)</h4>
-                <p className="text-sm bg-muted p-2 rounded">{displayData.valueDescription || "-"}</p>
-              </div>
-            </div>
-          </div>
-
-          {displayData.properties && displayData.properties.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Свойства (Properties)</h4>
-              <div className="border rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="h-8 text-xs">Название</TableHead>
-                      <TableHead className="h-8 text-xs">Тип</TableHead>
-                      <TableHead className="h-8 text-xs">Описание</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {displayData.properties.map((prop: any, i: number) => (
-                      <TableRow key={i}>
-                        <TableCell className="py-2 text-xs font-mono">{prop.name}</TableCell>
-                        <TableCell className="py-2 text-xs">{prop.type}</TableCell>
-                        <TableCell className="py-2 text-xs text-muted-foreground">{prop.description}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-
-          {displayData.notes && (
-            <div>
-              <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Заметки</h4>
-              <p className="text-xs font-mono bg-muted/50 p-3 rounded border">{displayData.notes}</p>
-            </div>
-          )}
-
-          {/* Matomo Code Generator Plugin */}
-          {isCodeGeneratorEnabled && <MatomoCodeGenerator event={displayData} />}
-
-          {/* Comments Plugin */}
-          {isCommentsEnabled && <Comments eventId={event.id} canComment={canComment} isAdmin={isAdmin} />}
-        </TabsContent>
-
-        {/* Tab 2: Здоровье */}
-        <TabsContent value="health" className="space-y-6 pt-4">
-          {/* Platform Statuses Plugin */}
-          {isPlatformStatusesEnabled && (
-            <PlatformStatuses
-              eventId={event.id}
-              platforms={displayData.platforms || []}
-              displayVersion={displayVersion}
-              canChangeStatuses={canChangeStatuses}
-            />
-          )}
-
-          {/* Analytics Chart Plugin */}
-          {isAnalyticsChartEnabled && (
-            <AnalyticsChart 
-              eventAction={event.action} 
-              eventCategory={event.category}
-              platforms={event.platforms || []}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
-    </DialogContent>
   );
 }
 

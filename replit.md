@@ -139,5 +139,4 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 
 ## Known Technical Debt
 
-1. **N+1 Queries**: `deleteEventPlatformStatuses` and `getStats()` could be optimized
-2. **Large Components**: EventDetailsModal should be extracted from EventsList.tsx to a separate file
+1. **Type annotations in storage.ts**: Minor drizzle-orm/drizzle-zod type mismatches that don't affect runtime

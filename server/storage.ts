@@ -276,17 +276,40 @@ export class DatabaseStorage implements IStorage {
     const [countResult] = await db.select({ count: sql<number>`count(*)::int` }).from(events);
     const total = countResult?.count ?? 0;
     
-    // Count statuses from event_platform_statuses table
+    // Initialize status counts
     const byImplementationStatus: Record<string, number> = {};
     IMPLEMENTATION_STATUS.forEach(s => byImplementationStatus[s] = 0);
     
     const byValidationStatus: Record<string, number> = {};
     VALIDATION_STATUS.forEach(s => byValidationStatus[s] = 0);
 
-    const platformStatuses = await db.select().from(eventPlatformStatuses);
-    platformStatuses.forEach(ps => {
-      byImplementationStatus[ps.implementationStatus] = (byImplementationStatus[ps.implementationStatus] || 0) + 1;
-      byValidationStatus[ps.validationStatus] = (byValidationStatus[ps.validationStatus] || 0) + 1;
+    // Use SQL GROUP BY instead of fetching all records
+    const implCounts = await db
+      .select({ 
+        status: eventPlatformStatuses.implementationStatus, 
+        count: sql<number>`count(*)::int` 
+      })
+      .from(eventPlatformStatuses)
+      .groupBy(eventPlatformStatuses.implementationStatus);
+    
+    implCounts.forEach(row => {
+      if (row.status && byImplementationStatus.hasOwnProperty(row.status)) {
+        byImplementationStatus[row.status] = row.count;
+      }
+    });
+
+    const valCounts = await db
+      .select({ 
+        status: eventPlatformStatuses.validationStatus, 
+        count: sql<number>`count(*)::int` 
+      })
+      .from(eventPlatformStatuses)
+      .groupBy(eventPlatformStatuses.validationStatus);
+    
+    valCounts.forEach(row => {
+      if (row.status && byValidationStatus.hasOwnProperty(row.status)) {
+        byValidationStatus[row.status] = row.count;
+      }
     });
 
     return {
@@ -397,11 +420,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEventPlatformStatuses(eventId: number): Promise<void> {
-    // First delete related status history
-    const platformStatuses = await this.getEventPlatformStatuses(eventId);
-    for (const ps of platformStatuses) {
-      await db.delete(statusHistory).where(eq(statusHistory.eventPlatformStatusId, ps.id));
-    }
+    // Delete status history using subquery (single query instead of N+1)
+    await db.delete(statusHistory).where(
+      sql`${statusHistory.eventPlatformStatusId} IN (
+        SELECT id FROM event_platform_statuses WHERE event_id = ${eventId}
+      )`
+    );
     // Then delete platform statuses
     await db.delete(eventPlatformStatuses).where(eq(eventPlatformStatuses.eventId, eventId));
   }
