@@ -1072,6 +1072,33 @@ export async function registerRoutes(
     }
   });
 
+  // Delete multiple alerts (admin and analyst only)
+  app.post("/api/alerts/bulk-delete", requireAuth, async (req, res) => {
+    try {
+      const user = req.user!;
+      
+      if (user.role !== "admin" && user.role !== "analyst") {
+        return res.status(403).json({ message: "Только администратор и аналитик могут удалять алерты" });
+      }
+      
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "Необходимо указать массив ID алертов" });
+      }
+      
+      let deleted = 0;
+      for (const id of ids) {
+        await storage.deleteAlert(id);
+        deleted++;
+      }
+      
+      res.json({ message: `Удалено алертов: ${deleted}`, deleted });
+    } catch (error) {
+      console.error("Failed to bulk delete alerts:", error);
+      res.status(500).json({ message: "Failed to bulk delete alerts" });
+    }
+  });
+
   // Check events for alerts (cron job endpoint)
   app.post("/api/alerts/check", async (req, res) => {
     try {

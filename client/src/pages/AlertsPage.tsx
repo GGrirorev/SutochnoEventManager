@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
 import type { EventAlert } from "@shared/schema";
@@ -86,6 +87,8 @@ export default function AlertsPage() {
   const [viewEventId, setViewEventId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   const { data: alertsData, isLoading, refetch: refetchAlerts } = useQuery<{ alerts: EventAlert[]; total: number }>({
     queryKey: ["/api/alerts"]
@@ -142,7 +145,47 @@ export default function AlertsPage() {
     }
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await apiRequest("POST", "/api/alerts/bulk-delete", { ids });
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+      setSelectedIds(new Set());
+      setShowBulkDelete(false);
+      toast({
+        title: "Алерты удалены",
+        description: `Удалено записей: ${ids.length}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось удалить алерты",
+        variant: "destructive",
+      });
+    }
+  });
+
   const canDelete = user?.role === "admin" || user?.role === "analyst";
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === alerts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(alerts.map(a => a.id)));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
   const allAlerts = alertsData?.alerts || [];
   
   // Get unique categories and platforms for filters
@@ -234,6 +277,18 @@ export default function AlertsPage() {
               <span className="text-sm text-muted-foreground ml-auto">
                 Показано: {alerts.length} из {allAlerts.length}
               </span>
+
+              {canDelete && selectedIds.size > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setShowBulkDelete(true)}
+                  data-testid="button-bulk-delete"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Удалить выбранные ({selectedIds.size})
+                </Button>
+              )}
             </div>
           )}
 
@@ -267,6 +322,15 @@ export default function AlertsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {canDelete && (
+                      <TableHead className="w-12">
+                        <Checkbox 
+                          checked={alerts.length > 0 && selectedIds.size === alerts.length}
+                          onCheckedChange={toggleSelectAll}
+                          data-testid="checkbox-select-all"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Событие</TableHead>
                     <TableHead>Платформа</TableHead>
                     <TableHead>Падение</TableHead>
@@ -279,6 +343,15 @@ export default function AlertsPage() {
                 <TableBody>
                   {alerts.map((alert) => (
                     <TableRow key={alert.id} data-testid={`row-alert-${alert.id}`}>
+                      {canDelete && (
+                        <TableCell>
+                          <Checkbox 
+                            checked={selectedIds.has(alert.id)}
+                            onCheckedChange={() => toggleSelect(alert.id)}
+                            data-testid={`checkbox-alert-${alert.id}`}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell data-testid={`text-alert-event-${alert.id}`}>
                         <button 
                           onClick={() => setViewEventId(alert.eventId)}
@@ -354,6 +427,28 @@ export default function AlertsPage() {
                 >
                   {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Удалить
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog open={showBulkDelete} onOpenChange={setShowBulkDelete}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Удалить выбранные алерты?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Вы уверены, что хотите удалить {selectedIds.size} алертов? Это действие нельзя отменить.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel data-testid="button-cancel-bulk-delete">Отмена</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => bulkDeleteMutation.mutate(Array.from(selectedIds))}
+                  className="bg-destructive text-destructive-foreground"
+                  data-testid="button-confirm-bulk-delete"
+                >
+                  {bulkDeleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Удалить ({selectedIds.size})
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
