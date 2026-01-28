@@ -1183,28 +1183,41 @@ export async function registerRoutes(
     };
 
     try {
-      const plugin = await storage.getPlugin("analytics-chart");
-      if (!plugin || !plugin.isEnabled) {
-        sendProgress({ error: "Analytics chart plugin is not enabled" });
+      const alertConfig = await storage.getAlertSettings();
+      
+      if (!alertConfig || !alertConfig.isEnabled) {
+        sendProgress({ error: "Модуль алертов отключен. Включите его в настройках." });
         res.end();
         return;
       }
       
-      const config = (plugin.config as any) || {};
-      const apiUrl = config.apiUrl || "https://analytics.sutochno.ru/index.php";
-      const token = config.apiToken || process.env.ANALYTICS_API_TOKEN;
+      const apiUrl = alertConfig.matomoUrl || "https://analytics.sutochno.ru/index.php";
+      const token = alertConfig.matomoToken || process.env.ANALYTICS_API_TOKEN;
       
       if (!token) {
-        sendProgress({ error: "Analytics API token not configured" });
+        sendProgress({ error: "API токен не настроен. Укажите его в настройках алертов." });
         res.end();
         return;
       }
       
-      const platformSiteMapping: Record<string, number> = config.platformSiteMapping || {
-        "web": 1,
-        "ios": 2,
-        "android": 3
-      };
+      // Parse site IDs from comma-separated string: "web:1,ios:2,android:3"
+      const platformSiteMapping: Record<string, number> = {};
+      if (alertConfig.matomoSiteId) {
+        alertConfig.matomoSiteId.split(",").forEach(part => {
+          const [platform, id] = part.trim().split(":");
+          if (platform && id) {
+            platformSiteMapping[platform.toLowerCase()] = parseInt(id);
+          }
+        });
+      }
+      if (Object.keys(platformSiteMapping).length === 0) {
+        platformSiteMapping["web"] = 1;
+        platformSiteMapping["ios"] = 2;
+        platformSiteMapping["android"] = 3;
+      }
+      
+      const dropThreshold = alertConfig.dropThreshold || 30;
+      const CONCURRENCY = alertConfig.maxConcurrency || 5;
       
       const now = new Date();
       const yesterday = new Date(now);
@@ -1237,9 +1250,6 @@ export async function registerRoutes(
       
       const alertsCreated: any[] = [];
       let completed = 0;
-      
-      // Process in batches of 5
-      const CONCURRENCY = 5;
       
       for (let i = 0; i < checks.length; i += CONCURRENCY) {
         const batch = checks.slice(i, i + CONCURRENCY);
@@ -1299,7 +1309,7 @@ export async function registerRoutes(
             if (dayBeforeCount > 0) {
               const dropPercent = Math.round((1 - yesterdayCount / dayBeforeCount) * 100);
               
-              if (dropPercent >= 30) {
+              if (dropPercent >= dropThreshold) {
                 const alert = await storage.createAlert({
                   eventId: event.id,
                   platform: platform as any,
@@ -1347,24 +1357,37 @@ export async function registerRoutes(
   // Check events for alerts (cron job endpoint - no auth, no SSE)
   app.post("/api/alerts/check", async (req, res) => {
     try {
-      const plugin = await storage.getPlugin("analytics-chart");
-      if (!plugin || !plugin.isEnabled) {
-        return res.status(400).json({ message: "Analytics chart plugin is not enabled" });
+      const alertConfig = await storage.getAlertSettings();
+      
+      if (!alertConfig || !alertConfig.isEnabled) {
+        return res.status(400).json({ message: "Модуль алертов отключен" });
       }
       
-      const config = (plugin.config as any) || {};
-      const apiUrl = config.apiUrl || "https://analytics.sutochno.ru/index.php";
-      const token = config.apiToken || process.env.ANALYTICS_API_TOKEN;
+      const apiUrl = alertConfig.matomoUrl || "https://analytics.sutochno.ru/index.php";
+      const token = alertConfig.matomoToken || process.env.ANALYTICS_API_TOKEN;
       
       if (!token) {
-        return res.status(500).json({ message: "Analytics API token not configured" });
+        return res.status(500).json({ message: "API токен не настроен" });
       }
       
-      const platformSiteMapping: Record<string, number> = config.platformSiteMapping || {
-        "web": 1,
-        "ios": 2,
-        "android": 3
-      };
+      // Parse site IDs from comma-separated string
+      const platformSiteMapping: Record<string, number> = {};
+      if (alertConfig.matomoSiteId) {
+        alertConfig.matomoSiteId.split(",").forEach(part => {
+          const [platform, id] = part.trim().split(":");
+          if (platform && id) {
+            platformSiteMapping[platform.toLowerCase()] = parseInt(id);
+          }
+        });
+      }
+      if (Object.keys(platformSiteMapping).length === 0) {
+        platformSiteMapping["web"] = 1;
+        platformSiteMapping["ios"] = 2;
+        platformSiteMapping["android"] = 3;
+      }
+      
+      const dropThreshold = alertConfig.dropThreshold || 30;
+      const CONCURRENCY = alertConfig.maxConcurrency || 5;
       
       const now = new Date();
       const yesterday = new Date(now);
@@ -1376,7 +1399,7 @@ export async function registerRoutes(
       const dayBeforeStr = dayBefore.toISOString().split('T')[0];
       
       const eventsToMonitor = await storage.getEventsForMonitoring();
-      const platformsToCheck = ["web", "ios", "android"];
+      const platformsToCheck = Object.keys(platformSiteMapping);
       
       // Build list of checks
       const checks: { event: typeof eventsToMonitor[0]; platform: string }[] = [];
@@ -1389,7 +1412,6 @@ export async function registerRoutes(
       }
       
       const alertsCreated: any[] = [];
-      const CONCURRENCY = 5;
       
       for (let i = 0; i < checks.length; i += CONCURRENCY) {
         const batch = checks.slice(i, i + CONCURRENCY);
@@ -1449,7 +1471,7 @@ export async function registerRoutes(
             if (dayBeforeCount > 0) {
               const dropPercent = Math.round((1 - yesterdayCount / dayBeforeCount) * 100);
               
-              if (dropPercent >= 30) {
+              if (dropPercent >= dropThreshold) {
                 const alert = await storage.createAlert({
                   eventId: event.id,
                   platform: platform as any,
@@ -1471,7 +1493,7 @@ export async function registerRoutes(
       }
       
       res.json({
-        message: `Check completed. ${alertsCreated.length} alerts created.`,
+        message: `Проверка завершена. Создано алертов: ${alertsCreated.length}.`,
         alertsCreated: alertsCreated.length,
         eventsChecked: eventsToMonitor.length,
       });
