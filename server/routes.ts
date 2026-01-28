@@ -1038,7 +1038,7 @@ export async function registerRoutes(
   // Get all alerts (viewable by all authenticated users)
   app.get("/api/alerts", requireAuth, async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 100;
+      const limit = parseInt(req.query.limit as string) || 10000;
       const offset = parseInt(req.query.offset as string) || 0;
       const result = await storage.getAlerts(limit, offset);
       res.json(result);
