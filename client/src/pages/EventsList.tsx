@@ -256,7 +256,7 @@ function VersionBadge({ event }: { event: any }) {
   );
 }
 
-function EventDetailsModal({ event: initialEvent }: { event: any }) {
+export function EventDetailsModal({ event: initialEvent }: { event: any }) {
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const { isEnabled: isCodeGeneratorEnabled } = useIsPluginEnabled("code-generator");
   const { isEnabled: isAnalyticsChartEnabled } = useIsPluginEnabled("analytics-chart");

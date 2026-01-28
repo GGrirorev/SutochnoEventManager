@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/Sidebar";
+import { EventDetailsModal } from "@/pages/EventsList";
 import {
   Table,
   TableBody,
@@ -19,19 +20,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink, X } from "lucide-react";
+import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { Link } from "wouter";
 import type { EventAlert } from "@shared/schema";
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -87,7 +82,7 @@ export default function AlertsPage() {
     queryKey: ["/api/alerts"]
   });
 
-  const { data: viewEvent, isLoading: isLoadingEvent } = useQuery<any>({
+  const { data: viewEvent } = useQuery<any>({
     queryKey: ["/api/events", viewEventId],
     queryFn: async () => {
       const res = await fetch(`/api/events/${viewEventId}`);
@@ -294,97 +289,8 @@ export default function AlertsPage() {
             </AlertDialogContent>
           </AlertDialog>
 
-          <Dialog open={!!viewEventId} onOpenChange={(open) => !open && setViewEventId(null)}>
-            <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" data-testid="dialog-event-details">
-              <DialogHeader>
-                <DialogTitle className="text-xl flex items-center gap-3">
-                  {viewEvent ? (
-                    <>
-                      <Badge variant="outline" className="text-base font-normal">
-                        {viewEvent.category}
-                      </Badge>
-                      {viewEvent.action}
-                    </>
-                  ) : (
-                    "Загрузка..."
-                  )}
-                </DialogTitle>
-              </DialogHeader>
-              
-              {isLoadingEvent ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : viewEvent ? (
-                <div className="space-y-4">
-                  {viewEvent.name && (
-                    <div>
-                      <div className="text-sm font-medium text-muted-foreground mb-1">Название</div>
-                      <div>{viewEvent.name}</div>
-                    </div>
-                  )}
-                  
-                  {viewEvent.description && (
-                    <div>
-                      <div className="text-sm font-medium text-muted-foreground mb-1">Описание</div>
-                      <div className="whitespace-pre-wrap">{viewEvent.description}</div>
-                    </div>
-                  )}
-                  
-                  {viewEvent.properties && (viewEvent.properties as any[]).length > 0 && (
-                    <div>
-                      <div className="text-sm font-medium text-muted-foreground mb-2">Свойства</div>
-                      <div className="border rounded-md overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Имя</TableHead>
-                              <TableHead>Тип</TableHead>
-                              <TableHead>Описание</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {(viewEvent.properties as any[]).map((prop: any, idx: number) => (
-                              <TableRow key={idx}>
-                                <TableCell className="font-mono text-sm">{prop.name}</TableCell>
-                                <TableCell>
-                                  <Badge variant="secondary">{prop.type}</Badge>
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">{prop.description || "—"}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {viewEvent.owner && (
-                      <div>
-                        <div className="text-sm font-medium text-muted-foreground mb-1">Владелец</div>
-                        <div>{viewEvent.owner}</div>
-                      </div>
-                    )}
-                    {viewEvent.authorName && (
-                      <div>
-                        <div className="text-sm font-medium text-muted-foreground mb-1">Автор</div>
-                        <div>{viewEvent.authorName}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end pt-4 border-t">
-                    <Link href="/events">
-                      <Button variant="outline" data-testid="button-go-to-events">
-                        Перейти к списку событий
-                        <ExternalLink className="h-4 w-4 ml-2" />
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              ) : null}
-            </DialogContent>
+          <Dialog open={!!viewEvent} onOpenChange={(open) => !open && setViewEventId(null)}>
+            {viewEvent && <EventDetailsModal event={viewEvent} />}
           </Dialog>
         </div>
       </main>
