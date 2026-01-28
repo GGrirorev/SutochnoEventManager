@@ -23,8 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown } from "lucide-react";
+import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
+import { Link } from "wouter";
 import type { EventAlert } from "@shared/schema";
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -198,8 +199,17 @@ export default function AlertsPage() {
                   {alerts.map((alert) => (
                     <TableRow key={alert.id} data-testid={`row-alert-${alert.id}`}>
                       <TableCell data-testid={`text-alert-event-${alert.id}`}>
-                        <div className="font-medium">{alert.eventCategory}</div>
-                        <div className="text-sm text-muted-foreground">@{alert.eventAction}</div>
+                        <Link 
+                          href={`/events/${alert.eventId}`}
+                          className="group block hover-elevate rounded-md p-1 -m-1"
+                          data-testid={`link-event-${alert.id}`}
+                        >
+                          <div className="font-medium flex items-center gap-1">
+                            {alert.eventCategory}
+                            <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <div className="text-sm text-muted-foreground">@{alert.eventAction}</div>
+                        </Link>
                       </TableCell>
                       <TableCell data-testid={`text-alert-platform-${alert.id}`}>
                         <Badge 
