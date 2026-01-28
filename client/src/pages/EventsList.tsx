@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { useEvents, useDeleteEvent, useEventVersions, useEventPlatformStatuses } from "@/hooks/use-events";
 import { useIsPluginEnabled } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -257,7 +257,7 @@ function VersionBadge({ event }: { event: any }) {
   );
 }
 
-export function EventDetailsModal({ event: initialEvent }: { event: any }) {
+export function EventDetailsModal({ event: initialEvent, onEdit }: { event: any; onEdit?: (event: any) => void }) {
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
   const { isEnabled: isCodeGeneratorEnabled } = useIsPluginEnabled("code-generator");
   const { isEnabled: isAnalyticsChartEnabled } = useIsPluginEnabled("analytics-chart");
@@ -331,17 +331,16 @@ export function EventDetailsModal({ event: initialEvent }: { event: any }) {
           </DialogTitle>
           <div className="flex items-center gap-2">
             {/* Edit Button */}
-            {canEditEvents && (
-              <Link href={`/events/${event.id}/edit`}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  data-testid="button-edit-event"
-                  title="Редактировать событие"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </Link>
+            {canEditEvents && onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                data-testid="button-edit-event"
+                title="Редактировать событие"
+                onClick={() => onEdit(event)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
             )}
             {/* Version Badge */}
             <Badge variant="secondary" className="text-xs">
@@ -838,7 +837,7 @@ export default function EventsList() {
                             )}
                           </div>
                         </DialogTrigger>
-                        {selectedEvent && <EventDetailsModal event={selectedEvent} />}
+                        {selectedEvent && <EventDetailsModal event={selectedEvent} onEdit={(e) => { setSelectedEvent(null); setEditingEvent(e); setSheetOpen(true); }} />}
                       </Dialog>
                     </TableCell>
                     <TableCell>
