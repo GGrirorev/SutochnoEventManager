@@ -127,3 +127,18 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 ### Validation
 - **Zod**: Schema validation for data and API contracts.
 - **drizzle-zod**: Zod schema generation from Drizzle.
+
+## Recent Changes
+
+### January 2026
+- **EventEditSheet Component**: Created reusable component for event editing, used in both EventsList and AlertsPage
+- **Type Safety Improvements**: Added `AuthenticatedRequest` interface in routes.ts for proper user type handling
+- **Category Handling**: Updated storage methods to properly convert category string to categoryId internally
+- **Form Data Types**: Created `EventFormData` type for proper form handling
+
+## Known Technical Debt
+
+1. **Legacy Fields**: `implementationStatus` and `validationStatus` columns in events/event_versions tables are deprecated (use platform statuses instead) - requires DB migration to remove
+2. **Storage Type Mismatches**: Some drizzle-orm/drizzle-zod type incompatibilities remain in storage.ts (16 LSP errors) - these don't affect runtime
+3. **N+1 Queries**: `deleteEventPlatformStatuses` and `getStats()` could be optimized
+4. **Large Components**: EventDetailsModal should be extracted from EventsList.tsx to a separate file

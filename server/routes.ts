@@ -15,7 +15,13 @@ import {
   loginSchema,
   ROLE_PERMISSIONS,
   UserRole,
+  User,
 } from "@shared/schema";
+
+// Extend Express Request to include authenticated user
+interface AuthenticatedRequest extends Request {
+  user: User;
+}
 
 // Zod schemas for platform status API validation
 const createPlatformStatusSchema = z.object({
@@ -127,14 +133,14 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   }
   
   // Attach user to request for downstream use
-  (req as any).user = user;
+  (req as AuthenticatedRequest).user = user;
   next();
 };
 
 // Role-based access control middleware factory
 const requirePermission = (permission: keyof typeof ROLE_PERMISSIONS.admin) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user;
+    const user = (req as AuthenticatedRequest).user;
     if (!user) {
       return res.status(401).json({ message: "Требуется авторизация" });
     }
@@ -150,7 +156,7 @@ const requirePermission = (permission: keyof typeof ROLE_PERMISSIONS.admin) => {
 
 // Admin-only middleware (shortcut)
 const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  const user = (req as any).user;
+  const user = (req as AuthenticatedRequest).user;
   if (!user || user.role !== "admin") {
     return res.status(403).json({ message: "Доступ только для администраторов" });
   }
@@ -311,7 +317,7 @@ export async function registerRoutes(
           {
             version: newVersion,
             block: input.block || "",
-            action: input.action,
+            action: input.action || existing.action,
             actionDescription: input.actionDescription || "",
             name: input.name,
             valueDescription: input.valueDescription || "",
@@ -479,7 +485,6 @@ export async function registerRoutes(
             },
             {
               version: 1,
-              category: event.category,
               action: event.action,
               name: event.name || null,
               block: event.block || "",
@@ -528,7 +533,6 @@ export async function registerRoutes(
             },
             {
               version: newVersion,
-              category: parsed.category,
               action: parsed.action,
               name: parsed.name || "",
               block: parsed.block || "",
@@ -725,7 +729,7 @@ export async function registerRoutes(
       }
       
       const targetVersion = versionNumber || event.currentVersion;
-      const existing = await storage.getEventPlatformStatus(eventId, platform, targetVersion);
+      const existing = await storage.getEventPlatformStatus(eventId, platform as string, targetVersion);
       if (!existing) {
         return res.status(404).json({ message: "Platform status not found for this version" });
       }
@@ -772,7 +776,7 @@ export async function registerRoutes(
   app.delete("/api/events/:eventId/platform-statuses/:platform", requireAuth, requirePermission("canChangeStatuses"), async (req, res) => {
     try {
       const eventId = Number(req.params.eventId);
-      const platform = req.params.platform;
+      const platform = req.params.platform as string;
       
       const existing = await storage.getEventPlatformStatus(eventId, platform, 1);
       if (!existing) {
@@ -1051,15 +1055,14 @@ export async function registerRoutes(
   // Delete an alert (admin and analyst only)
   app.delete("/api/alerts/:id", requireAuth, async (req, res) => {
     try {
-      const user = req.user!;
-      const permissions = ROLE_PERMISSIONS[user.role as UserRole];
+      const user = (req as AuthenticatedRequest).user;
       
       // Only admin and analyst can delete alerts
       if (user.role !== "admin" && user.role !== "analyst") {
         return res.status(403).json({ message: "Только администратор и аналитик могут удалять алерты" });
       }
       
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid alert ID" });
       }
@@ -1075,7 +1078,7 @@ export async function registerRoutes(
   // Delete multiple alerts (admin and analyst only)
   app.post("/api/alerts/bulk-delete", requireAuth, async (req, res) => {
     try {
-      const user = req.user!;
+      const user = (req as AuthenticatedRequest).user;
       
       if (user.role !== "admin" && user.role !== "analyst") {
         return res.status(403).json({ message: "Только администратор и аналитик могут удалять алерты" });
@@ -1102,7 +1105,7 @@ export async function registerRoutes(
   // Get alert settings (admin only)
   app.get("/api/alerts/settings", requireAuth, async (req, res) => {
     try {
-      const user = req.user!;
+      const user = (req as AuthenticatedRequest).user;
       if (user.role !== "admin") {
         return res.status(403).json({ message: "Только администратор может просматривать настройки алертов" });
       }
@@ -1125,7 +1128,7 @@ export async function registerRoutes(
   // Update alert settings (admin only)
   app.put("/api/alerts/settings", requireAuth, async (req, res) => {
     try {
-      const user = req.user!;
+      const user = (req as AuthenticatedRequest).user;
       if (user.role !== "admin") {
         return res.status(403).json({ message: "Только администратор может изменять настройки алертов" });
       }
@@ -1631,7 +1634,7 @@ export async function registerRoutes(
 
   // Get single plugin - requires auth
   app.get(api.plugins.get.path, requireAuth, async (req, res) => {
-    const plugin = await storage.getPlugin(req.params.id);
+    const plugin = await storage.getPlugin(req.params.id as string);
     if (!plugin) {
       return res.status(404).json({ message: "Plugin not found" });
     }
@@ -1642,7 +1645,8 @@ export async function registerRoutes(
   app.patch(api.plugins.toggle.path, requireAuth, requireAdmin, async (req, res) => {
     try {
       const input = api.plugins.toggle.input.parse(req.body);
-      const plugin = await storage.getPlugin(req.params.id);
+      const pluginId = req.params.id as string;
+      const plugin = await storage.getPlugin(pluginId);
       if (!plugin) {
         return res.status(404).json({ message: "Plugin not found" });
       }
@@ -1650,11 +1654,11 @@ export async function registerRoutes(
       let updated = plugin;
       
       if (input.isEnabled !== undefined) {
-        updated = await storage.updatePluginEnabled(req.params.id, input.isEnabled);
+        updated = await storage.updatePluginEnabled(pluginId, input.isEnabled);
       }
       
       if (input.config !== undefined) {
-        updated = await storage.updatePluginConfig(req.params.id, input.config);
+        updated = await storage.updatePluginConfig(pluginId, input.config);
       }
       
       res.json(updated);
@@ -1788,10 +1792,9 @@ async function seedDatabase() {
 
   for (const event of sampleEvents) {
     const { categoryName, ...eventData } = event;
-    const category = await storage.getOrCreateCategory(categoryName);
     await storage.createEvent({
       ...eventData,
-      categoryId: category.id
+      category: categoryName
     });
   }
 }

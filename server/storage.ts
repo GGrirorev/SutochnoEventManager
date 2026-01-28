@@ -42,8 +42,8 @@ import {
 } from "@shared/schema";
 import { eq, ilike, and, or, desc, sql } from "drizzle-orm";
 
-export type EventWithAuthor = Event & { authorName?: string | null; category?: string };
-export type EventVersionWithAuthor = EventVersion & { authorName?: string | null };
+export type EventWithAuthor = Event & { authorName?: string | null; category?: string | null };
+export type EventVersionWithAuthor = EventVersion & { authorName?: string | null; category?: string | null };
 export type UserLoginLogWithUser = UserLoginLog & { userName: string; userEmail: string };
 
 export interface IStorage {
@@ -196,6 +196,7 @@ export class DatabaseStorage implements IStorage {
       currentVersion: events.currentVersion,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt,
+      excludeFromMonitoring: events.excludeFromMonitoring,
     })
       .from(events)
       .leftJoin(users, eq(events.authorId, users.id))
@@ -233,6 +234,7 @@ export class DatabaseStorage implements IStorage {
       currentVersion: events.currentVersion,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt,
+      excludeFromMonitoring: events.excludeFromMonitoring,
     })
       .from(events)
       .leftJoin(users, eq(events.authorId, users.id))
@@ -242,13 +244,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
-    const [event] = await db.insert(events).values(insertEvent).returning();
+    // Convert category string to categoryId
+    const categoryRecord = await this.getOrCreateCategory(insertEvent.category);
+    const { category, ...restEvent } = insertEvent;
+    const [event] = await db.insert(events).values({
+      ...restEvent,
+      categoryId: categoryRecord.id,
+    }).returning();
     return event;
   }
 
   async updateEvent(id: number, updates: UpdateEventRequest): Promise<Event> {
+    // Convert category string to categoryId if provided
+    let categoryId: number | undefined;
+    if (updates.category) {
+      const categoryRecord = await this.getOrCreateCategory(updates.category);
+      categoryId = categoryRecord.id;
+    }
+    const { category, ...restUpdates } = updates;
     const [event] = await db.update(events)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...restUpdates, ...(categoryId && { categoryId }), updatedAt: new Date() })
       .where(eq(events.id, id))
       .returning();
     return event;
@@ -660,21 +675,21 @@ export class DatabaseStorage implements IStorage {
 
   // Transactional operations for atomic multi-step operations
   async createEventWithVersionAndStatuses(
-    insertEvent: any,
-    versionData: Omit<InsertEventVersion, 'eventId'>,
+    insertEvent: InsertEvent,
+    versionData: Omit<InsertEventVersion, 'eventId' | 'categoryId'>,
     platforms: string[],
     categoryName?: string
   ): Promise<Event> {
     return await db.transaction(async (tx) => {
-      // Step 0: Create or get category within transaction (if categoryName provided)
-      let categoryId = insertEvent.categoryId;
-      if (categoryName) {
-        const category = await this.getOrCreateCategoryTx(tx, categoryName);
-        categoryId = category.id;
-      }
+      // Step 0: Create or get category within transaction
+      // Use categoryName if provided, otherwise use insertEvent.category
+      const catName = categoryName || insertEvent.category;
+      const categoryRecord = await this.getOrCreateCategoryTx(tx, catName);
+      const categoryId = categoryRecord.id;
       
-      // Step 1: Create event
-      const [event] = await tx.insert(events).values({ ...insertEvent, categoryId }).returning();
+      // Step 1: Create event (exclude category string, use categoryId)
+      const { category: _cat, ...restEvent } = insertEvent;
+      const [event] = await tx.insert(events).values({ ...restEvent, categoryId }).returning();
       
       // Step 2: Create initial version
       await tx.insert(eventVersions).values({
@@ -700,22 +715,25 @@ export class DatabaseStorage implements IStorage {
 
   async updateEventWithVersionAndStatuses(
     id: number,
-    updates: any,
-    versionData: Omit<InsertEventVersion, 'eventId'>,
+    updates: UpdateEventRequest,
+    versionData: Omit<InsertEventVersion, 'eventId' | 'categoryId'>,
     platforms: string[],
     categoryName?: string
   ): Promise<Event> {
     return await db.transaction(async (tx) => {
-      // Step 0: Create or get category within transaction (if categoryName provided)
-      let categoryId = updates.categoryId;
-      if (categoryName) {
-        const category = await this.getOrCreateCategoryTx(tx, categoryName);
-        categoryId = category.id;
+      // Step 0: Create or get category within transaction
+      // Use categoryName if provided, otherwise use updates.category
+      const catName = categoryName || updates.category;
+      let categoryId: number | undefined;
+      if (catName) {
+        const categoryRecord = await this.getOrCreateCategoryTx(tx, catName);
+        categoryId = categoryRecord.id;
       }
       
-      // Step 1: Update event
+      // Step 1: Update event (exclude category string, use categoryId)
+      const { category: _cat, ...restUpdates } = updates;
       const [event] = await tx.update(events)
-        .set({ ...updates, categoryId, updatedAt: new Date() })
+        .set({ ...restUpdates, ...(categoryId && { categoryId }), updatedAt: new Date() })
         .where(eq(events.id, id))
         .returning();
       
