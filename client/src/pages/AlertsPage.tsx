@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar } from "@/components/Sidebar";
 import { EventDetailsModal } from "@/pages/EventsList";
+import { EventForm } from "@/components/EventForm";
 import {
   Table,
   TableBody,
@@ -22,6 +23,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -33,7 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink, Settings } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import type { EventAlert } from "@shared/schema";
 import {
   PLATFORM_LABELS,
@@ -47,13 +54,14 @@ import {
 
 export default function AlertsPage() {
   const { data: user } = useCurrentUser();
-  const [, setLocation] = useLocation();
   const [deleteAlert, setDeleteAlert] = useState<EventAlert | null>(null);
   const [viewEventId, setViewEventId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const { checkProgress, startCheck } = useAlertCheck();
   const { alerts: allAlerts, isLoading, deleteMutation, bulkDeleteMutation } = useAlerts();
@@ -378,8 +386,26 @@ export default function AlertsPage() {
           </AlertDialog>
 
           <Dialog open={!!viewEvent} onOpenChange={(open) => !open && setViewEventId(null)}>
-            {viewEvent && <EventDetailsModal event={viewEvent} onEdit={(e) => { setViewEventId(null); setLocation(`/events?edit=${e.id}`); }} />}
+            {viewEvent && <EventDetailsModal event={viewEvent} onEdit={(e) => { setViewEventId(null); setEditingEvent(e); setSheetOpen(true); }} />}
           </Dialog>
+
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetContent className="sm:max-w-xl overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Редактировать событие</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6">
+                <EventForm
+                  mode="edit"
+                  initialData={editingEvent || undefined}
+                  onSuccess={() => {
+                    setSheetOpen(false);
+                    setEditingEvent(null);
+                  }}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </main>
     </div>
