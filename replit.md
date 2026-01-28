@@ -57,7 +57,34 @@ A modular architecture allows extending functionality with plugins.
 Monitors analytics events for significant count drops (30%+) between yesterday and the day before.
 - **Mechanism**: Utilizes `analytics-chart` plugin's Matomo integration.
 - **Database**: `event_alerts` table stores alert details; `events.excludeFromMonitoring` allows excluding events.
-- **API**: Endpoints to list, delete alerts, and trigger manual checks. Cron job support for automated checks.
+- **API Endpoints**:
+  - `GET /api/alerts` — Список всех алертов (доступно всем авторизованным пользователям)
+  - `DELETE /api/alerts/:id` — Удаление алерта (только admin и analyst)
+  - `POST /api/alerts/check` — Запуск проверки событий (для cron-заданий, без авторизации)
+
+#### Настройка автоматической проверки (Cron)
+Для ежедневной автоматической проверки падения событий настройте cron-задание:
+
+**URL для вызова:**
+```
+POST https://your-domain.replit.app/api/alerts/check
+```
+
+**Рекомендуемое расписание:** ежедневно после 23:00 (чтобы данные за вчерашний день были полными)
+
+**Примеры настройки:**
+- **cron-job.org**: Создайте задание с методом POST на указанный URL
+- **EasyCron**: Добавьте URL с методом POST и расписанием `0 23 * * *`
+- **UptimeRobot**: Используйте "HTTP(s) Keyword" монитор с POST-запросом
+
+**Ответ API:**
+```json
+{
+  "message": "Проверка завершена",
+  "alertsCreated": 2,
+  "eventsChecked": 15
+}
+```
 
 ### Initial Setup
 A setup wizard (`/setup`) is provided for the first administrator account creation when no users exist, making the system ready for use.
