@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
 import type { EventAlert } from "@shared/schema";
@@ -89,6 +90,12 @@ export default function AlertsPage() {
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [checkProgress, setCheckProgress] = useState<{
+    isRunning: boolean;
+    completed: number;
+    total: number;
+    alertsFound: number;
+  } | null>(null);
 
   const { data: alertsData, isLoading, refetch: refetchAlerts } = useQuery<{ alerts: EventAlert[]; total: number }>({
     queryKey: ["/api/alerts"]
@@ -103,26 +110,71 @@ export default function AlertsPage() {
     enabled: !!viewEventId,
   });
 
-  const checkMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/alerts/check");
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-      toast({
-        title: "Проверка завершена",
-        description: `Проверено событий: ${data.eventsChecked}. Создано алертов: ${data.alertsCreated}.`,
-      });
-    },
-    onError: (error: any) => {
+  const startCheck = async () => {
+    if (checkProgress?.isRunning) return;
+    
+    setCheckProgress({ isRunning: true, completed: 0, total: 0, alertsFound: 0 });
+    
+    try {
+      const eventSource = new EventSource("/api/alerts/check-stream");
+      
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.error) {
+          eventSource.close();
+          setCheckProgress(null);
+          toast({
+            title: "Ошибка",
+            description: data.error,
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (data.status === "started") {
+          setCheckProgress({
+            isRunning: true,
+            completed: 0,
+            total: data.total,
+            alertsFound: 0,
+          });
+        } else if (data.status === "progress") {
+          setCheckProgress({
+            isRunning: true,
+            completed: data.completed,
+            total: data.total,
+            alertsFound: data.alertsFound || 0,
+          });
+        } else if (data.status === "completed") {
+          eventSource.close();
+          setCheckProgress(null);
+          queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+          toast({
+            title: "Проверка завершена",
+            description: `Проверено: ${data.total} проверок. Создано алертов: ${data.alertsCreated}.`,
+          });
+        }
+      };
+      
+      eventSource.onerror = () => {
+        eventSource.close();
+        setCheckProgress(null);
+        toast({
+          title: "Ошибка",
+          description: "Соединение прервано",
+          variant: "destructive",
+        });
+      };
+    } catch (error: any) {
+      setCheckProgress(null);
       toast({
         title: "Ошибка",
         description: error.message || "Не удалось выполнить проверку",
         variant: "destructive",
       });
     }
-  });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -217,11 +269,11 @@ export default function AlertsPage() {
             </div>
 
             <Button
-              onClick={() => checkMutation.mutate()}
-              disabled={checkMutation.isPending}
+              onClick={startCheck}
+              disabled={checkProgress?.isRunning}
               data-testid="button-check-alerts"
             >
-              {checkMutation.isPending ? (
+              {checkProgress?.isRunning ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -229,6 +281,26 @@ export default function AlertsPage() {
               Запустить проверку
             </Button>
           </div>
+
+          {/* Progress bar */}
+          {checkProgress?.isRunning && checkProgress.total > 0 && (
+            <div className="border rounded-lg p-4 bg-muted/50" data-testid="check-progress">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Проверка событий...</span>
+                <span className="text-sm text-muted-foreground">
+                  {checkProgress.completed} / {checkProgress.total}
+                </span>
+              </div>
+              <Progress 
+                value={(checkProgress.completed / checkProgress.total) * 100} 
+                className="h-2"
+              />
+              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                <span>Найдено алертов: {checkProgress.alertsFound}</span>
+                <span>{Math.round((checkProgress.completed / checkProgress.total) * 100)}%</span>
+              </div>
+            </div>
+          )}
 
           {/* Filters */}
           {allAlerts.length > 0 && (
@@ -305,11 +377,11 @@ export default function AlertsPage() {
               </p>
               <Button
                 variant="outline"
-                onClick={() => checkMutation.mutate()}
-                disabled={checkMutation.isPending}
+                onClick={startCheck}
+                disabled={checkProgress?.isRunning}
                 data-testid="button-check-alerts-empty"
               >
-                {checkMutation.isPending ? (
+                {checkProgress?.isRunning ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <RefreshCw className="h-4 w-4 mr-2" />

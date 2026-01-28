@@ -1099,10 +1099,205 @@ export async function registerRoutes(
     }
   });
 
-  // Check events for alerts (cron job endpoint)
+  // Helper function to process items with concurrency limit
+  async function processWithConcurrency<T, R>(
+    items: T[],
+    processor: (item: T) => Promise<R>,
+    concurrency: number,
+    onProgress?: (completed: number, total: number) => void
+  ): Promise<R[]> {
+    const results: R[] = [];
+    let completed = 0;
+    
+    for (let i = 0; i < items.length; i += concurrency) {
+      const batch = items.slice(i, i + concurrency);
+      const batchResults = await Promise.all(batch.map(processor));
+      results.push(...batchResults);
+      completed += batch.length;
+      if (onProgress) {
+        onProgress(completed, items.length);
+      }
+    }
+    
+    return results;
+  }
+
+  // Check events for alerts with SSE progress (for UI)
+  app.get("/api/alerts/check-stream", requireAuth, async (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sendProgress = (data: any) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+      const plugin = await storage.getPlugin("analytics-chart");
+      if (!plugin || !plugin.isEnabled) {
+        sendProgress({ error: "Analytics chart plugin is not enabled" });
+        res.end();
+        return;
+      }
+      
+      const config = (plugin.config as any) || {};
+      const apiUrl = config.apiUrl || "https://analytics.sutochno.ru/index.php";
+      const token = config.apiToken || process.env.ANALYTICS_API_TOKEN;
+      
+      if (!token) {
+        sendProgress({ error: "Analytics API token not configured" });
+        res.end();
+        return;
+      }
+      
+      const platformSiteMapping: Record<string, number> = config.platformSiteMapping || {
+        "web": 1,
+        "ios": 2,
+        "android": 3
+      };
+      
+      const now = new Date();
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const dayBefore = new Date(now);
+      dayBefore.setDate(dayBefore.getDate() - 2);
+      
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const dayBeforeStr = dayBefore.toISOString().split('T')[0];
+      
+      const eventsToMonitor = await storage.getEventsForMonitoring();
+      const platformsToCheck = ["web", "ios", "android"];
+      
+      // Build list of checks to perform
+      const checks: { event: typeof eventsToMonitor[0]; platform: string }[] = [];
+      for (const event of eventsToMonitor) {
+        for (const platform of platformsToCheck) {
+          if (event.platforms.map(p => p.toLowerCase()).includes(platform)) {
+            checks.push({ event, platform });
+          }
+        }
+      }
+      
+      sendProgress({ 
+        status: "started", 
+        total: checks.length, 
+        completed: 0,
+        eventsCount: eventsToMonitor.length 
+      });
+      
+      const alertsCreated: any[] = [];
+      let completed = 0;
+      
+      // Process in batches of 5
+      const CONCURRENCY = 5;
+      
+      for (let i = 0; i < checks.length; i += CONCURRENCY) {
+        const batch = checks.slice(i, i + CONCURRENCY);
+        
+        await Promise.all(batch.map(async ({ event, platform }) => {
+          const label = `${event.category} > @${event.action}`;
+          const idSite = platformSiteMapping[platform] || 1;
+          
+          const urlYesterday = new URL(apiUrl);
+          urlYesterday.searchParams.set("module", "API");
+          urlYesterday.searchParams.set("format", "JSON");
+          urlYesterday.searchParams.set("idSite", String(idSite));
+          urlYesterday.searchParams.set("period", "day");
+          urlYesterday.searchParams.set("date", yesterdayStr);
+          urlYesterday.searchParams.set("method", "Events.getCategory");
+          urlYesterday.searchParams.set("label", label);
+          urlYesterday.searchParams.set("filter_limit", "100");
+          urlYesterday.searchParams.set("token_auth", token);
+          
+          const urlDayBefore = new URL(apiUrl);
+          urlDayBefore.searchParams.set("module", "API");
+          urlDayBefore.searchParams.set("format", "JSON");
+          urlDayBefore.searchParams.set("idSite", String(idSite));
+          urlDayBefore.searchParams.set("period", "day");
+          urlDayBefore.searchParams.set("date", dayBeforeStr);
+          urlDayBefore.searchParams.set("method", "Events.getCategory");
+          urlDayBefore.searchParams.set("label", label);
+          urlDayBefore.searchParams.set("filter_limit", "100");
+          urlDayBefore.searchParams.set("token_auth", token);
+          
+          try {
+            const [resYesterday, resDayBefore] = await Promise.all([
+              fetch(urlYesterday.toString()),
+              fetch(urlDayBefore.toString())
+            ]);
+            
+            if (!resYesterday.ok || !resDayBefore.ok) return;
+            
+            const dataYesterday = await resYesterday.json();
+            const dataDayBefore = await resDayBefore.json();
+            
+            let yesterdayCount = 0;
+            let dayBeforeCount = 0;
+            
+            if (Array.isArray(dataYesterday) && dataYesterday.length > 0) {
+              yesterdayCount = dataYesterday[0]?.nb_events || 0;
+            } else if (dataYesterday && typeof dataYesterday === 'object') {
+              yesterdayCount = dataYesterday.nb_events || 0;
+            }
+            
+            if (Array.isArray(dataDayBefore) && dataDayBefore.length > 0) {
+              dayBeforeCount = dataDayBefore[0]?.nb_events || 0;
+            } else if (dataDayBefore && typeof dataDayBefore === 'object') {
+              dayBeforeCount = dataDayBefore.nb_events || 0;
+            }
+            
+            if (dayBeforeCount > 0) {
+              const dropPercent = Math.round((1 - yesterdayCount / dayBeforeCount) * 100);
+              
+              if (dropPercent >= 30) {
+                const alert = await storage.createAlert({
+                  eventId: event.id,
+                  platform: platform as any,
+                  eventCategory: event.category,
+                  eventAction: event.action,
+                  yesterdayCount,
+                  dayBeforeCount,
+                  dropPercent,
+                  checkedAt: new Date(),
+                  isResolved: false,
+                });
+                alertsCreated.push(alert);
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to check event ${event.id} platform ${platform}:`, err);
+          }
+        }));
+        
+        completed += batch.length;
+        sendProgress({ 
+          status: "progress", 
+          completed, 
+          total: checks.length,
+          alertsFound: alertsCreated.length
+        });
+      }
+      
+      sendProgress({ 
+        status: "completed", 
+        completed: checks.length, 
+        total: checks.length,
+        alertsCreated: alertsCreated.length,
+        eventsChecked: eventsToMonitor.length
+      });
+      
+      res.end();
+    } catch (error: any) {
+      console.error("Failed to check alerts:", error);
+      sendProgress({ error: error.message || "Failed to check alerts" });
+      res.end();
+    }
+  });
+
+  // Check events for alerts (cron job endpoint - no auth, no SSE)
   app.post("/api/alerts/check", async (req, res) => {
     try {
-      // Get plugin config for analytics-chart
       const plugin = await storage.getPlugin("analytics-chart");
       if (!plugin || !plugin.isEnabled) {
         return res.status(400).json({ message: "Analytics chart plugin is not enabled" });
@@ -1122,7 +1317,6 @@ export async function registerRoutes(
         "android": 3
       };
       
-      // Calculate dates: yesterday from 23:00 and day before yesterday from 23:00
       const now = new Date();
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
@@ -1132,24 +1326,29 @@ export async function registerRoutes(
       const yesterdayStr = yesterday.toISOString().split('T')[0];
       const dayBeforeStr = dayBefore.toISOString().split('T')[0];
       
-      // Get all events for monitoring
       const eventsToMonitor = await storage.getEventsForMonitoring();
-      
-      const alertsCreated: any[] = [];
       const platformsToCheck = ["web", "ios", "android"];
       
+      // Build list of checks
+      const checks: { event: typeof eventsToMonitor[0]; platform: string }[] = [];
       for (const event of eventsToMonitor) {
-        const label = `${event.category} > @${event.action}`;
-        
         for (const platform of platformsToCheck) {
-          // Skip if event is not on this platform
-          if (!event.platforms.map(p => p.toLowerCase()).includes(platform)) {
-            continue;
+          if (event.platforms.map(p => p.toLowerCase()).includes(platform)) {
+            checks.push({ event, platform });
           }
-          
+        }
+      }
+      
+      const alertsCreated: any[] = [];
+      const CONCURRENCY = 5;
+      
+      for (let i = 0; i < checks.length; i += CONCURRENCY) {
+        const batch = checks.slice(i, i + CONCURRENCY);
+        
+        await Promise.all(batch.map(async ({ event, platform }) => {
+          const label = `${event.category} > @${event.action}`;
           const idSite = platformSiteMapping[platform] || 1;
           
-          // Fetch yesterday's data
           const urlYesterday = new URL(apiUrl);
           urlYesterday.searchParams.set("module", "API");
           urlYesterday.searchParams.set("format", "JSON");
@@ -1161,7 +1360,6 @@ export async function registerRoutes(
           urlYesterday.searchParams.set("filter_limit", "100");
           urlYesterday.searchParams.set("token_auth", token);
           
-          // Fetch day before yesterday's data
           const urlDayBefore = new URL(apiUrl);
           urlDayBefore.searchParams.set("module", "API");
           urlDayBefore.searchParams.set("format", "JSON");
@@ -1179,12 +1377,11 @@ export async function registerRoutes(
               fetch(urlDayBefore.toString())
             ]);
             
-            if (!resYesterday.ok || !resDayBefore.ok) continue;
+            if (!resYesterday.ok || !resDayBefore.ok) return;
             
             const dataYesterday = await resYesterday.json();
             const dataDayBefore = await resDayBefore.json();
             
-            // Extract event count
             let yesterdayCount = 0;
             let dayBeforeCount = 0;
             
@@ -1200,12 +1397,10 @@ export async function registerRoutes(
               dayBeforeCount = dataDayBefore.nb_events || 0;
             }
             
-            // Check for 30% or more drop
             if (dayBeforeCount > 0) {
               const dropPercent = Math.round((1 - yesterdayCount / dayBeforeCount) * 100);
               
               if (dropPercent >= 30) {
-                // Create alert
                 const alert = await storage.createAlert({
                   eventId: event.id,
                   platform: platform as any,
@@ -1223,7 +1418,7 @@ export async function registerRoutes(
           } catch (err) {
             console.error(`Failed to check event ${event.id} platform ${platform}:`, err);
           }
-        }
+        }));
       }
       
       res.json({
