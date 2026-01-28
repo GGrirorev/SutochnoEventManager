@@ -34,8 +34,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink } from "lucide-react";
+import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink, Settings } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
+import { Link } from "wouter";
 import type { EventAlert } from "@shared/schema";
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -268,18 +269,28 @@ export default function AlertsPage() {
               </p>
             </div>
 
-            <Button
-              onClick={startCheck}
-              disabled={checkProgress?.isRunning}
-              data-testid="button-check-alerts"
-            >
-              {checkProgress?.isRunning ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
+            <div className="flex items-center gap-2">
+              {user?.role === "admin" && (
+                <Link href="/alerts/settings">
+                  <Button variant="outline" data-testid="button-alert-settings">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Настройки
+                  </Button>
+                </Link>
               )}
-              Запустить проверку
-            </Button>
+              <Button
+                onClick={startCheck}
+                disabled={checkProgress?.isRunning}
+                data-testid="button-check-alerts"
+              >
+                {checkProgress?.isRunning ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Запустить проверку
+              </Button>
+            </div>
           </div>
 
           {/* Progress bar */}

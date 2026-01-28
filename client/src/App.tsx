@@ -10,6 +10,7 @@ import PropertiesPage from "@/pages/PropertiesPage";
 import UsersPage from "@/pages/UsersPage";
 import PluginsPage from "@/pages/PluginsPage";
 import AlertsPage from "@/pages/AlertsPage";
+import AlertSettingsPage from "@/pages/AlertSettingsPage";
 import LoginPage from "@/pages/LoginPage";
 import SetupPage from "@/pages/SetupPage";
 import { useIsAuthenticated, useCurrentUser } from "@/hooks/useAuth";
@@ -135,6 +136,9 @@ function Router() {
       </Route>
       <Route path="/alerts">
         <ProtectedRoute component={AlertsPage} />
+      </Route>
+      <Route path="/alerts/settings">
+        <AdminRoute component={AlertSettingsPage} />
       </Route>
       <Route path="/users">
         <AdminRoute component={UsersPage} />
