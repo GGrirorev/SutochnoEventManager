@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink, Settings } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import type { EventAlert } from "@shared/schema";
 import {
   PLATFORM_LABELS,
@@ -47,6 +47,7 @@ import {
 
 export default function AlertsPage() {
   const { data: user } = useCurrentUser();
+  const [, setLocation] = useLocation();
   const [deleteAlert, setDeleteAlert] = useState<EventAlert | null>(null);
   const [viewEventId, setViewEventId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -377,7 +378,7 @@ export default function AlertsPage() {
           </AlertDialog>
 
           <Dialog open={!!viewEvent} onOpenChange={(open) => !open && setViewEventId(null)}>
-            {viewEvent && <EventDetailsModal event={viewEvent} />}
+            {viewEvent && <EventDetailsModal event={viewEvent} onEdit={(e) => { setViewEventId(null); setLocation(`/events?edit=${e.id}`); }} />}
           </Dialog>
         </div>
       </main>

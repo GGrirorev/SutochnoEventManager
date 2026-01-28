@@ -603,10 +603,16 @@ export default function EventsList() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   
   // Handle ?open=ID query parameter to auto-open event details
+  // Handle ?edit=ID query parameter to auto-open edit form
   const [location, setLocation] = useLocation();
   const [openEventId, setOpenEventId] = useState<number | null>(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("open");
+    return id ? parseInt(id, 10) : null;
+  });
+  const [editEventId, setEditEventId] = useState<number | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("edit");
     return id ? parseInt(id, 10) : null;
   });
 
@@ -661,6 +667,20 @@ export default function EventsList() {
       }
     }
   }, [openEventId, events, setLocation]);
+
+  // Auto-open edit form from query parameter
+  useEffect(() => {
+    if (editEventId && events.length > 0) {
+      const eventToEdit = events.find(e => e.id === editEventId);
+      if (eventToEdit) {
+        setEditingEvent(eventToEdit);
+        setSheetOpen(true);
+        setEditEventId(null);
+        // Clear the query parameter from URL
+        setLocation("/events", { replace: true });
+      }
+    }
+  }, [editEventId, events, setLocation]);
   
   const deleteMutation = useDeleteEvent();
 
