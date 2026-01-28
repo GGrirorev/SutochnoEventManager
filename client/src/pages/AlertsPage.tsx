@@ -21,6 +21,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -77,6 +84,8 @@ export default function AlertsPage() {
   const { toast } = useToast();
   const [deleteAlert, setDeleteAlert] = useState<EventAlert | null>(null);
   const [viewEventId, setViewEventId] = useState<number | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [platformFilter, setPlatformFilter] = useState<string>("all");
 
   const { data: alertsData, isLoading, refetch: refetchAlerts } = useQuery<{ alerts: EventAlert[]; total: number }>({
     queryKey: ["/api/alerts"]
@@ -134,7 +143,18 @@ export default function AlertsPage() {
   });
 
   const canDelete = user?.role === "admin" || user?.role === "analyst";
-  const alerts = alertsData?.alerts || [];
+  const allAlerts = alertsData?.alerts || [];
+  
+  // Get unique categories and platforms for filters
+  const categories = Array.from(new Set(allAlerts.map(a => a.eventCategory))).sort();
+  const platforms = Array.from(new Set(allAlerts.map(a => a.platform)));
+  
+  // Apply filters
+  const alerts = allAlerts.filter(alert => {
+    if (categoryFilter !== "all" && alert.eventCategory !== categoryFilter) return false;
+    if (platformFilter !== "all" && alert.platform !== platformFilter) return false;
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -166,6 +186,56 @@ export default function AlertsPage() {
               Запустить проверку
             </Button>
           </div>
+
+          {/* Filters */}
+          {allAlerts.length > 0 && (
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Категория:</span>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[200px]" data-testid="select-category-filter">
+                    <SelectValue placeholder="Все категории" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все категории</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Платформа:</span>
+                <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                  <SelectTrigger className="w-[150px]" data-testid="select-platform-filter">
+                    <SelectValue placeholder="Все платформы" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все платформы</SelectItem>
+                    {platforms.map(p => (
+                      <SelectItem key={p} value={p}>{PLATFORM_LABELS[p] || p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(categoryFilter !== "all" || platformFilter !== "all") && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => { setCategoryFilter("all"); setPlatformFilter("all"); }}
+                  data-testid="button-clear-filters"
+                >
+                  Сбросить фильтры
+                </Button>
+              )}
+
+              <span className="text-sm text-muted-foreground ml-auto">
+                Показано: {alerts.length} из {allAlerts.length}
+              </span>
+            </div>
+          )}
 
           {isLoading ? (
             <div className="flex items-center justify-center h-64" data-testid="loading-alerts">
