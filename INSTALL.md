@@ -1,5 +1,7 @@
 # Инструкция по установке
 
+**Repository**: https://github.com/GGrirorev/SutochnoEventManager
+
 Руководство по развёртыванию Analytics Event Schema Manager на собственном сервере.
 
 ## Требования
@@ -12,8 +14,8 @@
 
 1. Клонируйте репозиторий:
 ```bash
-git clone <repository-url>
-cd analytics-event-schema-manager
+git clone https://github.com/GGrirorev/SutochnoEventManager.git
+cd SutochnoEventManager
 ```
 
 2. Установите зависимости:
@@ -48,6 +50,9 @@ npm run db:push
 # Обязательные переменные
 DATABASE_URL=postgresql://user:password@localhost:5432/analytics_events
 SESSION_SECRET=your_very_long_random_secret_key_here
+
+# Опционально (для модуля мониторинга событий)
+ANALYTICS_API_TOKEN=your_matomo_api_token
 
 # Опционально
 NODE_ENV=production
@@ -233,3 +238,31 @@ lsof -i :5000
 4. Примените миграции: `npm run db:push`
 5. Соберите приложение: `npm run build`
 6. Запустите: `npm start`
+
+## Дополнительные возможности
+
+### Управление категориями событий
+
+Страница `/categories` позволяет:
+- Просматривать все категории с количеством связанных событий
+- Добавлять новые категории с описанием
+- Редактировать название и описание категорий
+- Удалять категории (только если нет связанных событий)
+
+### Мониторинг событий (Алерты)
+
+Модуль мониторинга отслеживает падение количества событий между вчерашним и позавчерашним днём.
+
+**Настройка** (только для администраторов, `/alerts/settings`):
+- URL Matomo API
+- Токен API (или используйте переменную `ANALYTICS_API_TOKEN`)
+- Порог падения (по умолчанию 30%)
+- Соответствие платформ и Site ID
+
+**Автоматическая проверка через Cron:**
+```bash
+# Ежедневно в 23:00
+curl -X POST https://your-domain.com/api/alerts/check
+```
+
+Рекомендуемые сервисы: cron-job.org, EasyCron, UptimeRobot
