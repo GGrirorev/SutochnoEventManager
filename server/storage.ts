@@ -100,6 +100,7 @@ export interface IStorage {
   
   // Status history operations
   getStatusHistory(eventPlatformStatusId: number): Promise<StatusHistory[]>;
+  getStatusHistoryBatch(statusIds: number[]): Promise<Map<number, (StatusHistory & { changedByUserName?: string })[]>>;
   createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory>;
   
   // Event version operations
@@ -564,6 +565,45 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(statusHistory.changedByUserId, users.id))
       .where(eq(statusHistory.eventPlatformStatusId, eventPlatformStatusId))
       .orderBy(desc(statusHistory.createdAt));
+  }
+
+  async getStatusHistoryBatch(statusIds: number[]): Promise<Map<number, (StatusHistory & { changedByUserName?: string })[]>> {
+    if (statusIds.length === 0) {
+      return new Map();
+    }
+    
+    const histories = await db.select({
+      id: statusHistory.id,
+      eventPlatformStatusId: statusHistory.eventPlatformStatusId,
+      statusType: statusHistory.statusType,
+      oldStatus: statusHistory.oldStatus,
+      newStatus: statusHistory.newStatus,
+      changedBy: statusHistory.changedBy,
+      changedByUserId: statusHistory.changedByUserId,
+      comment: statusHistory.comment,
+      jiraLink: statusHistory.jiraLink,
+      createdAt: statusHistory.createdAt,
+      changedByUserName: users.name,
+    })
+      .from(statusHistory)
+      .leftJoin(users, eq(statusHistory.changedByUserId, users.id))
+      .where(inArray(statusHistory.eventPlatformStatusId, statusIds))
+      .orderBy(desc(statusHistory.createdAt));
+    
+    const result = new Map<number, (StatusHistory & { changedByUserName?: string })[]>();
+    
+    for (const statusId of statusIds) {
+      result.set(statusId, []);
+    }
+    
+    for (const history of histories) {
+      const list = result.get(history.eventPlatformStatusId);
+      if (list) {
+        list.push(history);
+      }
+    }
+    
+    return result;
   }
 
   async createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory> {
