@@ -506,7 +506,8 @@ export async function registerRoutes(
         properties: { name: string; type: string; required: boolean; description: string }[];
       }> };
 
-      const { events: allEvents } = await storage.getEvents({});
+      // Get ALL events for deduplication (no limit)
+      const { events: allEvents } = await storage.getEvents({ limit: 10000 });
       const newEvents: typeof events = [];
       const existingEvents: Array<{ parsed: typeof events[0]; existingId: number; existingVersion: number }> = [];
       const errors: string[] = [];
