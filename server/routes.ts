@@ -1735,8 +1735,8 @@ export async function registerRoutes(
   // Seed default plugins
   await seedPlugins();
   
-  // Seed default alert settings
-  await seedAlertSettings();
+  // Migrate legacy alert_settings to plugins.config (one-time migration)
+  await migrateAlertSettings();
 
   return httpServer;
 }
@@ -1807,23 +1807,64 @@ async function seedPlugins() {
       description: "Мониторинг падения событий аналитики с уведомлениями о значительном снижении показателей",
       version: "1.0.0",
       isEnabled: true,
-      config: {},
+      config: {
+        matomoUrl: "https://analytics.sutochno.ru/index.php",
+        matomoToken: null,
+        matomoSiteId: "web:1,ios:2,android:3",
+        dropThreshold: 30,
+        maxConcurrency: 5,
+      },
     });
   }
 }
 
-async function seedAlertSettings() {
-  const existing = await storage.getAlertSettings();
-  if (existing) return;
-  
-  await storage.updateAlertSettings({
-    matomoUrl: "https://analytics.sutochno.ru/index.php",
-    matomoToken: null,
-    matomoSiteId: "web:1,ios:2,android:3",
-    dropThreshold: 30,
-    maxConcurrency: 5,
-    isEnabled: true,
-  });
+async function migrateAlertSettings() {
+  try {
+    // Check if alerts plugin exists and has empty config
+    const alertsPlugin = await storage.getPlugin("alerts");
+    if (!alertsPlugin) return;
+    
+    const config = alertsPlugin.config as Record<string, unknown> | null;
+    
+    // If config already has matomoUrl, migration was already done or plugin was created with defaults
+    if (config && config.matomoUrl) return;
+    
+    // Try to read from legacy alert_settings table using raw SQL
+    const { db } = await import("./db");
+    const { sql } = await import("drizzle-orm");
+    
+    const legacySettings = await db.execute(sql`
+      SELECT matomo_url, matomo_token, matomo_site_id, drop_threshold, max_concurrency, is_enabled
+      FROM alert_settings
+      LIMIT 1
+    `).catch(() => null);
+    
+    if (legacySettings && legacySettings.rows && legacySettings.rows.length > 0) {
+      const settings = legacySettings.rows[0] as {
+        matomo_url: string;
+        matomo_token: string;
+        matomo_site_id: string;
+        drop_threshold: number;
+        max_concurrency: number;
+        is_enabled: boolean;
+      };
+      
+      // Migrate settings to plugin config
+      await storage.updateAlertSettings({
+        matomoUrl: settings.matomo_url || "https://analytics.sutochno.ru/index.php",
+        matomoToken: settings.matomo_token || null,
+        matomoSiteId: settings.matomo_site_id || "web:1,ios:2,android:3",
+        dropThreshold: settings.drop_threshold || 30,
+        maxConcurrency: settings.max_concurrency || 5,
+        isEnabled: settings.is_enabled ?? true,
+      });
+      
+      console.log("Migrated alert settings from legacy table to plugins.config");
+    }
+  } catch (error) {
+    // Table might not exist or other error - silently continue
+    console.log("Alert settings migration skipped (legacy table may not exist)");
+  }
 }
 
 async function seedDatabase() {

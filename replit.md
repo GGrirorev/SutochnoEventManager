@@ -66,7 +66,7 @@ Monitors analytics events for significant count drops between yesterday and the 
 
 **Database**: 
 - `event_alerts` table stores alert details
-- `alert_settings` table stores module configuration
+- Alert configuration is stored in `plugins.config` for the 'alerts' plugin (no separate table)
 - `events.excludeFromMonitoring` allows excluding events
 
 **API Endpoints**:
