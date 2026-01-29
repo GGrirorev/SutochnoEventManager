@@ -83,7 +83,8 @@ import {
   Check,
   History,
   ChevronDown,
-  Pencil
+  Pencil,
+  RefreshCw
 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -427,7 +428,9 @@ export default function EventsList() {
     isLoading, 
     fetchNextPage, 
     hasNextPage, 
-    isFetchingNextPage 
+    isFetchingNextPage,
+    refetch,
+    isFetching
   } = useEvents({ 
     search: search || undefined, 
     category: categoryFilter === "all" ? undefined : categoryFilter,
@@ -545,15 +548,26 @@ export default function EventsList() {
             <h1 className="text-3xl font-bold tracking-tight">Схема событий</h1>
             <p className="text-muted-foreground mt-1">Управление определениями аналитических событий продукта.</p>
           </div>
-          {canCreate && (
-            <div className="flex gap-2">
-              {renderHeaderPlugins()}
-              <Button onClick={handleCreate} className="shadow-md hover:shadow-lg transition-all">
-                <Plus className="w-4 h-4 mr-2" />
-                Новое событие
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              data-testid="button-refresh-events"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+            {canCreate && (
+              <>
+                {renderHeaderPlugins()}
+                <Button onClick={handleCreate} className="shadow-md hover:shadow-lg transition-all">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Новое событие
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Search & Filters */}
