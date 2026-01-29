@@ -352,6 +352,16 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Event Category обязательна", field: "category" });
       }
       
+      // Check for duplicate category + action combination
+      const { events: existingEvents } = await storage.getEvents({ category: trimmedCategoryName, limit: 10000 });
+      const duplicate = existingEvents.find(e => e.action === input.action);
+      if (duplicate) {
+        return res.status(400).json({ 
+          message: `Событие с категорией "${trimmedCategoryName}" и action "${input.action}" уже существует`, 
+          field: "action" 
+        });
+      }
+      
       // Atomic transaction: create category + event + version + platform statuses
       const event = await storage.createEventWithVersionAndStatuses(
         { ...inputData, authorId },
