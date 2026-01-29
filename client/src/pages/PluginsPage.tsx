@@ -18,21 +18,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Puzzle, Code, Loader2, TrendingUp, Activity, MessageSquare, Settings, Trash2 } from "lucide-react";
+import { Puzzle, Loader2, Settings, Trash2 } from "lucide-react";
 import type { Plugin } from "@shared/schema";
+import { getPluginEntry } from "@/plugins/registry";
 
 interface AnalyticsChartConfig {
   apiUrl?: string;
   apiToken?: string;
   platformSiteMapping?: Record<string, number>;
 }
-
-const PLUGIN_ICONS: Record<string, typeof Code> = {
-  "code-generator": Code,
-  "analytics-chart": TrendingUp,
-  "platform-statuses": Activity,
-  "comments": MessageSquare,
-};
 
 export default function PluginsPage() {
   const { toast } = useToast();
@@ -190,7 +184,7 @@ export default function PluginsPage() {
           ) : (
             <div className="space-y-4">
               {plugins?.map((plugin) => {
-                const IconComponent = PLUGIN_ICONS[plugin.id] || Puzzle;
+                const IconComponent = getPluginEntry(plugin.id)?.icon || Puzzle;
                 return (
                   <Card key={plugin.id} data-testid={`card-plugin-${plugin.id}`}>
                     <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
