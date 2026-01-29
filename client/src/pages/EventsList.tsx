@@ -247,17 +247,65 @@ function VersionBadge({ event }: { event: any }) {
   );
 }
 
-// Helper to read URL params
+const EVENTS_FILTER_KEY = "events-filters";
+
+function loadEventsFilters() {
+  try {
+    const saved = localStorage.getItem(EVENTS_FILTER_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch {}
+  return null;
+}
+
+function saveEventsFilters(filters: {
+  search: string;
+  category: string;
+  platform: string;
+  ownerId: string;
+  authorId: string;
+  implementationStatus: string;
+  validationStatus: string;
+}) {
+  try {
+    localStorage.setItem(EVENTS_FILTER_KEY, JSON.stringify(filters));
+  } catch {}
+}
+
+// Helper to read URL params with localStorage fallback
 function getUrlParams() {
   const params = new URLSearchParams(window.location.search);
+  const savedFilters = loadEventsFilters();
+  
+  // Check if URL has any filter params
+  const hasUrlFilters = params.has("search") || params.has("category") || params.has("platform") || 
+    params.has("ownerId") || params.has("authorId") || 
+    params.has("implementationStatus") || params.has("validationStatus");
+  
+  // Use URL params if present, otherwise fallback to localStorage
+  if (hasUrlFilters || !savedFilters) {
+    return {
+      search: params.get("search") || "",
+      category: params.get("category") || "all",
+      platform: params.get("platform") || "all",
+      ownerId: params.get("ownerId") || "all",
+      authorId: params.get("authorId") || "all",
+      implementationStatus: params.get("implementationStatus") || "all",
+      validationStatus: params.get("validationStatus") || "all",
+      open: params.get("open"),
+      edit: params.get("edit"),
+    };
+  }
+  
   return {
-    search: params.get("search") || "",
-    category: params.get("category") || "all",
-    platform: params.get("platform") || "all",
-    ownerId: params.get("ownerId") || "all",
-    authorId: params.get("authorId") || "all",
-    implementationStatus: params.get("implementationStatus") || "all",
-    validationStatus: params.get("validationStatus") || "all",
+    search: savedFilters.search || "",
+    category: savedFilters.category || "all",
+    platform: savedFilters.platform || "all",
+    ownerId: savedFilters.ownerId || "all",
+    authorId: savedFilters.authorId || "all",
+    implementationStatus: savedFilters.implementationStatus || "all",
+    validationStatus: savedFilters.validationStatus || "all",
     open: params.get("open"),
     edit: params.get("edit"),
   };
@@ -290,7 +338,7 @@ export default function EventsList() {
     return count;
   }, [categoryFilter, platformFilter, ownerFilter, authorFilter, implStatusFilter, valStatusFilter]);
   
-  // Sync filters to URL (preserve existing open/edit params)
+  // Sync filters to URL and localStorage (preserve existing open/edit params)
   useEffect(() => {
     const currentParams = new URLSearchParams(window.location.search);
     const params = new URLSearchParams();
@@ -315,6 +363,17 @@ export default function EventsList() {
     if (window.location.pathname + window.location.search !== newPath) {
       window.history.replaceState({}, "", newPath);
     }
+    
+    // Save to localStorage
+    saveEventsFilters({
+      search,
+      category: categoryFilter,
+      platform: platformFilter,
+      ownerId: ownerFilter,
+      authorId: authorFilter,
+      implementationStatus: implStatusFilter,
+      validationStatus: valStatusFilter,
+    });
   }, [search, categoryFilter, platformFilter, ownerFilter, authorFilter, implStatusFilter, valStatusFilter]);
   
   // Get current user permissions
