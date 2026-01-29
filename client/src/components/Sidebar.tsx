@@ -89,15 +89,7 @@ export function Sidebar() {
       {/* Brand */}
       <div className="h-20 flex items-center justify-center px-4 border-b">
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">S</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-semibold text-sm">Sutochno.ru</span>
-              <span className="text-xs text-muted-foreground">Аналитика</span>
-            </div>
-          </div>
+          <img src="/images/logo-header.png" alt="Sutochno.ru Аналитика" className="h-10 w-auto object-contain" />
         )}
         {collapsed && (
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
