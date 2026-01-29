@@ -270,7 +270,10 @@ export async function registerRoutes(
         search: req.query.search as string | undefined,
         category: req.query.category as string | undefined,
         platform: req.query.platform as string | undefined,
-        status: req.query.status as string | undefined,
+        ownerId: req.query.ownerId ? parseInt(req.query.ownerId as string, 10) : undefined,
+        authorId: req.query.authorId ? parseInt(req.query.authorId as string, 10) : undefined,
+        implementationStatus: req.query.implementationStatus as string | undefined,
+        validationStatus: req.query.validationStatus as string | undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
         offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
       };

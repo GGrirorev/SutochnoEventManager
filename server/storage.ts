@@ -52,7 +52,10 @@ export interface IStorage {
     search?: string;
     category?: string;
     platform?: string;
-    status?: string;
+    ownerId?: number;
+    authorId?: number;
+    implementationStatus?: string;
+    validationStatus?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean }>;
@@ -140,14 +143,17 @@ export class DatabaseStorage implements IStorage {
     search?: string;
     category?: string;
     platform?: string;
-    status?: string;
+    ownerId?: number;
+    authorId?: number;
+    implementationStatus?: string;
+    validationStatus?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean }> {
     const conditions = [];
+    const needStatusJoin = filters?.implementationStatus || filters?.validationStatus;
 
     if (filters?.search) {
-      // Search by Event Action and Action Description
       conditions.push(
         or(
           ilike(events.action, `%${filters.search}%`),
@@ -161,22 +167,46 @@ export class DatabaseStorage implements IStorage {
     if (filters?.platform) {
       conditions.push(sql`${events.platforms} @> ARRAY[${filters.platform}]::text[]`);
     }
-    // Note: status filter removed - statuses now managed per-platform in event_platform_statuses table
+    if (filters?.ownerId) {
+      conditions.push(eq(events.ownerId, filters.ownerId));
+    }
+    if (filters?.authorId) {
+      conditions.push(eq(events.authorId, filters.authorId));
+    }
+    if (filters?.implementationStatus) {
+      conditions.push(eq(eventPlatformStatuses.implementationStatus, filters.implementationStatus));
+    }
+    if (filters?.validationStatus) {
+      conditions.push(eq(eventPlatformStatuses.validationStatus, filters.validationStatus));
+    }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const limit = filters?.limit ?? 50;
     const offset = filters?.offset ?? 0;
 
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
+    // Build count query with optional status join
+    let countQuery = db
+      .select({ count: sql<number>`count(DISTINCT ${events.id})::int` })
       .from(events)
-      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
-      .where(whereClause);
+      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id));
     
+    if (needStatusJoin) {
+      countQuery = countQuery.leftJoin(
+        eventPlatformStatuses,
+        and(
+          eq(eventPlatformStatuses.eventId, events.id),
+          eq(eventPlatformStatuses.versionNumber, events.currentVersion)
+        )
+      ) as typeof countQuery;
+    }
+    
+    const [countResult] = await countQuery.where(whereClause);
     const total = countResult?.count ?? 0;
 
     const ownerUsers = alias(users, "owner_users");
-    const result = await db.select({
+    
+    // Build main query with optional status join
+    let mainQuery = db.selectDistinctOn([events.id], {
       id: events.id,
       categoryId: events.categoryId,
       category: eventCategories.name,
@@ -201,9 +231,21 @@ export class DatabaseStorage implements IStorage {
       .from(events)
       .leftJoin(users, eq(events.authorId, users.id))
       .leftJoin(ownerUsers, eq(events.ownerId, ownerUsers.id))
-      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
+      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id));
+    
+    if (needStatusJoin) {
+      mainQuery = mainQuery.leftJoin(
+        eventPlatformStatuses,
+        and(
+          eq(eventPlatformStatuses.eventId, events.id),
+          eq(eventPlatformStatuses.versionNumber, events.currentVersion)
+        )
+      ) as typeof mainQuery;
+    }
+    
+    const result = await mainQuery
       .where(whereClause)
-      .orderBy(desc(events.createdAt))
+      .orderBy(events.id, desc(events.createdAt))
       .limit(limit)
       .offset(offset);
     
