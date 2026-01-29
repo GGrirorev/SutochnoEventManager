@@ -352,9 +352,8 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Event Category обязательна", field: "category" });
       }
       
-      // Check for duplicate category + action combination
-      const { events: existingEvents } = await storage.getEvents({ category: trimmedCategoryName, limit: 10000 });
-      const duplicate = existingEvents.find(e => e.action === input.action);
+      // Check for duplicate category + action combination (optimized with index)
+      const duplicate = await storage.checkEventExistsByCategoryAction(trimmedCategoryName, input.action);
       if (duplicate) {
         return res.status(400).json({ 
           message: `Событие с категорией "${trimmedCategoryName}" и action "${input.action}" уже существует`, 
@@ -516,27 +515,33 @@ export async function registerRoutes(
         properties: { name: string; type: string; required: boolean; description: string }[];
       }> };
 
-      // Get ALL events for deduplication (no limit)
-      const { events: allEvents } = await storage.getEvents({ limit: 10000 });
       const newEvents: typeof events = [];
       const existingEvents: Array<{ parsed: typeof events[0]; existingId: number; existingVersion: number }> = [];
       const errors: string[] = [];
 
-      for (const event of events) {
+      // Filter valid events and prepare for batch check
+      const validEvents = events.filter(event => {
         if (!event.category || !event.action) {
           errors.push(`Событие без category или action пропущено`);
-          continue;
+          return false;
         }
+        return true;
+      });
 
-        const existing = allEvents.find(
-          e => e.category === event.category && e.action === event.action
-        );
+      // Optimized batch check using index (handles any number of events)
+      const existingMap = await storage.checkEventsExistBatch(
+        validEvents.map(e => ({ category: e.category, action: e.action }))
+      );
+
+      for (const event of validEvents) {
+        const key = `${event.category}:${event.action}`;
+        const existing = existingMap.get(key);
 
         if (existing) {
           existingEvents.push({
             parsed: event,
             existingId: existing.id,
-            existingVersion: existing.currentVersion || 1
+            existingVersion: existing.currentVersion
           });
         } else {
           newEvents.push(event);

@@ -1154,6 +1154,60 @@ export class DatabaseStorage implements IStorage {
       isEnabled: updates.isEnabled ?? plugin.isEnabled,
     };
   }
+  // Optimized: Check if event exists by category + action (uses index)
+  async checkEventExistsByCategoryAction(categoryName: string, action: string): Promise<{ id: number; currentVersion: number } | null> {
+    const result = await db
+      .select({ id: events.id, currentVersion: events.currentVersion })
+      .from(events)
+      .innerJoin(eventCategories, eq(events.categoryId, eventCategories.id))
+      .where(and(eq(eventCategories.name, categoryName), eq(events.action, action)))
+      .limit(1);
+    
+    return result[0] || null;
+  }
+
+  // Optimized: Batch check multiple events for import preview (uses index)
+  async checkEventsExistBatch(eventsToCheck: { category: string; action: string }[]): Promise<Map<string, { id: number; currentVersion: number }>> {
+    if (eventsToCheck.length === 0) return new Map();
+    
+    // Get all unique categories first
+    const uniqueCategories = [...new Set(eventsToCheck.map(e => e.category))];
+    
+    // Get category IDs
+    const categoryRows = await db
+      .select({ id: eventCategories.id, name: eventCategories.name })
+      .from(eventCategories)
+      .where(sql`${eventCategories.name} IN (${sql.join(uniqueCategories.map(c => sql`${c}`), sql`, `)})`);
+    
+    const categoryMap = new Map(categoryRows.map(c => [c.name, c.id]));
+    
+    // Build conditions for batch query
+    const conditions = eventsToCheck
+      .filter(e => categoryMap.has(e.category))
+      .map(e => and(eq(events.categoryId, categoryMap.get(e.category)!), eq(events.action, e.action)));
+    
+    if (conditions.length === 0) return new Map();
+    
+    const existingEvents = await db
+      .select({ 
+        id: events.id, 
+        categoryId: events.categoryId,
+        action: events.action, 
+        currentVersion: events.currentVersion,
+        categoryName: eventCategories.name
+      })
+      .from(events)
+      .innerJoin(eventCategories, eq(events.categoryId, eventCategories.id))
+      .where(or(...conditions));
+    
+    const resultMap = new Map<string, { id: number; currentVersion: number }>();
+    for (const event of existingEvents) {
+      const key = `${event.categoryName}:${event.action}`;
+      resultMap.set(key, { id: event.id, currentVersion: event.currentVersion || 1 });
+    }
+    
+    return resultMap;
+  }
 }
 
 export const storage = new DatabaseStorage();
