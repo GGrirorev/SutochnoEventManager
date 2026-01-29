@@ -191,6 +191,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
     // Invalidate queries to refresh data
     queryClient.invalidateQueries({ queryKey: ["/api/events"] });
     queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "platform-statuses"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/events/platform-statuses-batch"] });
     
     onSuccess?.();
   };

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useEvents, useDeleteEvent, useEventPlatformStatuses } from "@/hooks/use-events";
+import { useEvents, useDeleteEvent, useEventPlatformStatusesBatch } from "@/hooks/use-events";
 import { useSidebar } from "@/components/Sidebar";
 import type { EventFormData } from "@/components/EventForm";
 import { usePlugins } from "@/hooks/usePlugins";
@@ -158,10 +158,13 @@ const getPlatformIcon = (p: string) => {
   }
 };
 
-function PlatformWithStatus({ eventId, platform, currentVersion }: { eventId: number; platform: string; currentVersion: number }) {
-  const { data: statuses } = useEventPlatformStatuses(eventId);
-  
-  const status = statuses?.find((s: any) => s.platform === platform && s.versionNumber === currentVersion);
+interface PlatformStatusData {
+  platform: string;
+  implementationStatus?: string;
+  validationStatus?: string;
+}
+
+function PlatformWithStatus({ platform, status }: { platform: string; status?: PlatformStatusData }) {
   
   const getImplStatusColor = (implStatus?: string) => {
     switch (implStatus) {
@@ -449,6 +452,15 @@ export default function EventsList() {
   }, [data]);
   
   const totalCount = data?.pages[0]?.total ?? 0;
+  
+  // Batch fetch platform statuses for all visible events
+  const eventIds = useMemo(() => events.map(e => e.id), [events]);
+  const versions = useMemo(() => {
+    const map: Record<number, number> = {};
+    events.forEach(e => { map[e.id] = e.currentVersion || 1; });
+    return map;
+  }, [events]);
+  const { data: platformStatusesBatch } = useEventPlatformStatusesBatch(eventIds, versions);
   
   const tableContainerRef = useRef<HTMLDivElement>(null);
   
@@ -840,14 +852,17 @@ export default function EventsList() {
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         {isPlatformStatusesEnabled ? (
-                          event.platforms?.map((p: string) => (
-                            <PlatformWithStatus
-                              key={p}
-                              eventId={event.id}
-                              platform={p}
-                              currentVersion={event.currentVersion || 1}
-                            />
-                          ))
+                          event.platforms?.map((p: string) => {
+                            const eventStatuses = platformStatusesBatch?.[event.id] || [];
+                            const status = eventStatuses.find((s: any) => s.platform === p);
+                            return (
+                              <PlatformWithStatus
+                                key={p}
+                                platform={p}
+                                status={status}
+                              />
+                            );
+                          })
                         ) : (
                           event.platforms?.map((p: string) => (
                             <Badge key={p} variant="secondary" className="font-normal capitalize gap-1 pl-1.5 text-[10px] min-w-[70px]">

@@ -247,6 +247,7 @@ export function PlatformStatuses({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "platform-statuses", displayVersion] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/platform-statuses-batch"] });
     },
   });
 

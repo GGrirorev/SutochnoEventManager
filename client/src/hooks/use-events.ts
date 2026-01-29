@@ -215,6 +215,25 @@ export function useEventPlatformStatuses(eventId: number) {
   });
 }
 
+export function useEventPlatformStatusesBatch(eventIds: number[], versions?: Record<number, number>) {
+  return useQuery<Record<number, any[]>>({
+    queryKey: ["/api/events/platform-statuses-batch", eventIds.sort().join(","), JSON.stringify(versions || {})],
+    queryFn: async () => {
+      if (eventIds.length === 0) return {};
+      const res = await fetch("/api/events/platform-statuses-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ eventIds, versions }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch platform statuses batch");
+      return res.json();
+    },
+    enabled: eventIds.length > 0,
+    staleTime: 30000,
+  });
+}
+
 export function useCreatePlatformStatus() {
   const queryClient = useQueryClient();
 
@@ -238,6 +257,7 @@ export function useCreatePlatformStatus() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", variables.eventId, "platform-statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/platform-statuses-batch"] });
     }
   });
 }
@@ -265,6 +285,7 @@ export function useUpdatePlatformStatus() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", variables.eventId, "platform-statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/platform-statuses-batch"] });
     }
   });
 }
@@ -286,6 +307,7 @@ export function useDeletePlatformStatus() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/events", variables.eventId, "platform-statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/platform-statuses-batch"] });
     }
   });
 }
