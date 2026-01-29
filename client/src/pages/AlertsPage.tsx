@@ -32,9 +32,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink, Settings } from "lucide-react";
+import { AlertTriangle, Trash2, Loader2, Bell, RefreshCw, TrendingDown, ExternalLink } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { Link } from "wouter";
 import type { EventAlert } from "@shared/schema";
 import {
   PLATFORM_LABELS,
@@ -144,14 +143,6 @@ export default function AlertsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {user?.role === "admin" && (
-                <Link href="/alerts/settings">
-                  <Button variant="outline" data-testid="button-alert-settings">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Настройки
-                  </Button>
-                </Link>
-              )}
               <Button
                 onClick={startCheck}
                 disabled={checkProgress?.isRunning}
