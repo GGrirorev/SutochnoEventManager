@@ -91,6 +91,7 @@ export interface IStorage {
   
   // Event platform status operations (version-aware)
   getEventPlatformStatuses(eventId: number, versionNumber?: number): Promise<EventPlatformStatus[]>;
+  getEventPlatformStatusesBatch(eventIds: number[], versionNumbers?: Map<number, number>): Promise<Map<number, EventPlatformStatus[]>>;
   getEventPlatformStatus(eventId: number, platform: string, versionNumber: number): Promise<EventPlatformStatus | undefined>;
   createEventPlatformStatus(status: InsertEventPlatformStatus): Promise<EventPlatformStatus>;
   updateEventPlatformStatus(id: number, updates: Partial<InsertEventPlatformStatus>): Promise<EventPlatformStatus>;
@@ -482,6 +483,40 @@ export class DatabaseStorage implements IStorage {
       .from(eventPlatformStatuses)
       .where(eq(eventPlatformStatuses.eventId, eventId))
       .orderBy(eventPlatformStatuses.platform);
+  }
+
+  async getEventPlatformStatusesBatch(eventIds: number[], versionNumbers?: Map<number, number>): Promise<Map<number, EventPlatformStatus[]>> {
+    if (eventIds.length === 0) {
+      return new Map();
+    }
+    
+    const statuses = await db.select()
+      .from(eventPlatformStatuses)
+      .where(inArray(eventPlatformStatuses.eventId, eventIds))
+      .orderBy(eventPlatformStatuses.eventId, eventPlatformStatuses.platform);
+    
+    const result = new Map<number, EventPlatformStatus[]>();
+    
+    for (const eventId of eventIds) {
+      result.set(eventId, []);
+    }
+    
+    for (const status of statuses) {
+      // Filter by version if specified
+      if (versionNumbers && versionNumbers.has(status.eventId)) {
+        const targetVersion = versionNumbers.get(status.eventId);
+        if (status.versionNumber !== targetVersion) {
+          continue;
+        }
+      }
+      
+      const list = result.get(status.eventId);
+      if (list) {
+        list.push(status);
+      }
+    }
+    
+    return result;
   }
 
   async getEventPlatformStatus(eventId: number, platform: string, versionNumber: number): Promise<EventPlatformStatus | undefined> {

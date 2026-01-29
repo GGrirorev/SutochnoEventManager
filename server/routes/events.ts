@@ -483,9 +483,13 @@ export function registerEventRoutes(app: Express): void {
     
     const statuses = await storage.getEventPlatformStatuses(eventId, versionNumber);
     
-    const statusesWithHistory = await Promise.all(statuses.map(async (status) => {
-      const history = await storage.getStatusHistory(status.id);
-      return { ...status, history };
+    // Batch fetch all histories in a single query (optimization: 2 queries instead of N+1)
+    const statusIds = statuses.map(s => s.id);
+    const historiesMap = await storage.getStatusHistoryBatch(statusIds);
+    
+    const statusesWithHistory = statuses.map(status => ({
+      ...status,
+      history: historiesMap.get(status.id) || []
     }));
     
     res.json(statusesWithHistory);
