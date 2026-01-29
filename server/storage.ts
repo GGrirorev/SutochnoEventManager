@@ -50,7 +50,14 @@ export interface AlertConfig {
 import { eq, ilike, and, or, desc, sql, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
-export type EventWithAuthor = Event & { authorName?: string | null; ownerName?: string | null; ownerDepartment?: string | null; category?: string | null };
+export type EventWithAuthor = Event & { 
+  authorName?: string | null; 
+  ownerName?: string | null; 
+  ownerDepartment?: string | null; 
+  category?: string | null;
+  versionCreatedAt?: Date | null;
+  versionAuthorName?: string | null;
+};
 export type EventVersionWithAuthor = EventVersion & { authorName?: string | null; category?: string | null };
 export type UserLoginLogWithUser = UserLoginLog & { userName: string; userEmail: string };
 
@@ -294,6 +301,44 @@ export class DatabaseStorage implements IStorage {
       .orderBy(events.id, desc(events.createdAt))
       .limit(limit)
       .offset(offset);
+    
+    // Batch fetch version info to avoid N+1 queries in VersionBadge
+    if (result.length > 0) {
+      const versionConditions = result.map(e => 
+        and(
+          eq(eventVersions.eventId, e.id),
+          eq(eventVersions.version, e.currentVersion || 1)
+        )
+      );
+      
+      const versionAuthorUsers = alias(users, "version_author_users");
+      const versionsData = await db.select({
+        eventId: eventVersions.eventId,
+        version: eventVersions.version,
+        createdAt: eventVersions.createdAt,
+        authorName: versionAuthorUsers.name,
+      })
+        .from(eventVersions)
+        .leftJoin(versionAuthorUsers, eq(eventVersions.authorId, versionAuthorUsers.id))
+        .where(or(...versionConditions));
+      
+      const versionsMap = new Map(versionsData.map(v => [v.eventId, v]));
+      
+      const enrichedResult = result.map(e => {
+        const versionInfo = versionsMap.get(e.id);
+        return {
+          ...e,
+          versionCreatedAt: versionInfo?.createdAt || null,
+          versionAuthorName: versionInfo?.authorName || null,
+        };
+      });
+      
+      return {
+        events: enrichedResult,
+        total,
+        hasMore: offset + result.length < total,
+      };
+    }
     
     return {
       events: result,

@@ -217,20 +217,9 @@ function PlatformWithStatus({ platform, status }: { platform: string; status?: P
 function VersionBadge({ event }: { event: any }) {
   const version = event.currentVersion || 1;
   
-  // Lazy load version details on hover
-  const { data: versions } = useQuery({
-    queryKey: ["/api/events", event.id, "versions"],
-    queryFn: async () => {
-      const res = await fetch(`/api/events/${event.id}/versions`);
-      return res.json();
-    },
-    staleTime: 60000 // Cache for 1 minute
-  });
-  
-  const latestVersion = versions?.find((v: any) => v.version === version);
-  
-  const formattedDate = latestVersion?.createdAt 
-    ? format(new Date(latestVersion.createdAt), "d MMM yyyy, HH:mm", { locale: ru })
+  // Use version data from main events query (no separate request needed)
+  const formattedDate = event.versionCreatedAt 
+    ? format(new Date(event.versionCreatedAt), "d MMM yyyy, HH:mm", { locale: ru })
     : null;
   
   return (
@@ -244,8 +233,8 @@ function VersionBadge({ event }: { event: any }) {
         <div className="space-y-0.5">
           <div>Версия {version}</div>
           {formattedDate && <div className="text-muted-foreground">{formattedDate}</div>}
-          {latestVersion?.authorName && (
-            <div className="text-muted-foreground">Автор: {latestVersion.authorName}</div>
+          {event.versionAuthorName && (
+            <div className="text-muted-foreground">Автор: {event.versionAuthorName}</div>
           )}
         </div>
       </TooltipContent>
