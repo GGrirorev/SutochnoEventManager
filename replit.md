@@ -1,5 +1,7 @@
 # Sutochno.ru Analytics Event Schema Manager
 
+**Repository**: https://github.com/GGrirorev/SutochnoEventManager
+
 ## Overview
 
 This project is an analytics event schema management application for Sutochno.ru, designed to help teams define, track, and validate analytics events across various platforms (web, iOS, Android, backend). It aims to provide a centralized system for event monitoring, a comprehensive event catalog with property definitions, and a reusable property template library. The application supports full event versioning, detailed platform status tracking, user management with role-based access control, and a plugin system for extending functionality, including analytics monitoring and CSV imports.
