@@ -56,6 +56,7 @@ export interface IStorage {
     authorId?: number;
     implementationStatus?: string;
     validationStatus?: string;
+    jira?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean }>;
@@ -147,11 +148,12 @@ export class DatabaseStorage implements IStorage {
     authorId?: number;
     implementationStatus?: string;
     validationStatus?: string;
+    jira?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean }> {
     const conditions = [];
-    const needStatusJoin = filters?.implementationStatus || filters?.validationStatus;
+    const needStatusJoin = filters?.implementationStatus || filters?.validationStatus || filters?.jira;
 
     if (filters?.search) {
       conditions.push(
@@ -178,6 +180,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (filters?.validationStatus) {
       conditions.push(eq(eventPlatformStatuses.validationStatus, filters.validationStatus));
+    }
+    if (filters?.jira) {
+      conditions.push(ilike(eventPlatformStatuses.jiraLink, `%${filters.jira}%`));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

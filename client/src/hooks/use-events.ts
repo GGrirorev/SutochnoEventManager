@@ -23,6 +23,7 @@ export function useEvents(filters?: {
   authorId?: number;
   implementationStatus?: string;
   validationStatus?: string;
+  jira?: string;
 }) {
   const queryKey = [api.events.list.path, filters];
   

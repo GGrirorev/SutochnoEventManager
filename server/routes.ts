@@ -274,6 +274,7 @@ export async function registerRoutes(
         authorId: req.query.authorId ? parseInt(req.query.authorId as string, 10) : undefined,
         implementationStatus: req.query.implementationStatus as string | undefined,
         validationStatus: req.query.validationStatus as string | undefined,
+        jira: req.query.jira as string | undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
         offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
       };

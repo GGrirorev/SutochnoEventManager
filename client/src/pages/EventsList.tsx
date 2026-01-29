@@ -267,6 +267,7 @@ function saveEventsFilters(filters: {
   authorId: string;
   implementationStatus: string;
   validationStatus: string;
+  jira: string;
 }) {
   try {
     localStorage.setItem(EVENTS_FILTER_KEY, JSON.stringify(filters));
@@ -281,7 +282,7 @@ function getUrlParams() {
   // Check if URL has any filter params
   const hasUrlFilters = params.has("search") || params.has("category") || params.has("platform") || 
     params.has("ownerId") || params.has("authorId") || 
-    params.has("implementationStatus") || params.has("validationStatus");
+    params.has("implementationStatus") || params.has("validationStatus") || params.has("jira");
   
   // Use URL params if present, otherwise fallback to localStorage
   if (hasUrlFilters || !savedFilters) {
@@ -293,6 +294,7 @@ function getUrlParams() {
       authorId: params.get("authorId") || "all",
       implementationStatus: params.get("implementationStatus") || "all",
       validationStatus: params.get("validationStatus") || "all",
+      jira: params.get("jira") || "",
       open: params.get("open"),
       edit: params.get("edit"),
     };
@@ -306,6 +308,7 @@ function getUrlParams() {
     authorId: savedFilters.authorId || "all",
     implementationStatus: savedFilters.implementationStatus || "all",
     validationStatus: savedFilters.validationStatus || "all",
+    jira: savedFilters.jira || "",
     open: params.get("open"),
     edit: params.get("edit"),
   };
@@ -323,6 +326,7 @@ export default function EventsList() {
   const [authorFilter, setAuthorFilter] = useState<string>(initialParams.authorId);
   const [implStatusFilter, setImplStatusFilter] = useState<string>(initialParams.implementationStatus);
   const [valStatusFilter, setValStatusFilter] = useState<string>(initialParams.validationStatus);
+  const [jiraFilter, setJiraFilter] = useState<string>(initialParams.jira);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   
@@ -335,8 +339,9 @@ export default function EventsList() {
     if (authorFilter !== "all") count++;
     if (implStatusFilter !== "all") count++;
     if (valStatusFilter !== "all") count++;
+    if (jiraFilter) count++;
     return count;
-  }, [categoryFilter, platformFilter, ownerFilter, authorFilter, implStatusFilter, valStatusFilter]);
+  }, [categoryFilter, platformFilter, ownerFilter, authorFilter, implStatusFilter, valStatusFilter, jiraFilter]);
   
   // Sync filters to URL and localStorage (preserve existing open/edit params)
   useEffect(() => {
@@ -357,6 +362,7 @@ export default function EventsList() {
     if (authorFilter !== "all") params.set("authorId", authorFilter);
     if (implStatusFilter !== "all") params.set("implementationStatus", implStatusFilter);
     if (valStatusFilter !== "all") params.set("validationStatus", valStatusFilter);
+    if (jiraFilter) params.set("jira", jiraFilter);
     
     const queryString = params.toString();
     const newPath = queryString ? `/events?${queryString}` : "/events";
@@ -373,8 +379,9 @@ export default function EventsList() {
       authorId: authorFilter,
       implementationStatus: implStatusFilter,
       validationStatus: valStatusFilter,
+      jira: jiraFilter,
     });
-  }, [search, categoryFilter, platformFilter, ownerFilter, authorFilter, implStatusFilter, valStatusFilter]);
+  }, [search, categoryFilter, platformFilter, ownerFilter, authorFilter, implStatusFilter, valStatusFilter, jiraFilter]);
   
   // Get current user permissions
   const { data: currentUser } = useCurrentUser();
@@ -429,6 +436,7 @@ export default function EventsList() {
     authorId: authorFilter === "all" ? undefined : parseInt(authorFilter, 10),
     implementationStatus: implStatusFilter === "all" ? undefined : implStatusFilter,
     validationStatus: valStatusFilter === "all" ? undefined : valStatusFilter,
+    jira: jiraFilter || undefined,
   });
   
   const events = useMemo(() => {
@@ -668,6 +676,18 @@ export default function EventsList() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <div className="relative">
+                <ExternalLink className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder="Jira задача..."
+                  value={jiraFilter}
+                  onChange={(e) => setJiraFilter(e.target.value)}
+                  className="h-8 w-[120px] pl-7 pr-2 border-none bg-muted/50 text-xs focus-visible:ring-0"
+                  data-testid="input-jira-filter"
+                />
+              </div>
               
               {activeFiltersCount > 0 && (
                 <Button
@@ -680,6 +700,7 @@ export default function EventsList() {
                     setAuthorFilter("all");
                     setImplStatusFilter("all");
                     setValStatusFilter("all");
+                    setJiraFilter("");
                   }}
                   className="h-8 text-xs text-muted-foreground shrink-0"
                   data-testid="button-clear-filters"
