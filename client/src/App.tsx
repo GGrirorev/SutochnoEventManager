@@ -11,6 +11,7 @@ import UsersPage from "@/pages/UsersPage";
 import PluginsPage from "@/pages/PluginsPage";
 import AlertsPage from "@/pages/AlertsPage";
 import AlertSettingsPage from "@/pages/AlertSettingsPage";
+import CategoriesPage from "@/pages/CategoriesPage";
 import LoginPage from "@/pages/LoginPage";
 import SetupPage from "@/pages/SetupPage";
 import { SidebarProvider } from "@/components/Sidebar";
@@ -134,6 +135,9 @@ function Router() {
       </Route>
       <Route path="/properties">
         <ProtectedRoute component={PropertiesPage} />
+      </Route>
+      <Route path="/categories">
+        <ProtectedRoute component={CategoriesPage} />
       </Route>
       <Route path="/alerts">
         <ProtectedRoute component={AlertsPage} />

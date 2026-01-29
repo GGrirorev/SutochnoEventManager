@@ -8,6 +8,7 @@ import {
   LogOut,
   Puzzle,
   Bell,
+  Folder,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { label: "Обзор", icon: LayoutDashboard, href: "/" },
   { label: "Схема событий", icon: List, href: "/events" },
   { label: "Свойства событий", icon: Database, href: "/properties" },
+  { label: "Категории", icon: Folder, href: "/categories" },
 ];
 
 const MONITORING_ITEMS = [
