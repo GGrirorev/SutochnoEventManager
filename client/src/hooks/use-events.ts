@@ -18,8 +18,11 @@ interface EventsResponse {
 export function useEvents(filters?: { 
   search?: string; 
   category?: string; 
-  status?: string; 
   platform?: string;
+  ownerId?: number;
+  authorId?: number;
+  implementationStatus?: string;
+  validationStatus?: string;
 }) {
   const queryKey = [api.events.list.path, filters];
   

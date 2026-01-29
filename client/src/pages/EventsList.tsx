@@ -246,12 +246,53 @@ function VersionBadge({ event }: { event: any }) {
   );
 }
 
+// Helper to read URL params
+function getUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    search: params.get("search") || "",
+    category: params.get("category") || "all",
+    platform: params.get("platform") || "all",
+    ownerId: params.get("ownerId") || "all",
+    authorId: params.get("authorId") || "all",
+    implementationStatus: params.get("implementationStatus") || "all",
+    validationStatus: params.get("validationStatus") || "all",
+    open: params.get("open"),
+    edit: params.get("edit"),
+  };
+}
+
 export default function EventsList() {
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
-  const [status, setStatus] = useState<string>("all");
+  const [location, setLocation] = useLocation();
+  
+  // Initialize filters from URL
+  const initialParams = useMemo(() => getUrlParams(), []);
+  const [search, setSearch] = useState(initialParams.search);
+  const [categoryFilter, setCategoryFilter] = useState<string>(initialParams.category);
+  const [platformFilter, setPlatformFilter] = useState<string>(initialParams.platform);
+  const [ownerFilter, setOwnerFilter] = useState<string>(initialParams.ownerId);
+  const [authorFilter, setAuthorFilter] = useState<string>(initialParams.authorId);
+  const [implStatusFilter, setImplStatusFilter] = useState<string>(initialParams.implementationStatus);
+  const [valStatusFilter, setValStatusFilter] = useState<string>(initialParams.validationStatus);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (categoryFilter !== "all") params.set("category", categoryFilter);
+    if (platformFilter !== "all") params.set("platform", platformFilter);
+    if (ownerFilter !== "all") params.set("ownerId", ownerFilter);
+    if (authorFilter !== "all") params.set("authorId", authorFilter);
+    if (implStatusFilter !== "all") params.set("implementationStatus", implStatusFilter);
+    if (valStatusFilter !== "all") params.set("validationStatus", valStatusFilter);
+    
+    const queryString = params.toString();
+    const newPath = queryString ? `/events?${queryString}` : "/events";
+    if (window.location.pathname + window.location.search !== newPath) {
+      window.history.replaceState({}, "", newPath);
+    }
+  }, [search, categoryFilter, platformFilter, ownerFilter, authorFilter, implStatusFilter, valStatusFilter]);
   
   // Get current user permissions
   const { data: currentUser } = useCurrentUser();
@@ -260,10 +301,16 @@ export default function EventsList() {
   const canEdit = userPermissions?.canEditEvents ?? false;
   const canChangeStatuses = userPermissions?.canChangeStatuses ?? false;
   
-  // Fetch categories for filter (uses default fetcher from queryClient)
+  // Fetch categories for filter
   const { data: categories = [] } = useQuery<EventCategory[]>({
     queryKey: ["/api/categories"],
   });
+  
+  // Fetch users for owner/author filters
+  const { data: usersData } = useQuery<{ id: number; name: string; department: string | null; isActive: boolean }[]>({
+    queryKey: ["/api/users"],
+  });
+  const activeUsers = useMemo(() => (usersData || []).filter(u => u.isActive), [usersData]);
   
   // Check if plugins are enabled
   const { data: plugins = [] } = usePlugins();
@@ -277,29 +324,29 @@ export default function EventsList() {
   
   // Handle ?open=ID query parameter to auto-open event details
   // Handle ?edit=ID query parameter to auto-open edit form
-  const [location, setLocation] = useLocation();
   const [openEventId, setOpenEventId] = useState<number | null>(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("open");
+    const id = initialParams.open;
     return id ? parseInt(id, 10) : null;
   });
   const [editEventId, setEditEventId] = useState<number | null>(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("edit");
+    const id = initialParams.edit;
     return id ? parseInt(id, 10) : null;
   });
 
-    const { 
+  const { 
     data, 
     isLoading, 
     fetchNextPage, 
     hasNextPage, 
     isFetchingNextPage 
   } = useEvents({ 
-    search, 
+    search: search || undefined, 
     category: categoryFilter === "all" ? undefined : categoryFilter,
-    platform: platform,
-    status: status === "all" ? undefined : status 
+    platform: platformFilter === "all" ? undefined : platformFilter,
+    ownerId: ownerFilter === "all" ? undefined : parseInt(ownerFilter, 10),
+    authorId: authorFilter === "all" ? undefined : parseInt(authorFilter, 10),
+    implementationStatus: implStatusFilter === "all" ? undefined : implStatusFilter,
+    validationStatus: valStatusFilter === "all" ? undefined : valStatusFilter,
   });
   
   const events = useMemo(() => {
@@ -418,64 +465,120 @@ export default function EventsList() {
         </div>
 
         {/* Filters & Search */}
-        <div className="flex flex-col md:flex-row gap-4 bg-card p-4 rounded-xl border shadow-sm">
-          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
-            <SelectTrigger className="w-[200px] border-none bg-muted/50" data-testid="select-category-filter">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Layout className="w-4 h-4" />
-                <SelectValue placeholder="Все категории" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" data-testid="option-all-categories">Все категории</SelectItem>
-              {categories.map(c => (
-                <SelectItem key={c.id} value={c.name} data-testid={`option-category-${c.id}`}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Поиск по Event Action или описанию..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 border-none bg-muted/50 focus-visible:ring-1"
-              data-testid="input-search"
-            />
-          </div>
-          
-          <div className="flex gap-3">
-            <Select value={platform} onValueChange={setPlatform}>
-              <SelectTrigger className="w-[180px] border-none bg-muted/50">
+        <div className="flex flex-col gap-4 bg-card p-4 rounded-xl border shadow-sm">
+          {/* First row: Search + Category */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Поиск по Event Action или описанию..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 border-none bg-muted/50 focus-visible:ring-1"
+                data-testid="input-search"
+              />
+            </div>
+            
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
+              <SelectTrigger className="w-[200px] border-none bg-muted/50" data-testid="select-category-filter">
                 <div className="flex items-center gap-2 text-muted-foreground">
-                   <Smartphone className="w-4 h-4" />
-                   <SelectValue />
+                  <Layout className="w-4 h-4" />
+                  <SelectValue placeholder="Все категории" />
                 </div>
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all" data-testid="option-all-categories">Все категории</SelectItem>
+                {categories.map(c => (
+                  <SelectItem key={c.id} value={c.name} data-testid={`option-category-${c.id}`}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Second row: Platform, Statuses, Owner, Author */}
+          <div className="flex flex-wrap gap-3">
+            <Select value={platformFilter} onValueChange={setPlatformFilter}>
+              <SelectTrigger className="w-[140px] border-none bg-muted/50" data-testid="select-platform-filter">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                   <Smartphone className="w-4 h-4" />
+                   <SelectValue placeholder="Платформа" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все платформы</SelectItem>
                 {PLATFORMS.map(p => (
-                  <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>
+                  <SelectItem key={p} value={p} data-testid={`option-platform-${p}`}>{p}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             {isPlatformStatusesEnabled && (
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="w-[180px] border-none bg-muted/50">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                     <Filter className="w-4 h-4" />
-                     <SelectValue placeholder="Статус" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все статусы</SelectItem>
-                  {IMPLEMENTATION_STATUS.map(s => (
-                    <SelectItem key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <>
+                <Select value={implStatusFilter} onValueChange={setImplStatusFilter}>
+                  <SelectTrigger className="w-[160px] border-none bg-muted/50" data-testid="select-impl-status-filter">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                       <Rocket className="w-4 h-4" />
+                       <SelectValue placeholder="Внедрение" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все внедрения</SelectItem>
+                    {IMPLEMENTATION_STATUS.map(s => (
+                      <SelectItem key={s} value={s} data-testid={`option-impl-${s}`}>{s.replace('_', ' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={valStatusFilter} onValueChange={setValStatusFilter}>
+                  <SelectTrigger className="w-[160px] border-none bg-muted/50" data-testid="select-val-status-filter">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                       <ShieldCheck className="w-4 h-4" />
+                       <SelectValue placeholder="Валидация" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все валидации</SelectItem>
+                    {VALIDATION_STATUS.map(s => (
+                      <SelectItem key={s} value={s} data-testid={`option-val-${s}`}>{s.replace('_', ' ')}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
             )}
+
+            <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+              <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-owner-filter">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                   <Monitor className="w-4 h-4" />
+                   <SelectValue placeholder="Ответственный" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все ответственные</SelectItem>
+                {activeUsers.map(u => (
+                  <SelectItem key={u.id} value={String(u.id)} data-testid={`option-owner-${u.id}`}>
+                    {u.name}{u.department ? ` (${u.department})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={authorFilter} onValueChange={setAuthorFilter}>
+              <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-author-filter">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                   <Pencil className="w-4 h-4" />
+                   <SelectValue placeholder="Автор" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все авторы</SelectItem>
+                {activeUsers.map(u => (
+                  <SelectItem key={u.id} value={String(u.id)} data-testid={`option-author-${u.id}`}>
+                    {u.name}{u.department ? ` (${u.department})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         </div>
