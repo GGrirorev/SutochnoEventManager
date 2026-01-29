@@ -1796,6 +1796,17 @@ async function seedPlugins() {
       config: {},
     });
   }
+
+  if (!existingIds.includes("alerts")) {
+    await storage.upsertPlugin({
+      id: "alerts",
+      name: "Мониторинг событий",
+      description: "Мониторинг падения событий аналитики с уведомлениями о значительном снижении показателей",
+      version: "1.0.0",
+      isEnabled: true,
+      config: {},
+    });
+  }
 }
 
 async function seedDatabase() {
