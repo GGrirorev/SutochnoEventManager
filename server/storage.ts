@@ -181,9 +181,8 @@ export class DatabaseStorage implements IStorage {
     if (filters?.validationStatus) {
       conditions.push(eq(eventPlatformStatuses.validationStatus, filters.validationStatus));
     }
-    if (filters?.jira) {
-      conditions.push(ilike(eventPlatformStatuses.jiraLink, `%${filters.jira}%`));
-    }
+    // Jira filter is handled separately via subquery since jira links are in status_history
+    const jiraFilter = filters?.jira;
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const limit = filters?.limit ?? 50;
@@ -214,7 +213,18 @@ export class DatabaseStorage implements IStorage {
       ) as typeof countQuery;
     }
     
-    const [countResult] = await countQuery.where(whereClause);
+    // Add jira filter condition via subquery on status_history
+    let finalCountCondition = whereClause;
+    if (jiraFilter) {
+      const jiraCondition = sql`EXISTS (
+        SELECT 1 FROM ${statusHistory} sh
+        JOIN ${eventPlatformStatuses} eps ON eps.id = sh.event_platform_status_id
+        WHERE eps.event_id = ${events.id} AND sh.jira_link ILIKE ${'%' + jiraFilter + '%'}
+      )`;
+      finalCountCondition = whereClause ? and(whereClause, jiraCondition) : jiraCondition;
+    }
+
+    const [countResult] = await countQuery.where(finalCountCondition);
     const total = countResult?.count ?? 0;
 
     const ownerUsers = alias(users, "owner_users");
@@ -254,8 +264,19 @@ export class DatabaseStorage implements IStorage {
       ) as typeof mainQuery;
     }
     
+    // Apply the same jira condition to main query
+    let finalMainCondition = whereClause;
+    if (jiraFilter) {
+      const jiraCondition = sql`EXISTS (
+        SELECT 1 FROM ${statusHistory} sh
+        JOIN ${eventPlatformStatuses} eps ON eps.id = sh.event_platform_status_id
+        WHERE eps.event_id = ${events.id} AND sh.jira_link ILIKE ${'%' + jiraFilter + '%'}
+      )`;
+      finalMainCondition = whereClause ? and(whereClause, jiraCondition) : jiraCondition;
+    }
+    
     const result = await mainQuery
-      .where(whereClause)
+      .where(finalMainCondition)
       .orderBy(events.id, desc(events.createdAt))
       .limit(limit)
       .offset(offset);
