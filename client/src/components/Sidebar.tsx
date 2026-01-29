@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import logoHeader from "@assets/logo-header_1769085215107.png";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { ROLE_LABELS } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -90,11 +89,19 @@ export function Sidebar() {
       {/* Brand */}
       <div className="h-20 flex items-center justify-center px-4 border-b">
         {!collapsed && (
-          <img src={logoHeader} alt="Sutochno.ru Аналитика" className="h-10 w-auto object-contain" />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-lg">S</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-semibold text-sm">Sutochno.ru</span>
+              <span className="text-xs text-muted-foreground">Аналитика</span>
+            </div>
+          </div>
         )}
         {collapsed && (
-          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
-            <span className="text-primary font-bold text-sm">S</span>
+          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">S</span>
           </div>
         )}
       </div>
