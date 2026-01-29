@@ -122,7 +122,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
       platforms: [],
       implementationStatus: "черновик",
       validationStatus: "ожидает_проверки",
-      owner: "",
+      ownerId: undefined,
       notes: "",
       properties: [],
     },
@@ -357,19 +357,16 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
 
             <FormField
               control={form.control}
-              name="owner"
+              name="ownerId"
               render={({ field }) => {
-                const currentValue = field.value || "";
                 const activeUsers = users.filter(u => u.isActive);
-                const userValues = activeUsers.map(u => formatUserDisplay(u));
-                const showCurrentAsOption = currentValue && !userValues.includes(currentValue);
                 
                 return (
                   <FormItem>
                     <FormLabel>Ответственный</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      value={currentValue}
+                      onValueChange={(val) => field.onChange(val ? parseInt(val) : undefined)}
+                      value={field.value?.toString() || ""}
                     >
                       <FormControl>
                         <SelectTrigger data-testid="select-event-owner">
@@ -377,13 +374,8 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {showCurrentAsOption && (
-                          <SelectItem key="current" value={currentValue} data-testid="option-owner-current">
-                            {currentValue}
-                          </SelectItem>
-                        )}
                         {activeUsers.map((user) => (
-                          <SelectItem key={user.id} value={formatUserDisplay(user)} data-testid={`option-owner-${user.id}`}>
+                          <SelectItem key={user.id} value={user.id.toString()} data-testid={`option-owner-${user.id}`}>
                             {formatUserDisplay(user)}
                           </SelectItem>
                         ))}

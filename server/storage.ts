@@ -41,8 +41,9 @@ import {
   VALIDATION_STATUS
 } from "@shared/schema";
 import { eq, ilike, and, or, desc, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
-export type EventWithAuthor = Event & { authorName?: string | null; category?: string | null };
+export type EventWithAuthor = Event & { authorName?: string | null; ownerName?: string | null; ownerDepartment?: string | null; category?: string | null };
 export type EventVersionWithAuthor = EventVersion & { authorName?: string | null; category?: string | null };
 export type UserLoginLogWithUser = UserLoginLog & { userName: string; userEmail: string };
 
@@ -174,6 +175,7 @@ export class DatabaseStorage implements IStorage {
     
     const total = countResult?.count ?? 0;
 
+    const ownerUsers = alias(users, "owner_users");
     const result = await db.select({
       id: events.id,
       categoryId: events.categoryId,
@@ -183,7 +185,9 @@ export class DatabaseStorage implements IStorage {
       actionDescription: events.actionDescription,
       name: events.name,
       valueDescription: events.valueDescription,
-      owner: events.owner,
+      ownerId: events.ownerId,
+      ownerName: ownerUsers.name,
+      ownerDepartment: ownerUsers.department,
       authorId: events.authorId,
       authorName: users.name,
       platforms: events.platforms,
@@ -196,6 +200,7 @@ export class DatabaseStorage implements IStorage {
     })
       .from(events)
       .leftJoin(users, eq(events.authorId, users.id))
+      .leftJoin(ownerUsers, eq(events.ownerId, ownerUsers.id))
       .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
       .where(whereClause)
       .orderBy(desc(events.createdAt))
@@ -210,6 +215,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEvent(id: number): Promise<EventWithAuthor | undefined> {
+    const ownerUsers = alias(users, "owner_users");
     const [event] = await db.select({
       id: events.id,
       categoryId: events.categoryId,
@@ -219,7 +225,9 @@ export class DatabaseStorage implements IStorage {
       actionDescription: events.actionDescription,
       name: events.name,
       valueDescription: events.valueDescription,
-      owner: events.owner,
+      ownerId: events.ownerId,
+      ownerName: ownerUsers.name,
+      ownerDepartment: ownerUsers.department,
       authorId: events.authorId,
       authorName: users.name,
       platforms: events.platforms,
@@ -232,6 +240,7 @@ export class DatabaseStorage implements IStorage {
     })
       .from(events)
       .leftJoin(users, eq(events.authorId, users.id))
+      .leftJoin(ownerUsers, eq(events.ownerId, ownerUsers.id))
       .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
       .where(eq(events.id, id));
     return event;
@@ -489,7 +498,7 @@ export class DatabaseStorage implements IStorage {
       actionDescription: eventVersions.actionDescription,
       name: eventVersions.name,
       valueDescription: eventVersions.valueDescription,
-      owner: eventVersions.owner,
+      ownerId: eventVersions.ownerId,
       platforms: eventVersions.platforms,
       properties: eventVersions.properties,
       notes: eventVersions.notes,
@@ -517,7 +526,7 @@ export class DatabaseStorage implements IStorage {
       actionDescription: eventVersions.actionDescription,
       name: eventVersions.name,
       valueDescription: eventVersions.valueDescription,
-      owner: eventVersions.owner,
+      ownerId: eventVersions.ownerId,
       platforms: eventVersions.platforms,
       properties: eventVersions.properties,
       notes: eventVersions.notes,
@@ -804,7 +813,7 @@ export class DatabaseStorage implements IStorage {
           categoryId,
           block: updates.block,
           actionDescription: updates.actionDescription,
-          owner: updates.owner,
+          ownerId: updates.ownerId,
           platforms: updates.platforms,
           notes: updates.notes,
         })

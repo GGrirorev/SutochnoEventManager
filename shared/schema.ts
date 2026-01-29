@@ -138,7 +138,7 @@ export const events = pgTable("events", {
   name: text("name"), // Event Name (Optional)
   valueDescription: text("value_description").default(""), // Event Value Description (Text)
   
-  owner: text("owner"), 
+  ownerId: integer("owner_id"),
   authorId: integer("author_id"),
   platforms: text("platforms").array().notNull().default(sql`ARRAY[]::text[]`),
   
@@ -275,7 +275,7 @@ export const eventVersions = pgTable("event_versions", {
   actionDescription: text("action_description").notNull().default(""),
   name: text("name"),
   valueDescription: text("value_description").default(""),
-  owner: text("owner"),
+  ownerId: integer("owner_id"),
   platforms: text("platforms").array().notNull().default(sql`ARRAY[]::text[]`),
   properties: jsonb("properties").$type<{
     name: string;
