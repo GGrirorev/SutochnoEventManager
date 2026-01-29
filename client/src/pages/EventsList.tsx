@@ -7,7 +7,8 @@ import { usePlugins } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { ROLE_PERMISSIONS } from "@shared/schema";
 import { getPluginsForSlot, type EventsListPluginContext } from "@/plugins/registry";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import {
   Table,
   TableBody,
@@ -552,7 +553,9 @@ export default function EventsList() {
             <Button 
               variant="outline" 
               size="icon"
-              onClick={() => refetch()}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+              }}
               disabled={isFetching}
               data-testid="button-refresh-events"
             >
