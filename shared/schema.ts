@@ -329,6 +329,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   passwordHash: text("password_hash"),
   role: text("role", { enum: USER_ROLES }).notNull().default("viewer"),
+  department: text("department"),
   isActive: boolean("is_active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),

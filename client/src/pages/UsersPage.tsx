@@ -132,6 +132,7 @@ function UserForm({
       email: initialData?.email || "",
       name: initialData?.name || "",
       role: initialData?.role || "viewer",
+      department: initialData?.department || "",
       isActive: initialData?.isActive ?? true,
       password: "",
     }
@@ -262,6 +263,25 @@ function UserForm({
               <FormDescription>
                 <RoleDescription role={field.value} />
               </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="department"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Отдел</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Например: Аналитика, Разработка, Маркетинг"
+                  data-testid="input-user-department"
+                  {...field}
+                  value={field.value || ""}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -438,6 +458,7 @@ export default function UsersPage() {
                     <TableHead>Имя</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Роль</TableHead>
+                    <TableHead>Отдел</TableHead>
                     <TableHead>Последний вход</TableHead>
                     <TableHead>Статус</TableHead>
                     <TableHead className="w-[100px]">Действия</TableHead>
@@ -459,6 +480,9 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <RoleBadge role={user.role} />
+                      </TableCell>
+                      <TableCell data-testid={`text-user-department-${user.id}`}>
+                        {user.department || <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell data-testid={`text-user-last-login-${user.id}`}>
                         {user.lastLoginAt ? (
