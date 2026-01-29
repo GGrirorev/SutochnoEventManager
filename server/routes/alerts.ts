@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { storage } from "../storage";
 import { requireAuth, AuthenticatedRequest } from "./middleware";
+import { fetchWithTimeout, createRateLimiter, type RateLimiter } from "../httpClient";
 
 export function registerAlertRoutes(app: Express): void {
   app.get("/api/alerts", requireAuth, async (req, res) => {
@@ -154,6 +155,7 @@ export function registerAlertRoutes(app: Express): void {
       
       const dropThreshold = alertConfig.dropThreshold || 30;
       const CONCURRENCY = alertConfig.maxConcurrency || 5;
+      const rateLimiter = createRateLimiter(CONCURRENCY, 200);
       
       const now = new Date();
       const yesterday = new Date(now);
@@ -216,10 +218,11 @@ export function registerAlertRoutes(app: Express): void {
           urlDayBefore.searchParams.set("token_auth", token);
           
           try {
+            await rateLimiter.acquire();
             const [resYesterday, resDayBefore] = await Promise.all([
-              fetch(urlYesterday.toString()),
-              fetch(urlDayBefore.toString())
-            ]);
+              fetchWithTimeout(urlYesterday.toString(), { timeout: 30000 }),
+              fetchWithTimeout(urlDayBefore.toString(), { timeout: 30000 })
+            ]).finally(() => rateLimiter.release());
             
             if (!resYesterday.ok || !resDayBefore.ok) return;
             
@@ -321,6 +324,7 @@ export function registerAlertRoutes(app: Express): void {
       
       const dropThreshold = alertConfig.dropThreshold || 30;
       const CONCURRENCY = alertConfig.maxConcurrency || 5;
+      const rateLimiter = createRateLimiter(CONCURRENCY, 200);
       
       const now = new Date();
       const yesterday = new Date(now);
@@ -375,10 +379,11 @@ export function registerAlertRoutes(app: Express): void {
           urlDayBefore.searchParams.set("token_auth", token);
           
           try {
+            await rateLimiter.acquire();
             const [resYesterday, resDayBefore] = await Promise.all([
-              fetch(urlYesterday.toString()),
-              fetch(urlDayBefore.toString())
-            ]);
+              fetchWithTimeout(urlYesterday.toString(), { timeout: 30000 }),
+              fetchWithTimeout(urlDayBefore.toString(), { timeout: 30000 })
+            ]).finally(() => rateLimiter.release());
             
             if (!resYesterday.ok || !resDayBefore.ok) return;
             

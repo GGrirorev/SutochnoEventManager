@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { storage } from "../storage";
 import { z } from "zod";
 import { requireAuth, requireAdmin } from "./middleware";
+import { fetchWithRateLimit } from "../httpClient";
 
 const analyticsQuerySchema = z.object({
   label: z.string().min(1, "Label parameter is required"),
@@ -66,7 +67,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       url.searchParams.set("showMetadata", "0");
       url.searchParams.set("token_auth", token);
       
-      const response = await fetch(url.toString());
+      const response = await fetchWithRateLimit(url.toString(), { timeout: 30000 });
       
       if (!response.ok) {
         return res.status(502).json({ message: "Analytics API returned an error" });
