@@ -636,7 +636,7 @@ export default function EventsList() {
               {/* First row: Category, Platform, Implementation, Validation */}
               <div className="flex items-center gap-2 flex-wrap">
                 <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
-                  <SelectTrigger className="h-8 flex-1 min-w-[140px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-category-filter">
+                  <SelectTrigger className={`h-8 flex-1 min-w-[140px] border-none text-xs focus:ring-0 focus-visible:ring-0 ${categoryFilter !== "all" ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`} data-testid="select-category-filter">
                     <Layout className="w-3.5 h-3.5 shrink-0" />
                     <SelectValue placeholder="Категория" />
                   </SelectTrigger>
@@ -649,7 +649,7 @@ export default function EventsList() {
                 </Select>
                 
                 <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                  <SelectTrigger className="h-8 flex-1 min-w-[130px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-platform-filter">
+                  <SelectTrigger className={`h-8 flex-1 min-w-[130px] border-none text-xs focus:ring-0 focus-visible:ring-0 ${platformFilter !== "all" ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`} data-testid="select-platform-filter">
                     <Smartphone className="w-3.5 h-3.5 shrink-0" />
                     <SelectValue placeholder="Платформа" />
                   </SelectTrigger>
@@ -664,7 +664,7 @@ export default function EventsList() {
                 {isPlatformStatusesEnabled && (
                   <>
                     <Select value={implStatusFilter} onValueChange={setImplStatusFilter}>
-                      <SelectTrigger className="h-8 flex-1 min-w-[140px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-impl-status-filter">
+                      <SelectTrigger className={`h-8 flex-1 min-w-[140px] border-none text-xs focus:ring-0 focus-visible:ring-0 ${implStatusFilter !== "all" ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`} data-testid="select-impl-status-filter">
                         <Rocket className="w-3.5 h-3.5 shrink-0" />
                         <SelectValue placeholder="Внедрение" />
                       </SelectTrigger>
@@ -677,7 +677,7 @@ export default function EventsList() {
                     </Select>
 
                     <Select value={valStatusFilter} onValueChange={setValStatusFilter}>
-                      <SelectTrigger className="h-8 flex-1 min-w-[140px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-val-status-filter">
+                      <SelectTrigger className={`h-8 flex-1 min-w-[140px] border-none text-xs focus:ring-0 focus-visible:ring-0 ${valStatusFilter !== "all" ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`} data-testid="select-val-status-filter">
                         <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                         <SelectValue placeholder="Валидация" />
                       </SelectTrigger>
@@ -695,7 +695,7 @@ export default function EventsList() {
               {/* Second row: Owner, Author, Jira, Reset */}
               <div className="flex items-center gap-2 flex-wrap">
                 <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-                  <SelectTrigger className="h-8 flex-1 min-w-[160px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-owner-filter">
+                  <SelectTrigger className={`h-8 flex-1 min-w-[160px] border-none text-xs focus:ring-0 focus-visible:ring-0 ${ownerFilter !== "all" ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`} data-testid="select-owner-filter">
                     <Monitor className="w-3.5 h-3.5 shrink-0" />
                     <SelectValue placeholder="Ответственный" />
                   </SelectTrigger>
@@ -710,7 +710,7 @@ export default function EventsList() {
                 </Select>
 
                 <Select value={authorFilter} onValueChange={setAuthorFilter}>
-                  <SelectTrigger className="h-8 flex-1 min-w-[140px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-author-filter">
+                  <SelectTrigger className={`h-8 flex-1 min-w-[140px] border-none text-xs focus:ring-0 focus-visible:ring-0 ${authorFilter !== "all" ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`} data-testid="select-author-filter">
                     <Pencil className="w-3.5 h-3.5 shrink-0" />
                     <SelectValue placeholder="Автор" />
                   </SelectTrigger>
@@ -731,9 +731,19 @@ export default function EventsList() {
                     placeholder="Jira задача..."
                     value={jiraFilter}
                     onChange={(e) => setJiraFilter(e.target.value)}
-                    className="h-8 w-full pl-7 pr-2 border-none bg-muted/50 text-xs focus-visible:ring-0"
+                    className={`h-8 w-full pl-7 pr-8 border-none text-xs focus-visible:ring-0 ${jiraFilter ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`}
                     data-testid="input-jira-filter"
                   />
+                  {jiraFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setJiraFilter("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 transition-colors"
+                      data-testid="button-clear-jira"
+                    >
+                      <X className="w-2.5 h-2.5 text-muted-foreground" />
+                    </button>
+                  )}
                 </div>
                 
                 {activeFiltersCount > 0 && (
