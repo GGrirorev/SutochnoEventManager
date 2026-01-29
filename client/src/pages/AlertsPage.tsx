@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sidebar, useSidebar } from "@/components/Sidebar";
 import { EventDetailsModal } from "@/components/EventDetailsModal";
@@ -47,17 +47,42 @@ import {
 
 type AlertWithOwner = EventAlert & { ownerId: number | null; ownerName: string | null };
 
+const ALERTS_FILTER_KEY = "alerts-filters";
+
+function loadFilters() {
+  try {
+    const saved = localStorage.getItem(ALERTS_FILTER_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch {}
+  return { category: "all", platform: "all", owner: "all" };
+}
+
+function saveFilters(filters: { category: string; platform: string; owner: string }) {
+  try {
+    localStorage.setItem(ALERTS_FILTER_KEY, JSON.stringify(filters));
+  } catch {}
+}
+
 export default function AlertsPage() {
   const { data: user } = useCurrentUser();
   const [deleteAlert, setDeleteAlert] = useState<AlertWithOwner | null>(null);
   const [viewEventId, setViewEventId] = useState<number | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [platformFilter, setPlatformFilter] = useState<string>("all");
-  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  
+  const initialFilters = loadFilters();
+  const [categoryFilter, setCategoryFilter] = useState<string>(initialFilters.category);
+  const [platformFilter, setPlatformFilter] = useState<string>(initialFilters.platform);
+  const [ownerFilter, setOwnerFilter] = useState<string>(initialFilters.owner);
+  
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  useEffect(() => {
+    saveFilters({ category: categoryFilter, platform: platformFilter, owner: ownerFilter });
+  }, [categoryFilter, platformFilter, ownerFilter]);
 
   const { checkProgress, startCheck } = useAlertCheck();
   const { alerts: allAlerts, isLoading, deleteMutation, bulkDeleteMutation } = useAlerts();
