@@ -235,9 +235,9 @@ export function EventDetailsModal({ event: initialEvent, onEdit }: { event: any;
                   • Автор: {displayedVersion.authorName}
                 </span>
               )}
-              {displayData.ownerName && (
+              {event.ownerName && (
                 <span className="text-xs opacity-80">
-                  • Ответственный: {displayData.ownerName}{displayData.ownerDepartment ? ` (${displayData.ownerDepartment})` : ''}
+                  • Ответственный: {event.ownerName}{event.ownerDepartment ? ` (${event.ownerDepartment})` : ''}
                 </span>
               )}
               <button className="underline ml-auto" onClick={() => setSelectedVersion(null)}>Вернуться к текущей</button>
@@ -263,9 +263,9 @@ export function EventDetailsModal({ event: initialEvent, onEdit }: { event: any;
                   • Автор: {currentVersionData.authorName}
                 </span>
               )}
-              {displayData.ownerName && (
+              {event.ownerName && (
                 <span className="text-xs opacity-80">
-                  • Ответственный: {displayData.ownerName}{displayData.ownerDepartment ? ` (${displayData.ownerDepartment})` : ''}
+                  • Ответственный: {event.ownerName}{event.ownerDepartment ? ` (${event.ownerDepartment})` : ''}
                 </span>
               )}
             </div>
