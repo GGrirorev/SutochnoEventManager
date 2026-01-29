@@ -522,7 +522,7 @@ export default function EventsList() {
           {filtersExpanded && (
             <div className="flex items-center gap-2 pt-2 border-t overflow-x-auto">
               <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
-                <SelectTrigger className="h-8 min-w-[120px] border-none bg-muted/50 text-xs" data-testid="select-category-filter">
+                <SelectTrigger className="h-8 min-w-[120px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-category-filter">
                   <Layout className="w-3.5 h-3.5 shrink-0" />
                   <SelectValue placeholder="Категория" />
                 </SelectTrigger>
@@ -535,7 +535,7 @@ export default function EventsList() {
               </Select>
               
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="h-8 min-w-[100px] border-none bg-muted/50 text-xs" data-testid="select-platform-filter">
+                <SelectTrigger className="h-8 min-w-[100px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-platform-filter">
                   <Smartphone className="w-3.5 h-3.5 shrink-0" />
                   <SelectValue placeholder="Платформа" />
                 </SelectTrigger>
@@ -550,7 +550,7 @@ export default function EventsList() {
               {isPlatformStatusesEnabled && (
                 <>
                   <Select value={implStatusFilter} onValueChange={setImplStatusFilter}>
-                    <SelectTrigger className="h-8 min-w-[110px] border-none bg-muted/50 text-xs" data-testid="select-impl-status-filter">
+                    <SelectTrigger className="h-8 min-w-[110px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-impl-status-filter">
                       <Rocket className="w-3.5 h-3.5 shrink-0" />
                       <SelectValue placeholder="Внедрение" />
                     </SelectTrigger>
@@ -563,7 +563,7 @@ export default function EventsList() {
                   </Select>
 
                   <Select value={valStatusFilter} onValueChange={setValStatusFilter}>
-                    <SelectTrigger className="h-8 min-w-[110px] border-none bg-muted/50 text-xs" data-testid="select-val-status-filter">
+                    <SelectTrigger className="h-8 min-w-[110px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-val-status-filter">
                       <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
                       <SelectValue placeholder="Валидация" />
                     </SelectTrigger>
@@ -578,7 +578,7 @@ export default function EventsList() {
               )}
 
               <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-                <SelectTrigger className="h-8 min-w-[130px] border-none bg-muted/50 text-xs" data-testid="select-owner-filter">
+                <SelectTrigger className="h-8 min-w-[130px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-owner-filter">
                   <Monitor className="w-3.5 h-3.5 shrink-0" />
                   <SelectValue placeholder="Ответственный" />
                 </SelectTrigger>
@@ -593,7 +593,7 @@ export default function EventsList() {
               </Select>
 
               <Select value={authorFilter} onValueChange={setAuthorFilter}>
-                <SelectTrigger className="h-8 min-w-[100px] border-none bg-muted/50 text-xs" data-testid="select-author-filter">
+                <SelectTrigger className="h-8 min-w-[100px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-author-filter">
                   <Pencil className="w-3.5 h-3.5 shrink-0" />
                   <SelectValue placeholder="Автор" />
                 </SelectTrigger>
