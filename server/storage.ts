@@ -47,7 +47,7 @@ export interface AlertConfig {
   maxConcurrency?: number;
   isEnabled?: boolean;
 }
-import { eq, ilike, and, or, desc, sql } from "drizzle-orm";
+import { eq, ilike, and, or, desc, sql, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 export type EventWithAuthor = Event & { authorName?: string | null; ownerName?: string | null; ownerDepartment?: string | null; category?: string | null };

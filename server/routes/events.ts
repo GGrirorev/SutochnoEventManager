@@ -495,6 +495,50 @@ export function registerEventRoutes(app: Express): void {
     res.json(statusesWithHistory);
   });
 
+  // Batch endpoint for fetching platform statuses for multiple events (optimization for list views)
+  app.post("/api/events/platform-statuses-batch", requireAuth, async (req, res) => {
+    try {
+      const schema = z.object({
+        eventIds: z.array(z.number()).min(1).max(100),
+        versions: z.record(z.string(), z.number()).optional() // eventId -> version mapping
+      });
+      
+      const { eventIds, versions } = schema.parse(req.body);
+      
+      // Convert versions object to Map
+      const versionNumbers = versions 
+        ? new Map(Object.entries(versions).map(([k, v]) => [Number(k), v]))
+        : undefined;
+      
+      // 1 query: Get all statuses for all events
+      const statusesMap = await storage.getEventPlatformStatusesBatch(eventIds, versionNumbers);
+      
+      // Collect all status IDs for batch history fetch
+      const allStatusIds: number[] = [];
+      statusesMap.forEach(statuses => {
+        statuses.forEach(s => allStatusIds.push(s.id));
+      });
+      
+      // 1 query: Get all histories
+      const historiesMap = await storage.getStatusHistoryBatch(allStatusIds);
+      
+      // Combine results
+      const result: Record<number, any[]> = {};
+      
+      for (const eventId of eventIds) {
+        const statuses = statusesMap.get(eventId) || [];
+        result[eventId] = statuses.map(status => ({
+          ...status,
+          history: historiesMap.get(status.id) || []
+        }));
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Invalid request" });
+    }
+  });
+
   app.post("/api/events/:eventId/platform-statuses", requireAuth, requirePermission("canChangeStatuses"), async (req, res) => {
     try {
       const eventId = Number(req.params.eventId);
