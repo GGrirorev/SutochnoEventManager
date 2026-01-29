@@ -152,6 +152,52 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 - **Form Data Types**: Created `EventFormData` type for proper form handling
 - **Legacy Fields Removed**: Removed deprecated `implementationStatus` and `validationStatus` columns from events/event_versions tables. Status tracking now exclusively uses event_platform_statuses table.
 
+## Database Indexes (High Load Optimization)
+
+### Event Platform Statuses (7 индексов)
+- `idx_eps_event_id` - быстрый поиск статусов события
+- `idx_eps_implementation_status` - фильтрация по статусу внедрения
+- `idx_eps_validation_status` - фильтрация по статусу валидации
+- `idx_eps_event_version` - поиск по событию и версии
+- `idx_eps_updated_at` - сортировка по дате обновления
+- `unique_event_platform_version` - уникальность (event_id, platform, version)
+
+### Status History (5 индексов)
+- `idx_sh_platform_status_id` - JOIN со статусами платформ
+- `idx_sh_created_at` - сортировка по дате создания
+- `idx_sh_status_type` - фильтрация по типу статуса
+- `idx_sh_changed_by_user` - поиск по автору изменения
+
+### Event Versions (5 индексов)
+- `idx_ev_event_id` - поиск версий события
+- `idx_ev_event_version` - уникальная пара (event_id, version)
+- `idx_ev_author_id` - фильтрация по автору
+- `idx_ev_created_at` - сортировка по дате
+
+### Events (8 индексов)
+- `idx_events_category_action` - уникальность category+action
+- `idx_events_action` - поиск по action
+- `idx_events_platforms` - GIN индекс для массива платформ
+- `idx_events_owner_id` - фильтрация по владельцу
+- `idx_events_author_id` - фильтрация по автору
+- `idx_events_created_at` - сортировка по дате
+- `idx_events_exclude_monitoring` - partial индекс для мониторинга
+
+### Event Alerts (6 индексов)
+- `idx_alerts_event_id` - поиск алертов события
+- `idx_alerts_is_resolved` - фильтрация по статусу решения
+- `idx_alerts_checked_at` - сортировка по дате проверки
+- `idx_alerts_event_platform` - дедупликация по событию и платформе
+- `idx_alerts_drop_percent` - сортировка по проценту падения
+
+### Comments (3 индекса)
+- `idx_comments_event_id` - поиск комментариев события
+- `idx_comments_created_at` - сортировка по дате
+
+### User Login Logs (3 индекса)
+- `idx_ull_user_id` - поиск логов пользователя
+- `idx_ull_login_at` - сортировка по дате входа
+
 ## Known Technical Debt
 
 1. **Type annotations in storage.ts**: Minor drizzle-orm/drizzle-zod type mismatches that don't affect runtime
