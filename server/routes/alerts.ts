@@ -8,7 +8,12 @@ export function registerAlertRoutes(app: Express): void {
     try {
       const limit = parseInt(req.query.limit as string) || 10000;
       const offset = parseInt(req.query.offset as string) || 0;
-      const result = await storage.getAlerts(limit, offset);
+      // Keyset pagination cursor (preferred over offset for large datasets)
+      const cursor = req.query.cursorCreatedAt && req.query.cursorId
+        ? { createdAt: req.query.cursorCreatedAt as string, id: parseInt(req.query.cursorId as string, 10) }
+        : undefined;
+      
+      const result = await storage.getAlerts({ limit, offset, cursor });
       res.json(result);
     } catch (error) {
       console.error("Failed to fetch alerts:", error);

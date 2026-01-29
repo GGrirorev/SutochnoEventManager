@@ -9,10 +9,17 @@ import type { EventWithAuthor } from "@shared/schema";
 
 const PAGE_SIZE = 50;
 
+// Keyset pagination cursor type
+interface KeysetCursor {
+  createdAt: string;
+  id: number;
+}
+
 interface EventsResponse {
   events: EventWithAuthor[];
   total: number;
   hasMore: boolean;
+  nextCursor?: KeysetCursor;
 }
 
 export function useEvents(filters?: { 
@@ -27,16 +34,32 @@ export function useEvents(filters?: {
 }) {
   const queryKey = [api.events.list.path, filters];
   
+  // Status filters require DISTINCT ON in backend which conflicts with keyset ordering
+  // Fall back to offset pagination for these queries
+  const needsOffsetPagination = !!(filters?.implementationStatus || filters?.validationStatus || filters?.jira);
+  
   return useInfiniteQuery<EventsResponse>({
     queryKey,
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam }) => {
       const validFilters = Object.fromEntries(
         Object.entries(filters || {}).filter(([_, v]) => v != null && v !== '')
       ) as Record<string, string>;
       
       const params = new URLSearchParams(validFilters);
       params.set('limit', String(PAGE_SIZE));
-      params.set('offset', String(pageParam));
+      
+      if (needsOffsetPagination) {
+        // Use offset pagination for status-filtered queries
+        const offset = (pageParam as number) ?? 0;
+        params.set('offset', String(offset));
+      } else {
+        // Use keyset pagination cursor (more efficient for large datasets)
+        const cursor = pageParam as KeysetCursor | undefined;
+        if (cursor) {
+          params.set('cursorCreatedAt', cursor.createdAt);
+          params.set('cursorId', String(cursor.id));
+        }
+      }
       
       const url = buildUrl(api.events.list.path);
       const finalUrl = `${url}?${params.toString()}`;
@@ -47,9 +70,16 @@ export function useEvents(filters?: {
     },
     getNextPageParam: (lastPage, allPages) => {
       if (!lastPage.hasMore) return undefined;
-      return allPages.length * PAGE_SIZE;
+      
+      if (needsOffsetPagination) {
+        // Return next offset for status-filtered queries
+        return allPages.length * PAGE_SIZE;
+      } else {
+        // Use keyset cursor for next page (more efficient than offset)
+        return lastPage.nextCursor;
+      }
     },
-    initialPageParam: 0,
+    initialPageParam: needsOffsetPagination ? 0 : (undefined as KeysetCursor | undefined),
   });
 }
 

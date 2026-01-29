@@ -198,6 +198,29 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 - `idx_ull_user_id` - поиск логов пользователя
 - `idx_ull_login_at` - сортировка по дате входа
 
+## Keyset Pagination (High Load Optimization)
+
+Реализована keyset-пагинация для наиболее нагруженных списков вместо традиционного offset/limit. Keyset-пагинация эффективнее на больших таблицах, так как не требует сканирования всех предыдущих записей.
+
+### API Параметры
+- **Events** (`GET /api/events`): `cursorCreatedAt` + `cursorId`
+- **Alerts** (`GET /api/alerts`): `cursorCreatedAt` + `cursorId`  
+- **Login Logs** (`GET /api/login-logs`): `cursorLoginAt` + `cursorId`
+
+### Ответ API
+Все endpoint'ы возвращают:
+```json
+{
+  "items": [...],
+  "total": 100,
+  "hasMore": true,
+  "nextCursor": { "createdAt": "2026-01-29T12:00:00Z", "id": 42 }
+}
+```
+
+### Backward Compatibility
+Offset-пагинация остаётся доступной для обратной совместимости. Если `cursor*` параметры не переданы, используется `offset`.
+
 ## Known Technical Debt
 
 1. **Type annotations in storage.ts**: Minor drizzle-orm/drizzle-zod type mismatches that don't affect runtime

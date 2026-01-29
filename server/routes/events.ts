@@ -47,6 +47,10 @@ export function registerEventRoutes(app: Express): void {
         jira: req.query.jira as string | undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
         offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
+        // Keyset pagination cursor (preferred over offset for large datasets)
+        cursor: req.query.cursorCreatedAt && req.query.cursorId
+          ? { createdAt: req.query.cursorCreatedAt as string, id: parseInt(req.query.cursorId as string, 10) }
+          : undefined,
       };
       
       const result = await storage.getEvents(filters);

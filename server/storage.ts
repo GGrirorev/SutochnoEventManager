@@ -73,7 +73,9 @@ export interface IStorage {
     jira?: string;
     limit?: number;
     offset?: number;
-  }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean }>;
+    // Keyset pagination cursor (preferred over offset for large datasets)
+    cursor?: { createdAt: string; id: number };
+  }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean; nextCursor?: { createdAt: string; id: number } }>;
   getEvent(id: number): Promise<EventWithAuthor | undefined>;
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: number, updates: UpdateEventRequest): Promise<Event>;
@@ -127,7 +129,16 @@ export interface IStorage {
   
   // User login log operations
   recordLoginLog(userId: number, ipAddress?: string, userAgent?: string): Promise<void>;
-  getLoginLogs(limit?: number, offset?: number): Promise<{ logs: UserLoginLogWithUser[]; total: number }>;
+  getLoginLogs(options?: { 
+    limit?: number; 
+    offset?: number; 
+    cursor?: { loginAt: string; id: number };
+  }): Promise<{ 
+    logs: UserLoginLogWithUser[]; 
+    total: number;
+    hasMore: boolean;
+    nextCursor?: { loginAt: string; id: number };
+  }>;
   getUserLoginLogs(userId: number, limit?: number): Promise<UserLoginLog[]>;
   
   // Plugin operations
@@ -150,7 +161,16 @@ export interface IStorage {
   getCategoryById(id: number): Promise<EventCategory | undefined>;
   
   // Alert operations
-  getAlerts(limit?: number, offset?: number): Promise<{ alerts: (EventAlert & { ownerId: number | null; ownerName: string | null })[]; total: number }>;
+  getAlerts(options?: { 
+    limit?: number; 
+    offset?: number; 
+    cursor?: { createdAt: string; id: number };
+  }): Promise<{ 
+    alerts: (EventAlert & { ownerId: number | null; ownerName: string | null })[]; 
+    total: number;
+    hasMore: boolean;
+    nextCursor?: { createdAt: string; id: number };
+  }>;
   createAlert(alert: InsertEventAlert): Promise<EventAlert>;
   deleteAlert(id: number): Promise<void>;
   getEventsForMonitoring(): Promise<{ id: number; category: string; action: string; platforms: string[] }[]>;
@@ -172,7 +192,8 @@ export class DatabaseStorage implements IStorage {
     jira?: string;
     limit?: number;
     offset?: number;
-  }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean }> {
+    cursor?: { createdAt: string; id: number };
+  }): Promise<{ events: EventWithAuthor[]; total: number; hasMore: boolean; nextCursor?: { createdAt: string; id: number } }> {
     const conditions = [];
     const needStatusJoin = filters?.implementationStatus || filters?.validationStatus || filters?.jira;
 
@@ -208,6 +229,11 @@ export class DatabaseStorage implements IStorage {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const limit = filters?.limit ?? 50;
     const offset = filters?.offset ?? 0;
+    const cursor = filters?.cursor;
+    
+    // Keyset pagination cursor condition (more efficient than offset for large datasets)
+    // Uses (createdAt, id) tuple for stable ordering
+    const cursorCondition = cursor ? sql`(${events.createdAt} < ${cursor.createdAt}::timestamp OR (${events.createdAt} = ${cursor.createdAt}::timestamp AND ${events.id} < ${cursor.id}))` : undefined;
 
     // Build status join condition - include platform constraint if platform filter is set
     const statusJoinCondition = filters?.platform
@@ -296,16 +322,84 @@ export class DatabaseStorage implements IStorage {
       finalMainCondition = whereClause ? and(whereClause, jiraCondition) : jiraCondition;
     }
     
-    const result = await mainQuery
-      .where(finalMainCondition)
-      .orderBy(events.id, desc(events.createdAt))
-      .limit(limit)
-      .offset(offset);
+    // Keyset pagination strategy:
+    // - When needStatusJoin is false: use pure keyset pagination with proper ORDER BY (createdAt DESC, id DESC)
+    // - When needStatusJoin is true: DISTINCT ON is required to handle duplicates from JOIN,
+    //   which conflicts with keyset ordering. Fall back to offset pagination for these queries.
+    
+    let finalResult: typeof rawResult;
+    let rawResult: Awaited<ReturnType<typeof mainQuery.where>>;
+    
+    if (!needStatusJoin) {
+      // No status join needed - can use proper keyset pagination
+      // Apply cursor condition
+      if (cursorCondition) {
+        finalMainCondition = finalMainCondition ? and(finalMainCondition, cursorCondition) : cursorCondition;
+      }
+      
+      // Use simple select without DISTINCT ON (no duplicates without status join)
+      const simpleQuery = db.select({
+        id: events.id,
+        categoryId: events.categoryId,
+        category: eventCategories.name,
+        block: events.block,
+        action: events.action,
+        actionDescription: events.actionDescription,
+        name: events.name,
+        valueDescription: events.valueDescription,
+        ownerId: events.ownerId,
+        ownerName: ownerUsers.name,
+        ownerDepartment: ownerUsers.department,
+        authorId: events.authorId,
+        authorName: users.name,
+        platforms: events.platforms,
+        properties: events.properties,
+        notes: events.notes,
+        currentVersion: events.currentVersion,
+        createdAt: events.createdAt,
+        updatedAt: events.updatedAt,
+        excludeFromMonitoring: events.excludeFromMonitoring,
+      })
+        .from(events)
+        .leftJoin(users, eq(events.authorId, users.id))
+        .leftJoin(ownerUsers, eq(events.ownerId, ownerUsers.id))
+        .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
+        .where(finalMainCondition)
+        .orderBy(desc(events.createdAt), desc(events.id))
+        .limit(limit + 1); // Fetch limit+1 to determine hasMore
+      
+      // For keyset: no offset needed (cursor condition filters older records)
+      // For offset: apply offset
+      rawResult = cursor 
+        ? await simpleQuery
+        : await simpleQuery.offset(offset);
+      
+      // Trim to limit, use extra row to determine hasMore
+      finalResult = rawResult.slice(0, limit);
+    } else {
+      // Status join needed - use DISTINCT ON with offset pagination
+      // DISTINCT ON requires ORDER BY to start with DISTINCT ON columns, incompatible with keyset
+      const baseQuery = mainQuery
+        .where(finalMainCondition)
+        .orderBy(events.id, desc(events.createdAt))
+        .limit(limit + 1)
+        .offset(offset);
+      
+      rawResult = await baseQuery;
+      
+      // Sort by createdAt DESC, id DESC for display
+      const sorted = [...rawResult].sort((a, b) => {
+        const dateCompare = (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0);
+        if (dateCompare !== 0) return dateCompare;
+        return b.id - a.id;
+      });
+      finalResult = sorted.slice(0, limit);
+    }
     
     // Batch fetch version info to avoid N+1 queries in VersionBadge
-    if (result.length > 0) {
+    if (finalResult.length > 0) {
       // Build (eventId, version) pairs for efficient IN clause
-      const eventVersionPairs = result.map(e => ({
+      const eventVersionPairs = finalResult.map(e => ({
         eventId: e.id,
         version: e.currentVersion ?? 1
       }));
@@ -328,7 +422,7 @@ export class DatabaseStorage implements IStorage {
       
       const versionsMap = new Map(versionsData.map(v => [v.eventId, v]));
       
-      const enrichedResult = result.map(e => {
+      const enrichedResult = finalResult.map(e => {
         const versionInfo = versionsMap.get(e.id);
         return {
           ...e,
@@ -337,17 +431,33 @@ export class DatabaseStorage implements IStorage {
         };
       });
       
+      // Calculate hasMore using limit+1 pattern (more reliable than comparing to limit)
+      const lastItem = enrichedResult[enrichedResult.length - 1];
+      const hasMore = rawResult.length > limit;
+      const nextCursor = hasMore && lastItem?.createdAt 
+        ? { createdAt: lastItem.createdAt.toISOString(), id: lastItem.id }
+        : undefined;
+      
       return {
         events: enrichedResult,
         total,
-        hasMore: offset + result.length < total,
+        hasMore,
+        nextCursor,
       };
     }
     
+    // Calculate hasMore using limit+1 pattern (more reliable)
+    const lastItem = finalResult[finalResult.length - 1];
+    const hasMore = rawResult.length > limit;
+    const nextCursor = hasMore && lastItem?.createdAt 
+      ? { createdAt: lastItem.createdAt.toISOString(), id: lastItem.id }
+      : undefined;
+    
     return {
-      events: result,
+      events: finalResult,
       total,
-      hasMore: offset + result.length < total,
+      hasMore,
+      nextCursor,
     };
   }
 
@@ -817,14 +927,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
   
-  async getLoginLogs(limit: number = 100, offset: number = 0): Promise<{ logs: UserLoginLogWithUser[]; total: number }> {
+  async getLoginLogs(options?: { 
+    limit?: number; 
+    offset?: number; 
+    cursor?: { loginAt: string; id: number };
+  }): Promise<{ 
+    logs: UserLoginLogWithUser[]; 
+    total: number;
+    hasMore: boolean;
+    nextCursor?: { loginAt: string; id: number };
+  }> {
+    const limit = options?.limit ?? 100;
+    const offset = options?.offset ?? 0;
+    const cursor = options?.cursor;
+    
     const [countResult] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(userLoginLogs);
     
     const total = countResult?.count || 0;
     
-    const logs = await db
+    // Build cursor condition for keyset pagination
+    const cursorCondition = cursor 
+      ? sql`(${userLoginLogs.loginAt} < ${cursor.loginAt}::timestamp OR (${userLoginLogs.loginAt} = ${cursor.loginAt}::timestamp AND ${userLoginLogs.id} < ${cursor.id}))`
+      : undefined;
+    
+    let query = db
       .select({
         id: userLoginLogs.id,
         userId: userLoginLogs.userId,
@@ -836,9 +964,22 @@ export class DatabaseStorage implements IStorage {
       })
       .from(userLoginLogs)
       .leftJoin(users, eq(userLoginLogs.userId, users.id))
-      .orderBy(desc(userLoginLogs.loginAt))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(userLoginLogs.loginAt), desc(userLoginLogs.id))
+      .limit(limit + 1); // Fetch limit+1 to determine hasMore
+    
+    const rawResult = cursor 
+      ? await query.where(cursorCondition)
+      : await query.offset(offset);
+    
+    // Trim to limit, use extra row to determine hasMore
+    const logs = rawResult.slice(0, limit);
+    
+    // Calculate hasMore using limit+1 pattern (more reliable)
+    const lastItem = logs[logs.length - 1];
+    const hasMore = rawResult.length > limit;
+    const nextCursor = hasMore && lastItem?.loginAt 
+      ? { loginAt: lastItem.loginAt.toISOString(), id: lastItem.id }
+      : undefined;
     
     return {
       logs: logs.map(log => ({
@@ -847,6 +988,8 @@ export class DatabaseStorage implements IStorage {
         userEmail: log.userEmail || "",
       })),
       total,
+      hasMore,
+      nextCursor,
     };
   }
   
@@ -1163,14 +1306,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Alert operations
-  async getAlerts(limit = 100, offset = 0): Promise<{ alerts: (EventAlert & { ownerId: number | null; ownerName: string | null })[]; total: number }> {
+  async getAlerts(options?: { 
+    limit?: number; 
+    offset?: number; 
+    cursor?: { createdAt: string; id: number };
+  }): Promise<{ 
+    alerts: (EventAlert & { ownerId: number | null; ownerName: string | null })[]; 
+    total: number;
+    hasMore: boolean;
+    nextCursor?: { createdAt: string; id: number };
+  }> {
+    const limit = options?.limit ?? 100;
+    const offset = options?.offset ?? 0;
+    const cursor = options?.cursor;
+    
     const [countResult] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(eventAlerts);
     
     const total = countResult?.count ?? 0;
     
-    const alertsWithOwner = await db
+    // Build cursor condition for keyset pagination
+    const cursorCondition = cursor 
+      ? sql`(${eventAlerts.createdAt} < ${cursor.createdAt}::timestamp OR (${eventAlerts.createdAt} = ${cursor.createdAt}::timestamp AND ${eventAlerts.id} < ${cursor.id}))`
+      : undefined;
+    
+    let query = db
       .select({
         id: eventAlerts.id,
         eventId: eventAlerts.eventId,
@@ -1191,11 +1352,24 @@ export class DatabaseStorage implements IStorage {
       .from(eventAlerts)
       .leftJoin(events, eq(eventAlerts.eventId, events.id))
       .leftJoin(users, eq(events.ownerId, users.id))
-      .orderBy(desc(eventAlerts.createdAt))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(eventAlerts.createdAt), desc(eventAlerts.id))
+      .limit(limit + 1); // Fetch limit+1 to determine hasMore
     
-    return { alerts: alertsWithOwner, total };
+    const rawResult = cursor 
+      ? await query.where(cursorCondition)
+      : await query.offset(offset);
+    
+    // Trim to limit, use extra row to determine hasMore
+    const alertsWithOwner = rawResult.slice(0, limit);
+    
+    // Calculate hasMore using limit+1 pattern (more reliable)
+    const lastItem = alertsWithOwner[alertsWithOwner.length - 1];
+    const hasMore = rawResult.length > limit;
+    const nextCursor = hasMore && lastItem?.createdAt 
+      ? { createdAt: lastItem.createdAt.toISOString(), id: lastItem.id }
+      : undefined;
+    
+    return { alerts: alertsWithOwner, total, hasMore, nextCursor };
   }
 
   async createAlert(alert: InsertEventAlert): Promise<EventAlert> {

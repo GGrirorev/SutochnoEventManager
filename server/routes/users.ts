@@ -100,7 +100,12 @@ export function registerUserRoutes(app: Express): void {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
       const offset = parseInt(req.query.offset as string) || 0;
-      const result = await storage.getLoginLogs(limit, offset);
+      // Keyset pagination cursor (preferred over offset for large datasets)
+      const cursor = req.query.cursorLoginAt && req.query.cursorId
+        ? { loginAt: req.query.cursorLoginAt as string, id: parseInt(req.query.cursorId as string, 10) }
+        : undefined;
+      
+      const result = await storage.getLoginLogs({ limit, offset, cursor });
       res.json(result);
     } catch (error) {
       console.error("Failed to fetch login logs:", error);
