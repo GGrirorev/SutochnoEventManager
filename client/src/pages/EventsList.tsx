@@ -605,126 +605,132 @@ export default function EventsList() {
             </Button>
           </div>
           
-          {/* Collapsible filters - single row */}
+          {/* Collapsible filters - two rows */}
           {filtersExpanded && (
-            <div className="flex items-center gap-2 pt-2 border-t overflow-x-auto">
-              <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
-                <SelectTrigger className="h-8 min-w-[120px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-category-filter">
-                  <Layout className="w-3.5 h-3.5 shrink-0" />
-                  <SelectValue placeholder="Категория" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" data-testid="option-all-categories">Все категории</SelectItem>
-                  {categories.map(c => (
-                    <SelectItem key={c.id} value={c.name} data-testid={`option-category-${c.id}`}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="h-8 min-w-[100px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-platform-filter">
-                  <Smartphone className="w-3.5 h-3.5 shrink-0" />
-                  <SelectValue placeholder="Платформа" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все платформы</SelectItem>
-                  {PLATFORMS.map(p => (
-                    <SelectItem key={p} value={p} data-testid={`option-platform-${p}`}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col gap-2 pt-2 border-t">
+              {/* First row: Category, Platform, Implementation, Validation */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
+                  <SelectTrigger className="h-8 flex-1 min-w-[140px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-category-filter">
+                    <Layout className="w-3.5 h-3.5 shrink-0" />
+                    <SelectValue placeholder="Категория" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" data-testid="option-all-categories">Все категории</SelectItem>
+                    {categories.map(c => (
+                      <SelectItem key={c.id} value={c.name} data-testid={`option-category-${c.id}`}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                  <SelectTrigger className="h-8 flex-1 min-w-[130px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-platform-filter">
+                    <Smartphone className="w-3.5 h-3.5 shrink-0" />
+                    <SelectValue placeholder="Платформа" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все платформы</SelectItem>
+                    {PLATFORMS.map(p => (
+                      <SelectItem key={p} value={p} data-testid={`option-platform-${p}`}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              {isPlatformStatusesEnabled && (
-                <>
-                  <Select value={implStatusFilter} onValueChange={setImplStatusFilter}>
-                    <SelectTrigger className="h-8 min-w-[110px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-impl-status-filter">
-                      <Rocket className="w-3.5 h-3.5 shrink-0" />
-                      <SelectValue placeholder="Внедрение" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все внедрения</SelectItem>
-                      {IMPLEMENTATION_STATUS.map(s => (
-                        <SelectItem key={s} value={s} data-testid={`option-impl-${s}`}>{s.replace('_', ' ')}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {isPlatformStatusesEnabled && (
+                  <>
+                    <Select value={implStatusFilter} onValueChange={setImplStatusFilter}>
+                      <SelectTrigger className="h-8 flex-1 min-w-[140px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-impl-status-filter">
+                        <Rocket className="w-3.5 h-3.5 shrink-0" />
+                        <SelectValue placeholder="Внедрение" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все внедрения</SelectItem>
+                        {IMPLEMENTATION_STATUS.map(s => (
+                          <SelectItem key={s} value={s} data-testid={`option-impl-${s}`}>{s.replace('_', ' ')}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                  <Select value={valStatusFilter} onValueChange={setValStatusFilter}>
-                    <SelectTrigger className="h-8 min-w-[110px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-val-status-filter">
-                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                      <SelectValue placeholder="Валидация" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все валидации</SelectItem>
-                      {VALIDATION_STATUS.map(s => (
-                        <SelectItem key={s} value={s} data-testid={`option-val-${s}`}>{s.replace('_', ' ')}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </>
-              )}
-
-              <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-                <SelectTrigger className="h-8 min-w-[130px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-owner-filter">
-                  <Monitor className="w-3.5 h-3.5 shrink-0" />
-                  <SelectValue placeholder="Ответственный" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все ответственные</SelectItem>
-                  {activeUsers.map(u => (
-                    <SelectItem key={u.id} value={String(u.id)} data-testid={`option-owner-${u.id}`}>
-                      {u.name}{u.department ? ` (${u.department})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={authorFilter} onValueChange={setAuthorFilter}>
-                <SelectTrigger className="h-8 min-w-[100px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-author-filter">
-                  <Pencil className="w-3.5 h-3.5 shrink-0" />
-                  <SelectValue placeholder="Автор" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все авторы</SelectItem>
-                  {activeUsers.map(u => (
-                    <SelectItem key={u.id} value={String(u.id)} data-testid={`option-author-${u.id}`}>
-                      {u.name}{u.department ? ` (${u.department})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="relative">
-                <ExternalLink className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-                <Input
-                  type="text"
-                  placeholder="Jira задача..."
-                  value={jiraFilter}
-                  onChange={(e) => setJiraFilter(e.target.value)}
-                  className="h-8 w-[120px] pl-7 pr-2 border-none bg-muted/50 text-xs focus-visible:ring-0"
-                  data-testid="input-jira-filter"
-                />
+                    <Select value={valStatusFilter} onValueChange={setValStatusFilter}>
+                      <SelectTrigger className="h-8 flex-1 min-w-[140px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-val-status-filter">
+                        <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                        <SelectValue placeholder="Валидация" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все валидации</SelectItem>
+                        {VALIDATION_STATUS.map(s => (
+                          <SelectItem key={s} value={s} data-testid={`option-val-${s}`}>{s.replace('_', ' ')}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
               </div>
-              
-              {activeFiltersCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setCategoryFilter("all");
-                    setPlatformFilter("all");
-                    setOwnerFilter("all");
-                    setAuthorFilter("all");
-                    setImplStatusFilter("all");
-                    setValStatusFilter("all");
-                    setJiraFilter("");
-                  }}
-                  className="h-8 text-xs text-muted-foreground shrink-0"
-                  data-testid="button-clear-filters"
-                >
-                  Сбросить
-                </Button>
-              )}
+
+              {/* Second row: Owner, Author, Jira, Reset */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                  <SelectTrigger className="h-8 flex-1 min-w-[160px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-owner-filter">
+                    <Monitor className="w-3.5 h-3.5 shrink-0" />
+                    <SelectValue placeholder="Ответственный" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все ответственные</SelectItem>
+                    {activeUsers.map(u => (
+                      <SelectItem key={u.id} value={String(u.id)} data-testid={`option-owner-${u.id}`}>
+                        {u.name}{u.department ? ` (${u.department})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={authorFilter} onValueChange={setAuthorFilter}>
+                  <SelectTrigger className="h-8 flex-1 min-w-[140px] border-none bg-muted/50 text-xs focus:ring-0 focus-visible:ring-0" data-testid="select-author-filter">
+                    <Pencil className="w-3.5 h-3.5 shrink-0" />
+                    <SelectValue placeholder="Автор" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все авторы</SelectItem>
+                    {activeUsers.map(u => (
+                      <SelectItem key={u.id} value={String(u.id)} data-testid={`option-author-${u.id}`}>
+                        {u.name}{u.department ? ` (${u.department})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div className="relative flex-1 min-w-[140px]">
+                  <ExternalLink className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder="Jira задача..."
+                    value={jiraFilter}
+                    onChange={(e) => setJiraFilter(e.target.value)}
+                    className="h-8 w-full pl-7 pr-2 border-none bg-muted/50 text-xs focus-visible:ring-0"
+                    data-testid="input-jira-filter"
+                  />
+                </div>
+                
+                {activeFiltersCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setCategoryFilter("all");
+                      setPlatformFilter("all");
+                      setOwnerFilter("all");
+                      setAuthorFilter("all");
+                      setImplStatusFilter("all");
+                      setValStatusFilter("all");
+                      setJiraFilter("");
+                    }}
+                    className="h-8 text-xs text-muted-foreground shrink-0"
+                    data-testid="button-clear-filters"
+                  >
+                    Сбросить
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>
