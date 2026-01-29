@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { insertEventSchema, PLATFORMS, type InsertEvent, type PropertyTemplate, type EventCategory } from "@shared/schema";
+import { insertEventSchema, PLATFORMS, type InsertEvent, type PropertyTemplate, type EventCategory, type User } from "@shared/schema";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,7 +91,24 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
     }
   });
   
+  // Fetch users for owner selection
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    queryFn: async () => {
+      const res = await fetch("/api/users");
+      return res.json();
+    }
+  });
+  
   const categoryNames = useMemo(() => categories.map(c => c.name), [categories]);
+  
+  // Format user display name with department
+  const formatUserDisplay = (user: User) => {
+    if (user.department) {
+      return `${user.name} (${user.department})`;
+    }
+    return user.name;
+  };
   
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -341,15 +358,41 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
             <FormField
               control={form.control}
               name="owner"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Ответственный</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Команда или человек" {...field} value={field.value || ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const currentValue = field.value || "";
+                const activeUsers = users.filter(u => u.isActive);
+                const userValues = activeUsers.map(u => formatUserDisplay(u));
+                const showCurrentAsOption = currentValue && !userValues.includes(currentValue);
+                
+                return (
+                  <FormItem>
+                    <FormLabel>Ответственный</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={currentValue}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-event-owner">
+                          <SelectValue placeholder="Выберите ответственного" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {showCurrentAsOption && (
+                          <SelectItem key="current" value={currentValue} data-testid="option-owner-current">
+                            {currentValue}
+                          </SelectItem>
+                        )}
+                        {activeUsers.map((user) => (
+                          <SelectItem key={user.id} value={formatUserDisplay(user)} data-testid={`option-owner-${user.id}`}>
+                            {formatUserDisplay(user)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             {/* Properties Section */}
