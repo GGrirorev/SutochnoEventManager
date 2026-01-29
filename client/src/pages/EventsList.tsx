@@ -518,15 +518,13 @@ export default function EventsList() {
             </Button>
           </div>
           
-          {/* Collapsible filters */}
+          {/* Collapsible filters - single row */}
           {filtersExpanded && (
-            <div className="flex flex-wrap gap-3 pt-2 border-t">
+            <div className="flex items-center gap-2 pt-2 border-t overflow-x-auto">
               <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
-                <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-category-filter">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Layout className="w-4 h-4" />
-                    <SelectValue placeholder="Категория" />
-                  </div>
+                <SelectTrigger className="h-8 min-w-[120px] border-none bg-muted/50 text-xs" data-testid="select-category-filter">
+                  <Layout className="w-3.5 h-3.5 shrink-0" />
+                  <SelectValue placeholder="Категория" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all" data-testid="option-all-categories">Все категории</SelectItem>
@@ -537,11 +535,9 @@ export default function EventsList() {
               </Select>
               
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="w-[140px] border-none bg-muted/50" data-testid="select-platform-filter">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                     <Smartphone className="w-4 h-4" />
-                     <SelectValue placeholder="Платформа" />
-                  </div>
+                <SelectTrigger className="h-8 min-w-[100px] border-none bg-muted/50 text-xs" data-testid="select-platform-filter">
+                  <Smartphone className="w-3.5 h-3.5 shrink-0" />
+                  <SelectValue placeholder="Платформа" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Все платформы</SelectItem>
@@ -554,11 +550,9 @@ export default function EventsList() {
               {isPlatformStatusesEnabled && (
                 <>
                   <Select value={implStatusFilter} onValueChange={setImplStatusFilter}>
-                    <SelectTrigger className="w-[160px] border-none bg-muted/50" data-testid="select-impl-status-filter">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                         <Rocket className="w-4 h-4" />
-                         <SelectValue placeholder="Внедрение" />
-                      </div>
+                    <SelectTrigger className="h-8 min-w-[110px] border-none bg-muted/50 text-xs" data-testid="select-impl-status-filter">
+                      <Rocket className="w-3.5 h-3.5 shrink-0" />
+                      <SelectValue placeholder="Внедрение" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Все внедрения</SelectItem>
@@ -569,11 +563,9 @@ export default function EventsList() {
                   </Select>
 
                   <Select value={valStatusFilter} onValueChange={setValStatusFilter}>
-                    <SelectTrigger className="w-[160px] border-none bg-muted/50" data-testid="select-val-status-filter">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                         <ShieldCheck className="w-4 h-4" />
-                         <SelectValue placeholder="Валидация" />
-                      </div>
+                    <SelectTrigger className="h-8 min-w-[110px] border-none bg-muted/50 text-xs" data-testid="select-val-status-filter">
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                      <SelectValue placeholder="Валидация" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Все валидации</SelectItem>
@@ -586,11 +578,9 @@ export default function EventsList() {
               )}
 
               <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-                <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-owner-filter">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                     <Monitor className="w-4 h-4" />
-                     <SelectValue placeholder="Ответственный" />
-                  </div>
+                <SelectTrigger className="h-8 min-w-[130px] border-none bg-muted/50 text-xs" data-testid="select-owner-filter">
+                  <Monitor className="w-3.5 h-3.5 shrink-0" />
+                  <SelectValue placeholder="Ответственный" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Все ответственные</SelectItem>
@@ -603,11 +593,9 @@ export default function EventsList() {
               </Select>
 
               <Select value={authorFilter} onValueChange={setAuthorFilter}>
-                <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-author-filter">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                     <Pencil className="w-4 h-4" />
-                     <SelectValue placeholder="Автор" />
-                  </div>
+                <SelectTrigger className="h-8 min-w-[100px] border-none bg-muted/50 text-xs" data-testid="select-author-filter">
+                  <Pencil className="w-3.5 h-3.5 shrink-0" />
+                  <SelectValue placeholder="Автор" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Все авторы</SelectItem>
@@ -631,10 +619,10 @@ export default function EventsList() {
                     setImplStatusFilter("all");
                     setValStatusFilter("all");
                   }}
-                  className="text-muted-foreground"
+                  className="h-8 text-xs text-muted-foreground shrink-0"
                   data-testid="button-clear-filters"
                 >
-                  Сбросить фильтры
+                  Сбросить
                 </Button>
               )}
             </div>
