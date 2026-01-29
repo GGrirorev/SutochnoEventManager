@@ -1734,6 +1734,9 @@ export async function registerRoutes(
 
   // Seed default plugins
   await seedPlugins();
+  
+  // Seed default alert settings
+  await seedAlertSettings();
 
   return httpServer;
 }
@@ -1807,6 +1810,20 @@ async function seedPlugins() {
       config: {},
     });
   }
+}
+
+async function seedAlertSettings() {
+  const existing = await storage.getAlertSettings();
+  if (existing) return;
+  
+  await storage.updateAlertSettings({
+    matomoUrl: "https://analytics.sutochno.ru/index.php",
+    matomoToken: null,
+    matomoSiteId: "web:1,ios:2,android:3",
+    dropThreshold: 30,
+    maxConcurrency: 5,
+    isEnabled: true,
+  });
 }
 
 async function seedDatabase() {
