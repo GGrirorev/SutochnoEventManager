@@ -11,7 +11,6 @@ import {
   userLoginLogs,
   plugins,
   eventAlerts,
-  alertSettings,
   type Event,
   type InsertEvent,
   type UpdateEventRequest,
@@ -35,11 +34,19 @@ import {
   type InsertPlugin,
   type EventAlert,
   type InsertEventAlert,
-  type AlertSettings,
-  type InsertAlertSettings,
   IMPLEMENTATION_STATUS,
   VALIDATION_STATUS
 } from "@shared/schema";
+
+// Alert settings stored in plugins.config for 'alerts' plugin
+export interface AlertConfig {
+  matomoUrl?: string;
+  matomoToken?: string | null;
+  matomoSiteId?: string;
+  dropThreshold?: number;
+  maxConcurrency?: number;
+  isEnabled?: boolean;
+}
 import { eq, ilike, and, or, desc, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
@@ -134,9 +141,9 @@ export interface IStorage {
   deleteAlert(id: number): Promise<void>;
   getEventsForMonitoring(): Promise<{ id: number; category: string; action: string; platforms: string[] }[]>;
   
-  // Alert settings operations
-  getAlertSettings(): Promise<AlertSettings | undefined>;
-  updateAlertSettings(settings: Partial<InsertAlertSettings>): Promise<AlertSettings>;
+  // Alert settings operations (stored in plugins.config)
+  getAlertSettings(): Promise<AlertConfig | undefined>;
+  updateAlertSettings(settings: Partial<AlertConfig>): Promise<AlertConfig>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1050,33 +1057,55 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getAlertSettings(): Promise<AlertSettings | undefined> {
-    const [settings] = await db.select().from(alertSettings).limit(1);
-    return settings;
+  async getAlertSettings(): Promise<AlertConfig | undefined> {
+    const [plugin] = await db.select().from(plugins).where(eq(plugins.id, 'alerts')).limit(1);
+    if (!plugin) return undefined;
+    
+    const config = plugin.config as AlertConfig | null;
+    return {
+      matomoUrl: config?.matomoUrl || '',
+      matomoToken: config?.matomoToken || null,
+      matomoSiteId: config?.matomoSiteId || '',
+      dropThreshold: config?.dropThreshold || 30,
+      maxConcurrency: config?.maxConcurrency || 5,
+      isEnabled: plugin.isEnabled,
+    };
   }
 
-  async updateAlertSettings(updates: Partial<InsertAlertSettings>): Promise<AlertSettings> {
-    const existing = await this.getAlertSettings();
+  async updateAlertSettings(updates: Partial<AlertConfig>): Promise<AlertConfig> {
+    const [plugin] = await db.select().from(plugins).where(eq(plugins.id, 'alerts')).limit(1);
     
-    if (existing) {
-      const [updated] = await db.update(alertSettings)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(alertSettings.id, existing.id))
-        .returning();
-      return updated;
-    } else {
-      const [created] = await db.insert(alertSettings)
-        .values({
-          matomoUrl: updates.matomoUrl || '',
-          matomoToken: updates.matomoToken || '',
-          matomoSiteId: updates.matomoSiteId || '',
-          dropThreshold: updates.dropThreshold || 30,
-          maxConcurrency: updates.maxConcurrency || 5,
-          isEnabled: updates.isEnabled ?? true,
-        })
-        .returning();
-      return created;
+    if (!plugin) {
+      throw new Error('Plugin alerts not found');
     }
+    
+    const currentConfig = (plugin.config as AlertConfig) || {};
+    const newConfig: AlertConfig = {
+      ...currentConfig,
+      ...(updates.matomoUrl !== undefined && { matomoUrl: updates.matomoUrl }),
+      ...(updates.matomoToken !== undefined && { matomoToken: updates.matomoToken }),
+      ...(updates.matomoSiteId !== undefined && { matomoSiteId: updates.matomoSiteId }),
+      ...(updates.dropThreshold !== undefined && { dropThreshold: updates.dropThreshold }),
+      ...(updates.maxConcurrency !== undefined && { maxConcurrency: updates.maxConcurrency }),
+    };
+    
+    const updateData: { config: AlertConfig; isEnabled?: boolean; updatedAt: Date } = {
+      config: newConfig,
+      updatedAt: new Date(),
+    };
+    
+    if (updates.isEnabled !== undefined) {
+      updateData.isEnabled = updates.isEnabled;
+    }
+    
+    await db.update(plugins)
+      .set(updateData)
+      .where(eq(plugins.id, 'alerts'));
+    
+    return {
+      ...newConfig,
+      isEnabled: updates.isEnabled ?? plugin.isEnabled,
+    };
   }
 }
 
