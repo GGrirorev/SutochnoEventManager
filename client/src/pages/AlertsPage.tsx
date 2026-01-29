@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar, useSidebar } from "@/components/Sidebar";
 import { EventDetailsModal } from "@/components/EventDetailsModal";
 import { EventEditSheet } from "@/components/EventEditSheet";
 import {
@@ -113,11 +113,13 @@ export default function AlertsPage() {
     return true;
   });
 
+  const { collapsed } = useSidebar();
+  
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       
-      <main className="flex-1 p-6 overflow-auto">
+      <main className={`flex-1 p-6 overflow-auto transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <div>

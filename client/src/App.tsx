@@ -13,6 +13,7 @@ import AlertsPage from "@/pages/AlertsPage";
 import AlertSettingsPage from "@/pages/AlertSettingsPage";
 import LoginPage from "@/pages/LoginPage";
 import SetupPage from "@/pages/SetupPage";
+import { SidebarProvider } from "@/components/Sidebar";
 import { useIsAuthenticated, useCurrentUser } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
@@ -155,8 +156,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={0}>
-        <Toaster />
-        <Router />
+        <SidebarProvider>
+          <Toaster />
+          <Router />
+        </SidebarProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

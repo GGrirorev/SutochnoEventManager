@@ -1,5 +1,5 @@
 import { useEventStats } from "@/hooks/use-events";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar, useSidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,12 +7,13 @@ import { Activity, CheckCircle2, AlertTriangle, Layers } from "lucide-react";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useEventStats();
+  const { collapsed } = useSidebar();
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 md:ml-64 p-8">
+        <main className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
            </div>
@@ -52,7 +53,7 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-muted/5">
       <Sidebar />
-      <main className="flex-1 md:ml-64 p-6 lg:p-10 space-y-8">
+      <main className={`flex-1 p-6 lg:p-10 space-y-8 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
         
         {/* Header */}
         <div className="flex flex-col gap-1">

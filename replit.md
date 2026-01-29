@@ -131,6 +131,7 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 ## Recent Changes
 
 ### January 2026
+- **Collapsible Sidebar**: Added collapsible sidebar functionality with localStorage persistence, tooltips for collapsed icons, and smooth animations. Sidebar state is managed via React Context (SidebarProvider/useSidebar).
 - **EventEditSheet Component**: Created reusable component for event editing, used in both EventsList and AlertsPage
 - **Type Safety Improvements**: Added `AuthenticatedRequest` interface in routes.ts for proper user type handling
 - **Category Handling**: Updated storage methods to properly convert category string to categoryId internally

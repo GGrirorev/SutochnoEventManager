@@ -7,12 +7,16 @@ import {
   Users,
   LogOut,
   Puzzle,
-  Bell
+  Bell,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import logoHeader from "@assets/logo-header_1769085215107.png";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { ROLE_LABELS } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
 const NAV_ITEMS = [
   { label: "Обзор", icon: LayoutDashboard, href: "/" },
@@ -29,94 +33,122 @@ const ADMIN_ITEMS = [
   { label: "Модули", icon: Puzzle, href: "/plugins" },
 ];
 
+interface SidebarContextType {
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+}
+
+const SidebarContext = createContext<SidebarContextType>({ collapsed: false, setCollapsed: () => {} });
+
+export function useSidebar() {
+  return useContext(SidebarContext);
+}
+
+export function SidebarProvider({ children }: { children: ReactNode }) {
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebar-collapsed");
+    return saved === "true";
+  });
+
+  const handleSetCollapsed = (value: boolean) => {
+    setCollapsed(value);
+    localStorage.setItem("sidebar-collapsed", String(value));
+  };
+
+  return (
+    <SidebarContext.Provider value={{ collapsed, setCollapsed: handleSetCollapsed }}>
+      {children}
+    </SidebarContext.Provider>
+  );
+}
+
 export function Sidebar() {
   const [location] = useLocation();
   const { data: currentUser } = useCurrentUser();
+  const { collapsed, setCollapsed } = useSidebar();
   
   const isAdmin = currentUser?.role === "admin";
 
   return (
-    <div className="w-64 h-screen border-r bg-card flex flex-col fixed left-0 top-0 z-30 hidden md:flex">
+    <div className={cn(
+      "h-screen border-r bg-card flex flex-col fixed left-0 top-0 z-30 hidden md:flex transition-all duration-300",
+      collapsed ? "w-16" : "w-64"
+    )}>
       {/* Brand */}
-      <div className="h-20 flex items-center px-4 border-b">
-        <img src={logoHeader} alt="Sutochno.ru Аналитика" className="h-10 w-auto object-contain" />
+      <div className="h-20 flex items-center px-4 border-b justify-between">
+        {!collapsed && (
+          <img src={logoHeader} alt="Sutochno.ru Аналитика" className="h-10 w-auto object-contain" />
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn("shrink-0", collapsed && "mx-auto")}
+          data-testid="button-toggle-sidebar"
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </Button>
       </div>
 
       {/* Navigation */}
       <div className="flex-1 py-4 px-3 overflow-y-auto">
-        <div className="px-3 py-2 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
-          Рабочая область
-        </div>
+        {!collapsed && (
+          <div className="px-3 py-2 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+            Рабочая область
+          </div>
+        )}
         <div className="space-y-1">
           {NAV_ITEMS.map((item) => {
             const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
             return (
-              <Link key={item.href} href={item.href}>
-                <div
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
-                    isActive 
-                      ? "bg-primary/10 text-primary shadow-sm" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                  data-testid={`nav-${item.href.slice(1) || 'dashboard'}`}
-                >
-                  <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
-                  {item.label}
-                </div>
-              </Link>
+              <NavItem 
+                key={item.href} 
+                item={item} 
+                isActive={isActive} 
+                collapsed={collapsed} 
+              />
             );
           })}
         </div>
 
-        <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
-          Мониторинг
-        </div>
+        {!collapsed && (
+          <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+            Мониторинг
+          </div>
+        )}
+        {collapsed && <div className="mt-6" />}
         <div className="space-y-1">
           {MONITORING_ITEMS.map((item) => {
             const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
             return (
-              <Link key={item.href} href={item.href}>
-                <div
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
-                    isActive 
-                      ? "bg-primary/10 text-primary shadow-sm" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                  data-testid={`nav-${item.href.slice(1)}`}
-                >
-                  <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
-                  {item.label}
-                </div>
-              </Link>
+              <NavItem 
+                key={item.href} 
+                item={item} 
+                isActive={isActive} 
+                collapsed={collapsed} 
+              />
             );
           })}
         </div>
 
         {isAdmin && (
           <>
-            <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
-              Администрирование
-            </div>
+            {!collapsed && (
+              <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+                Администрирование
+              </div>
+            )}
+            {collapsed && <div className="mt-6" />}
             <div className="space-y-1">
               {ADMIN_ITEMS.map((item) => {
                 const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
                 return (
-                  <Link key={item.href} href={item.href}>
-                    <div
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
-                        isActive 
-                          ? "bg-primary/10 text-primary shadow-sm" 
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                      data-testid={`nav-${item.href.slice(1)}`}
-                    >
-                      <item.icon className={cn("w-4 h-4", isActive ? "text-primary" : "text-muted-foreground")} />
-                      {item.label}
-                    </div>
-                  </Link>
+                  <NavItem 
+                    key={item.href} 
+                    item={item} 
+                    isActive={isActive} 
+                    collapsed={collapsed} 
+                  />
                 );
               })}
             </div>
@@ -125,12 +157,55 @@ export function Sidebar() {
       </div>
 
       {/* User / Footer */}
-      <UserFooter />
+      <UserFooter collapsed={collapsed} />
     </div>
   );
 }
 
-function UserFooter() {
+function NavItem({ 
+  item, 
+  isActive, 
+  collapsed 
+}: { 
+  item: { label: string; icon: any; href: string }; 
+  isActive: boolean; 
+  collapsed: boolean;
+}) {
+  const content = (
+    <Link href={item.href}>
+      <div
+        className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+          collapsed && "justify-center px-2",
+          isActive 
+            ? "bg-primary/10 text-primary shadow-sm" 
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        )}
+        data-testid={`nav-${item.href.slice(1) || 'dashboard'}`}
+      >
+        <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+        {!collapsed && item.label}
+      </div>
+    </Link>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>
+          {content}
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {item.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return content;
+}
+
+function UserFooter({ collapsed }: { collapsed: boolean }) {
   const { data: user } = useCurrentUser();
   const logout = useLogout();
 
@@ -142,6 +217,43 @@ function UserFooter() {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  if (collapsed) {
+    return (
+      <div className="p-2 border-t bg-muted/20 flex flex-col items-center gap-2">
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs cursor-default">
+              {initials}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <div>
+              <p className="font-medium">{user.name}</p>
+              <p className="text-xs text-muted-foreground">{ROLE_LABELS[user.role]}</p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => logout.mutate()}
+              disabled={logout.isPending}
+              data-testid="button-logout"
+              className="h-8 w-8"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            Выйти
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 border-t bg-muted/20">
