@@ -12,6 +12,7 @@ import PluginsPage from "@/pages/PluginsPage";
 import AlertsPage from "@/pages/AlertsPage";
 import AlertSettingsPage from "@/pages/AlertSettingsPage";
 import CategoriesPage from "@/pages/CategoriesPage";
+import HttpLogsPage from "@/pages/HttpLogsPage";
 import LoginPage from "@/pages/LoginPage";
 import SetupPage from "@/pages/SetupPage";
 import { SidebarProvider } from "@/components/Sidebar";
@@ -150,6 +151,9 @@ function Router() {
       </Route>
       <Route path="/plugins">
         <AdminRoute component={PluginsPage} />
+      </Route>
+      <Route path="/http-logs">
+        <AdminRoute component={HttpLogsPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>

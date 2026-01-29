@@ -10,6 +10,7 @@ import {
   registerAnalyticsRoutes,
   registerAlertRoutes,
   registerPluginRoutes,
+  registerHttpLogsRoutes,
   seedPlugins,
   migrateAlertSettings,
 } from "./routes/index";
@@ -26,6 +27,7 @@ export async function registerRoutes(
   registerAnalyticsRoutes(app);
   registerUserRoutes(app);
   registerAlertRoutes(app);
+  registerHttpLogsRoutes(app);
   
   await seedDatabase();
   

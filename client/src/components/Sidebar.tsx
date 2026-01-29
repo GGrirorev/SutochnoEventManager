@@ -10,7 +10,8 @@ import {
   Bell,
   Folder,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Activity
 } from "lucide-react";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { ROLE_LABELS } from "@shared/schema";
@@ -32,6 +33,7 @@ const MONITORING_ITEMS = [
 const ADMIN_ITEMS = [
   { label: "Пользователи", icon: Users, href: "/users" },
   { label: "Модули", icon: Puzzle, href: "/plugins" },
+  { label: "HTTP Логи", icon: Activity, href: "/http-logs" },
 ];
 
 interface SidebarContextType {
