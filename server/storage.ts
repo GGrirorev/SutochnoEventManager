@@ -134,6 +134,9 @@ export interface IStorage {
   getCategoryByName(name: string): Promise<EventCategory | undefined>;
   createCategory(category: InsertEventCategory): Promise<EventCategory>;
   getOrCreateCategory(name: string): Promise<EventCategory>;
+  updateCategory(id: number, updates: Partial<InsertEventCategory>): Promise<EventCategory>;
+  deleteCategory(id: number): Promise<void>;
+  getCategoryById(id: number): Promise<EventCategory | undefined>;
   
   // Alert operations
   getAlerts(limit?: number, offset?: number): Promise<{ alerts: (EventAlert & { ownerId: number | null; ownerName: string | null })[]; total: number }>;
@@ -989,6 +992,24 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getCategoryByName(name);
     if (existing) return existing;
     return this.createCategory({ name });
+  }
+
+  async getCategoryById(id: number): Promise<EventCategory | undefined> {
+    const [category] = await db.select().from(eventCategories).where(eq(eventCategories.id, id));
+    return category;
+  }
+
+  async updateCategory(id: number, updates: Partial<InsertEventCategory>): Promise<EventCategory> {
+    const [updated] = await db
+      .update(eventCategories)
+      .set(updates)
+      .where(eq(eventCategories.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCategory(id: number): Promise<void> {
+    await db.delete(eventCategories).where(eq(eventCategories.id, id));
   }
 
   // Alert operations
