@@ -200,10 +200,15 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 
 ## Keyset Pagination (High Load Optimization)
 
-Реализована keyset-пагинация для наиболее нагруженных списков вместо традиционного offset/limit. Keyset-пагинация эффективнее на больших таблицах, так как не требует сканирования всех предыдущих записей.
+Реализована keyset-пагинация для наиболее нагруженных списков вместо традиционного offset/limit. Keyset-пагинация эффективнее на больших таблицах (O(1) vs O(n)), так как не требует сканирования всех предыдущих записей.
+
+### Events: Гибридный подход
+- **Без status-фильтров**: Keyset pagination с ORDER BY (createdAt DESC, id DESC)
+- **С status-фильтрами** (implementationStatus, validationStatus, jira): Offset pagination (DISTINCT ON требует offset)
+- Frontend `useEvents` автоматически определяет режим на основе фильтров
 
 ### API Параметры
-- **Events** (`GET /api/events`): `cursorCreatedAt` + `cursorId`
+- **Events** (`GET /api/events`): `cursorCreatedAt` + `cursorId` (или `offset` для status-фильтров)
 - **Alerts** (`GET /api/alerts`): `cursorCreatedAt` + `cursorId`  
 - **Login Logs** (`GET /api/login-logs`): `cursorLoginAt` + `cursorId`
 
@@ -217,6 +222,9 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
   "nextCursor": { "createdAt": "2026-01-29T12:00:00Z", "id": 42 }
 }
 ```
+
+### Limit+1 Pattern
+hasMore определяется через запрос limit+1 записей: если rawResult.length > limit, значит есть ещё страницы.
 
 ### Backward Compatibility
 Offset-пагинация остаётся доступной для обратной совместимости. Если `cursor*` параметры не переданы, используется `offset`.
