@@ -74,20 +74,27 @@ export function Sidebar() {
       "h-screen border-r bg-card flex flex-col fixed left-0 top-0 z-30 hidden md:flex transition-all duration-300",
       collapsed ? "w-16" : "w-64"
     )}>
+      {/* Toggle button on edge */}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => setCollapsed(!collapsed)}
+        className="absolute -right-3 top-24 z-40 h-6 w-6 rounded-full border bg-background shadow-md"
+        data-testid="button-toggle-sidebar"
+      >
+        {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+      </Button>
+      
       {/* Brand */}
-      <div className="h-20 flex items-center px-4 border-b justify-between">
+      <div className="h-20 flex items-center justify-center px-4 border-b">
         {!collapsed && (
           <img src={logoHeader} alt="Sutochno.ru Аналитика" className="h-10 w-auto object-contain" />
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn("shrink-0", collapsed && "mx-auto")}
-          data-testid="button-toggle-sidebar"
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </Button>
+        {collapsed && (
+          <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+            <span className="text-primary font-bold text-sm">S</span>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
