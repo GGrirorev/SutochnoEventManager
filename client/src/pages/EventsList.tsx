@@ -598,20 +598,6 @@ export default function EventsList() {
                 </button>
               )}
             </div>
-            {search && (
-              <Badge variant="secondary" className="h-9 px-3 gap-1.5 shrink-0">
-                <Search className="w-3.5 h-3.5" />
-                <span className="max-w-[150px] truncate">{search}</span>
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
-                  data-testid="button-clear-search-tag"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
             
             <Button 
               variant="outline" 
