@@ -93,8 +93,48 @@ export function CsvImportButton() {
     return result;
   }, []);
 
+  const splitCsvIntoRows = useCallback((content: string): string[] => {
+    const rows: string[] = [];
+    let currentRow = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < content.length; i++) {
+      const char = content[i];
+      const nextChar = content[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          currentRow += '""';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+          currentRow += char;
+        }
+      } else if ((char === '\n' || (char === '\r' && nextChar === '\n')) && !inQuotes) {
+        if (currentRow.trim()) {
+          rows.push(currentRow);
+        }
+        currentRow = "";
+        if (char === '\r') i++;
+      } else if (char === '\r' && !inQuotes) {
+        if (currentRow.trim()) {
+          rows.push(currentRow);
+        }
+        currentRow = "";
+      } else {
+        currentRow += char;
+      }
+    }
+    
+    if (currentRow.trim()) {
+      rows.push(currentRow);
+    }
+    
+    return rows;
+  }, []);
+
   const parseCsv = useCallback((content: string): ParsedEvent[] => {
-    const lines = content.split("\n").filter(line => line.trim());
+    const lines = splitCsvIntoRows(content);
     if (lines.length < 2) return [];
 
     const headers = parseCsvLine(lines[0]);
@@ -134,7 +174,7 @@ export function CsvImportButton() {
           name: "eventValue",
           type: "string",
           required: false,
-          description: values[valueIndex]
+          description: values[valueIndex].replace(/\n/g, " ").trim()
         });
       }
 
@@ -145,7 +185,7 @@ export function CsvImportButton() {
             name: name,
             type: "string",
             required: false,
-            description: desc
+            description: desc.replace(/\n/g, " ").trim()
           });
         }
       });
@@ -157,13 +197,13 @@ export function CsvImportButton() {
         category: values[categoryIndex],
         action: values[actionIndex],
         name: values[nameIndex] || "",
-        valueDescription: values[valueIndex] || "",
+        valueDescription: values[valueIndex] ? values[valueIndex].replace(/\n/g, " ").trim() : "",
         properties
       });
     }
 
     return events;
-  }, [parseCsvLine]);
+  }, [parseCsvLine, splitCsvIntoRows]);
 
   const previewMutation = useMutation({
     mutationFn: async (parsedEvents: ParsedEvent[]): Promise<ImportPreview> => {
