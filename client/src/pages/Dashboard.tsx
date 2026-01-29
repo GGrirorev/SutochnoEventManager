@@ -1,5 +1,5 @@
 import { useEventStats } from "@/hooks/use-events";
-import { Sidebar, useSidebar } from "@/components/Sidebar";
+import { Sidebar, useSidebar, MobileHeader } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,8 +12,9 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen bg-background">
+        <MobileHeader />
         <Sidebar />
-        <main className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
+        <main className={`flex-1 p-8 pt-20 md:pt-8 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
            </div>
@@ -52,8 +53,9 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen bg-muted/5">
+      <MobileHeader />
       <Sidebar />
-      <main className={`flex-1 p-6 lg:p-10 space-y-8 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
+      <main className={`flex-1 p-6 lg:p-10 pt-20 md:pt-6 lg:pt-10 space-y-8 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
         
         {/* Header */}
         <div className="flex flex-col gap-1">

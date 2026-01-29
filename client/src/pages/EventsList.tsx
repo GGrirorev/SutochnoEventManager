@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useEvents, useDeleteEvent, useEventPlatformStatusesBatch } from "@/hooks/use-events";
-import { useSidebar } from "@/components/Sidebar";
+import { useSidebar, MobileHeader } from "@/components/Sidebar";
 import type { EventFormData } from "@/components/EventForm";
 import { usePlugins } from "@/hooks/usePlugins";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -542,8 +542,9 @@ export default function EventsList() {
   
   return (
     <div className="flex min-h-screen bg-muted/5">
+      <MobileHeader />
       <Sidebar />
-      <main className={`flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
+      <main className={`flex-1 flex flex-col h-screen overflow-hidden pt-14 md:pt-0 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
         <div className="p-6 lg:p-10 pb-0 space-y-6">
         {/* Header Area */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

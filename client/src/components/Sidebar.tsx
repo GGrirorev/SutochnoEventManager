@@ -11,12 +11,15 @@ import {
   Folder,
   ChevronLeft,
   ChevronRight,
-  Activity
+  Activity,
+  Menu,
+  X
 } from "lucide-react";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { ROLE_LABELS } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 const NAV_ITEMS = [
@@ -289,6 +292,156 @@ function UserFooter({ collapsed }: { collapsed: boolean }) {
           <LogOut className="w-4 h-4" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+// Mobile header with hamburger menu
+export function MobileHeader() {
+  const [location] = useLocation();
+  const { data: currentUser } = useCurrentUser();
+  const logout = useLogout();
+  const [open, setOpen] = useState(false);
+  
+  const isAdmin = currentUser?.role === "admin";
+
+  const handleNavClick = () => {
+    setOpen(false);
+  };
+
+  return (
+    <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b h-14 flex items-center justify-between px-4">
+      <img src="/images/logo-header.png" alt="Sutochno.ru" className="h-8 w-auto object-contain" />
+      
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+            <Menu className="w-5 h-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-72 p-0">
+          <SheetTitle className="sr-only">Меню навигации</SheetTitle>
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="h-14 flex items-center justify-between px-4 border-b">
+              <span className="font-semibold">Меню</span>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex-1 py-4 px-3 overflow-y-auto">
+              <div className="px-3 py-2 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+                Рабочая область
+              </div>
+              <div className="space-y-1">
+                {NAV_ITEMS.map((item) => {
+                  const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+                  return (
+                    <Link key={item.href} href={item.href} onClick={handleNavClick}>
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                          isActive 
+                            ? "bg-primary/10 text-primary shadow-sm" 
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                        data-testid={`mobile-nav-${item.href.slice(1) || 'dashboard'}`}
+                      >
+                        <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+                        {item.label}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+                Мониторинг
+              </div>
+              <div className="space-y-1">
+                {MONITORING_ITEMS.map((item) => {
+                  const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+                  return (
+                    <Link key={item.href} href={item.href} onClick={handleNavClick}>
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                          isActive 
+                            ? "bg-primary/10 text-primary shadow-sm" 
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                        data-testid={`mobile-nav-${item.href.slice(1)}`}
+                      >
+                        <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+                        {item.label}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {isAdmin && (
+                <>
+                  <div className="px-3 py-2 mt-6 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
+                    Администрирование
+                  </div>
+                  <div className="space-y-1">
+                    {ADMIN_ITEMS.map((item) => {
+                      const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+                      return (
+                        <Link key={item.href} href={item.href} onClick={handleNavClick}>
+                          <div
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                              isActive 
+                                ? "bg-primary/10 text-primary shadow-sm" 
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                            data-testid={`mobile-nav-${item.href.slice(1)}`}
+                          >
+                            <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+                            {item.label}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* User footer */}
+            {currentUser && (
+              <div className="p-4 border-t bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                    {currentUser.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-medium truncate">
+                      {currentUser.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {ROLE_LABELS[currentUser.role]}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      logout.mutate();
+                      setOpen(false);
+                    }}
+                    disabled={logout.isPending}
+                    data-testid="button-mobile-logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

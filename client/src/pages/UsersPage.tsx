@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { Sidebar, useSidebar } from "@/components/Sidebar";
+import { Sidebar, useSidebar, MobileHeader } from "@/components/Sidebar";
 import {
   Table,
   TableBody,
@@ -391,9 +391,10 @@ export default function UsersPage() {
   
   return (
     <div className="flex min-h-screen" data-testid="users-page">
+      <MobileHeader />
       <Sidebar />
       
-      <main className={`flex-1 p-8 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
+      <main className={`flex-1 p-8 pt-20 md:pt-8 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>

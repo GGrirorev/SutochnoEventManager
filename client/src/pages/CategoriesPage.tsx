@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sidebar, useSidebar } from "@/components/Sidebar";
+import { Sidebar, useSidebar, MobileHeader } from "@/components/Sidebar";
 import {
   Table,
   TableBody,
@@ -142,7 +142,7 @@ function CategoryForm({
 }
 
 export default function CategoriesPage() {
-  const { isCollapsed } = useSidebar();
+  const { collapsed } = useSidebar();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: currentUser } = useCurrentUser();
@@ -207,8 +207,9 @@ export default function CategoriesPage() {
 
   return (
     <div className="flex min-h-screen">
+      <MobileHeader />
       <Sidebar />
-      <main className={`flex-1 p-6 transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-64"}`}>
+      <main className={`flex-1 p-6 pt-20 md:pt-6 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>

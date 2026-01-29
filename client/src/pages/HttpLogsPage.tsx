@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sidebar, useSidebar, MobileHeader } from "@/components/Sidebar";
 import { RefreshCw, Trash2, CheckCircle, XCircle, Clock, RotateCw, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -81,6 +82,7 @@ function StatusBadge({ status }: { status: HttpLogEntry['status'] }) {
 export default function HttpLogsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { collapsed } = useSidebar();
 
   const { data: stats, isLoading: statsLoading } = useQuery<HttpStats>({
     queryKey: ["/api/http-logs/stats"],
@@ -113,17 +115,24 @@ export default function HttpLogsPage() {
 
   if (statsLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
-        </div>
+      <div className="flex min-h-screen">
+        <MobileHeader />
+        <Sidebar />
+        <main className={`flex-1 p-6 pt-20 md:pt-6 space-y-6 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
+          <Skeleton className="h-8 w-64" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex min-h-screen">
+      <MobileHeader />
+      <Sidebar />
+      <main className={`flex-1 p-6 pt-20 md:pt-6 space-y-6 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">HTTP Логи</h1>
@@ -274,6 +283,7 @@ export default function HttpLogsPage() {
           )}
         </CardContent>
       </Card>
+      </main>
     </div>
   );
 }

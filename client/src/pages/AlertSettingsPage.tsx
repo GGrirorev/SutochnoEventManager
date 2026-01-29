@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Sidebar, useSidebar, MobileHeader } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ interface AlertSettings {
 export default function AlertSettingsPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const { collapsed } = useSidebar();
 
   const { data: settings, isLoading: isLoadingSettings } = useQuery<AlertSettings>({
     queryKey: ["/api/alerts/settings"],
@@ -96,30 +98,40 @@ export default function AlertSettingsPage() {
 
   if (isLoadingSettings || isLoading) {
     return (
-      <div className="flex items-center justify-center h-64" data-testid="loading-settings">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex min-h-screen">
+        <MobileHeader />
+        <Sidebar />
+        <main className={`flex-1 p-6 pt-20 md:pt-6 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
+          <div className="flex items-center justify-center h-64" data-testid="loading-settings">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-2xl">
-      <div className="flex items-center gap-4">
-        <Link href="/alerts">
-          <Button variant="ghost" size="icon" data-testid="button-back">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-settings-title">
-            <Settings className="h-6 w-6" />
-            Настройки модуля алертов
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Конфигурация мониторинга событий аналитики
-          </p>
-        </div>
-      </div>
+    <div className="flex min-h-screen">
+      <MobileHeader />
+      <Sidebar />
+      <main className={`flex-1 p-6 pt-20 md:pt-6 space-y-6 transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex items-center gap-4">
+            <Link href="/alerts">
+              <Button variant="ghost" size="icon" data-testid="button-back">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-settings-title">
+                <Settings className="h-6 w-6" />
+                Настройки модуля алертов
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Конфигурация мониторинга событий аналитики
+              </p>
+            </div>
+          </div>
 
       <Card>
         <CardHeader>
@@ -309,6 +321,8 @@ export default function AlertSettingsPage() {
           </p>
         </CardContent>
       </Card>
+        </div>
+      </main>
     </div>
   );
 }
