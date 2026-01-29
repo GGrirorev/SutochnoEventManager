@@ -35,6 +35,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Folder, Loader2 } from "lucide-react";
 import { ROLE_PERMISSIONS, type EventCategory } from "@shared/schema";
 import { useCurrentUser } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+type CategoryWithCount = EventCategory & { eventCount: number };
 
 function CategoryForm({ 
   initialData, 
@@ -146,7 +150,7 @@ export default function CategoriesPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<EventCategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryWithCount | null>(null);
 
   const userRole = currentUser?.role || "viewer";
   const permissions = ROLE_PERMISSIONS[userRole];
@@ -154,7 +158,7 @@ export default function CategoriesPage() {
   const canEdit = permissions.canEditEvents;
   const canDelete = permissions.canDeleteEvents;
 
-  const { data: categories, isLoading, error } = useQuery<EventCategory[]>({
+  const { data: categories, isLoading, error } = useQuery<CategoryWithCount[]>({
     queryKey: ["/api/categories"]
   });
 
@@ -185,12 +189,12 @@ export default function CategoriesPage() {
     }
   });
 
-  const handleEdit = (category: EventCategory) => {
+  const handleEdit = (category: CategoryWithCount) => {
     setSelectedCategory(category);
     setEditDialogOpen(true);
   };
 
-  const handleDeleteClick = (category: EventCategory) => {
+  const handleDeleteClick = (category: CategoryWithCount) => {
     setSelectedCategory(category);
     setDeleteDialogOpen(true);
   };
@@ -256,6 +260,7 @@ export default function CategoriesPage() {
                     <TableRow>
                       <TableHead className="w-[200px]">Название</TableHead>
                       <TableHead>Описание</TableHead>
+                      <TableHead className="w-[100px] text-center">Событий</TableHead>
                       {(canEdit || canDelete) && (
                         <TableHead className="w-[100px] text-right">Действия</TableHead>
                       )}
@@ -267,6 +272,11 @@ export default function CategoriesPage() {
                         <TableCell className="font-medium">{category.name}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {category.description || "—"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={category.eventCount > 0 ? "secondary" : "outline"}>
+                            {category.eventCount}
+                          </Badge>
                         </TableCell>
                         {(canEdit || canDelete) && (
                           <TableCell className="text-right">
@@ -282,14 +292,26 @@ export default function CategoriesPage() {
                                 </Button>
                               )}
                               {canDelete && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  data-testid={`button-delete-category-${category.id}`}
-                                  onClick={() => handleDeleteClick(category)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        data-testid={`button-delete-category-${category.id}`}
+                                        onClick={() => handleDeleteClick(category)}
+                                        disabled={category.eventCount > 0}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  {category.eventCount > 0 && (
+                                    <TooltipContent>
+                                      Нельзя удалить: {category.eventCount} связанных событий
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
                               )}
                             </div>
                           </TableCell>

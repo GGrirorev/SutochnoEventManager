@@ -242,7 +242,7 @@ export async function registerRoutes(
   // Categories API
   app.get("/api/categories", requireAuth, async (req, res) => {
     try {
-      const categories = await storage.getCategories();
+      const categories = await storage.getCategoriesWithEventCount();
       res.json(categories);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch categories" });
@@ -292,6 +292,12 @@ export async function registerRoutes(
       const existing = await storage.getCategoryById(id);
       if (!existing) {
         return res.status(404).json({ message: "Category not found" });
+      }
+      const eventCount = await storage.getEventCountByCategory(id);
+      if (eventCount > 0) {
+        return res.status(400).json({ 
+          message: `Невозможно удалить категорию. С ней связано ${eventCount} событий.` 
+        });
       }
       await storage.deleteCategory(id);
       res.json({ message: "Category deleted" });

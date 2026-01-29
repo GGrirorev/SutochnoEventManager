@@ -131,6 +131,8 @@ export interface IStorage {
   
   // Category operations
   getCategories(): Promise<EventCategory[]>;
+  getCategoriesWithEventCount(): Promise<(EventCategory & { eventCount: number })[]>;
+  getEventCountByCategory(categoryId: number): Promise<number>;
   getCategoryByName(name: string): Promise<EventCategory | undefined>;
   createCategory(category: InsertEventCategory): Promise<EventCategory>;
   getOrCreateCategory(name: string): Promise<EventCategory>;
@@ -972,6 +974,30 @@ export class DatabaseStorage implements IStorage {
   // Category operations
   async getCategories(): Promise<EventCategory[]> {
     return db.select().from(eventCategories).orderBy(eventCategories.name);
+  }
+
+  async getCategoriesWithEventCount(): Promise<(EventCategory & { eventCount: number })[]> {
+    const result = await db
+      .select({
+        id: eventCategories.id,
+        name: eventCategories.name,
+        description: eventCategories.description,
+        createdAt: eventCategories.createdAt,
+        eventCount: sql<number>`count(${events.id})::int`,
+      })
+      .from(eventCategories)
+      .leftJoin(events, eq(events.categoryId, eventCategories.id))
+      .groupBy(eventCategories.id)
+      .orderBy(eventCategories.name);
+    return result;
+  }
+
+  async getEventCountByCategory(categoryId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events)
+      .where(eq(events.categoryId, categoryId));
+    return result?.count ?? 0;
   }
 
   async getCategoryByName(name: string): Promise<EventCategory | undefined> {
