@@ -275,6 +275,19 @@ export default function EventsList() {
   const [implStatusFilter, setImplStatusFilter] = useState<string>(initialParams.implementationStatus);
   const [valStatusFilter, setValStatusFilter] = useState<string>(initialParams.validationStatus);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  
+  // Count active filters
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (categoryFilter !== "all") count++;
+    if (platformFilter !== "all") count++;
+    if (ownerFilter !== "all") count++;
+    if (authorFilter !== "all") count++;
+    if (implStatusFilter !== "all") count++;
+    if (valStatusFilter !== "all") count++;
+    return count;
+  }, [categoryFilter, platformFilter, ownerFilter, authorFilter, implStatusFilter, valStatusFilter]);
   
   // Sync filters to URL (preserve existing open/edit params)
   useEffect(() => {
@@ -473,10 +486,10 @@ export default function EventsList() {
           )}
         </div>
 
-        {/* Filters & Search */}
-        <div className="flex flex-col gap-4 bg-card p-4 rounded-xl border shadow-sm">
-          {/* First row: Search + Category */}
-          <div className="flex flex-col md:flex-row gap-4">
+        {/* Search & Filters */}
+        <div className="flex flex-col gap-3 bg-card p-4 rounded-xl border shadow-sm">
+          {/* Search row with filters toggle */}
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
@@ -488,107 +501,144 @@ export default function EventsList() {
               />
             </div>
             
-            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
-              <SelectTrigger className="w-[200px] border-none bg-muted/50" data-testid="select-category-filter">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Layout className="w-4 h-4" />
-                  <SelectValue placeholder="Все категории" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" data-testid="option-all-categories">Все категории</SelectItem>
-                {categories.map(c => (
-                  <SelectItem key={c.id} value={c.name} data-testid={`option-category-${c.id}`}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Button 
+              variant="outline" 
+              onClick={() => setFiltersExpanded(!filtersExpanded)}
+              className="gap-2"
+              data-testid="button-toggle-filters"
+            >
+              <Filter className="w-4 h-4" />
+              Фильтры
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {activeFiltersCount}
+                </Badge>
+              )}
+              <ChevronDown className={`w-4 h-4 transition-transform ${filtersExpanded ? 'rotate-180' : ''}`} />
+            </Button>
           </div>
           
-          {/* Second row: Platform, Statuses, Owner, Author */}
-          <div className="flex flex-wrap gap-3">
-            <Select value={platformFilter} onValueChange={setPlatformFilter}>
-              <SelectTrigger className="w-[140px] border-none bg-muted/50" data-testid="select-platform-filter">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                   <Smartphone className="w-4 h-4" />
-                   <SelectValue placeholder="Платформа" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все платформы</SelectItem>
-                {PLATFORMS.map(p => (
-                  <SelectItem key={p} value={p} data-testid={`option-platform-${p}`}>{p}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Collapsible filters */}
+          {filtersExpanded && (
+            <div className="flex flex-wrap gap-3 pt-2 border-t">
+              <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
+                <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-category-filter">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Layout className="w-4 h-4" />
+                    <SelectValue placeholder="Категория" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" data-testid="option-all-categories">Все категории</SelectItem>
+                  {categories.map(c => (
+                    <SelectItem key={c.id} value={c.name} data-testid={`option-category-${c.id}`}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                <SelectTrigger className="w-[140px] border-none bg-muted/50" data-testid="select-platform-filter">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                     <Smartphone className="w-4 h-4" />
+                     <SelectValue placeholder="Платформа" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все платформы</SelectItem>
+                  {PLATFORMS.map(p => (
+                    <SelectItem key={p} value={p} data-testid={`option-platform-${p}`}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {isPlatformStatusesEnabled && (
-              <>
-                <Select value={implStatusFilter} onValueChange={setImplStatusFilter}>
-                  <SelectTrigger className="w-[160px] border-none bg-muted/50" data-testid="select-impl-status-filter">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                       <Rocket className="w-4 h-4" />
-                       <SelectValue placeholder="Внедрение" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все внедрения</SelectItem>
-                    {IMPLEMENTATION_STATUS.map(s => (
-                      <SelectItem key={s} value={s} data-testid={`option-impl-${s}`}>{s.replace('_', ' ')}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {isPlatformStatusesEnabled && (
+                <>
+                  <Select value={implStatusFilter} onValueChange={setImplStatusFilter}>
+                    <SelectTrigger className="w-[160px] border-none bg-muted/50" data-testid="select-impl-status-filter">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                         <Rocket className="w-4 h-4" />
+                         <SelectValue placeholder="Внедрение" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Все внедрения</SelectItem>
+                      {IMPLEMENTATION_STATUS.map(s => (
+                        <SelectItem key={s} value={s} data-testid={`option-impl-${s}`}>{s.replace('_', ' ')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-                <Select value={valStatusFilter} onValueChange={setValStatusFilter}>
-                  <SelectTrigger className="w-[160px] border-none bg-muted/50" data-testid="select-val-status-filter">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                       <ShieldCheck className="w-4 h-4" />
-                       <SelectValue placeholder="Валидация" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все валидации</SelectItem>
-                    {VALIDATION_STATUS.map(s => (
-                      <SelectItem key={s} value={s} data-testid={`option-val-${s}`}>{s.replace('_', ' ')}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
+                  <Select value={valStatusFilter} onValueChange={setValStatusFilter}>
+                    <SelectTrigger className="w-[160px] border-none bg-muted/50" data-testid="select-val-status-filter">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                         <ShieldCheck className="w-4 h-4" />
+                         <SelectValue placeholder="Валидация" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Все валидации</SelectItem>
+                      {VALIDATION_STATUS.map(s => (
+                        <SelectItem key={s} value={s} data-testid={`option-val-${s}`}>{s.replace('_', ' ')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              )}
 
-            <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-              <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-owner-filter">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                   <Monitor className="w-4 h-4" />
-                   <SelectValue placeholder="Ответственный" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все ответственные</SelectItem>
-                {activeUsers.map(u => (
-                  <SelectItem key={u.id} value={String(u.id)} data-testid={`option-owner-${u.id}`}>
-                    {u.name}{u.department ? ` (${u.department})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-owner-filter">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                     <Monitor className="w-4 h-4" />
+                     <SelectValue placeholder="Ответственный" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все ответственные</SelectItem>
+                  {activeUsers.map(u => (
+                    <SelectItem key={u.id} value={String(u.id)} data-testid={`option-owner-${u.id}`}>
+                      {u.name}{u.department ? ` (${u.department})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={authorFilter} onValueChange={setAuthorFilter}>
-              <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-author-filter">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                   <Pencil className="w-4 h-4" />
-                   <SelectValue placeholder="Автор" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все авторы</SelectItem>
-                {activeUsers.map(u => (
-                  <SelectItem key={u.id} value={String(u.id)} data-testid={`option-author-${u.id}`}>
-                    {u.name}{u.department ? ` (${u.department})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <Select value={authorFilter} onValueChange={setAuthorFilter}>
+                <SelectTrigger className="w-[180px] border-none bg-muted/50" data-testid="select-author-filter">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                     <Pencil className="w-4 h-4" />
+                     <SelectValue placeholder="Автор" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все авторы</SelectItem>
+                  {activeUsers.map(u => (
+                    <SelectItem key={u.id} value={String(u.id)} data-testid={`option-author-${u.id}`}>
+                      {u.name}{u.department ? ` (${u.department})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCategoryFilter("all");
+                    setPlatformFilter("all");
+                    setOwnerFilter("all");
+                    setAuthorFilter("all");
+                    setImplStatusFilter("all");
+                    setValStatusFilter("all");
+                  }}
+                  className="text-muted-foreground"
+                  data-testid="button-clear-filters"
+                >
+                  Сбросить фильтры
+                </Button>
+              )}
+            </div>
+          )}
         </div>
         </div>
 
