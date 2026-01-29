@@ -28,6 +28,15 @@ Preferred communication style: Simple, everyday language.
 - **Validation**: Zod schemas (shared client/server)
 - **Database ORM**: Drizzle ORM with PostgreSQL dialect
 - **Transactions**: `db.transaction()` for atomic multi-step operations
+- **Route Architecture**: Modular route structure in `server/routes/`:
+  - `middleware.ts` - Authentication, CSRF, permissions
+  - `auth.ts` - Login, logout, session management
+  - `categories.ts` - Category CRUD operations
+  - `events.ts` - Events CRUD, versions, platform statuses, comments, CSV import
+  - `users.ts` - User management
+  - `analytics.ts` - Matomo analytics proxy
+  - `alerts.ts` - Alert monitoring and SSE endpoints
+  - `plugins.ts` - Plugin management and seeding
 
 ### Data Model
 The system manages:
@@ -133,6 +142,7 @@ A setup wizard (`/setup`) is provided for the first administrator account creati
 ## Recent Changes
 
 ### January 2026
+- **Route Architecture Refactoring**: Refactored monolithic `routes.ts` (~2000 lines) into 8 modular components in `server/routes/` for better maintainability. Main routes.ts now ~90 lines with clean module imports.
 - **Categories Management Page**: Added `/categories` page for managing event categories with descriptions. Categories show event count and cannot be deleted if they have associated events.
 - **Alert Settings Migration**: Migrated alert settings from deprecated `alert_settings` table to `plugins.config` for the 'alerts' plugin. Automatic migration runs on startup.
 - **Collapsible Sidebar**: Added collapsible sidebar functionality with localStorage persistence, tooltips for collapsed icons, and smooth animations. Sidebar state is managed via React Context (SidebarProvider/useSidebar).
