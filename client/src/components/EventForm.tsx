@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { insertEventSchema, PLATFORMS, type InsertEvent, type PropertyTemplate, type EventCategory, type User } from "@shared/schema";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -68,6 +69,7 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
   const queryClient = useQueryClient();
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
+  const { toast } = useToast();
   
   // State for version confirmation dialog
   const [showVersionConfirm, setShowVersionConfirm] = useState(false);
@@ -170,30 +172,39 @@ export function EventForm({ initialData, onSuccess, mode }: EventFormProps) {
 
   // Actual submit function that performs the update
   const performSubmit = async (data: InsertEvent, description?: string) => {
-    let eventId: number;
-    
-    if (mode === "edit" && initialData?.id) {
-      // Include change description for versioning
-      await updateMutation.mutateAsync({ 
-        id: initialData.id, 
-        ...data,
-        changeDescription: description || "Обновление события"
+    try {
+      let eventId: number;
+      
+      if (mode === "edit" && initialData?.id) {
+        // Include change description for versioning
+        await updateMutation.mutateAsync({ 
+          id: initialData.id, 
+          ...data,
+          changeDescription: description || "Обновление события"
+        });
+        eventId = initialData.id;
+        // Platform statuses for the new version are created by the server with default values
+        // (черновик / ожидает_проверки). User can change them later in the Health tab.
+      } else {
+        const newEvent = await createMutation.mutateAsync(data);
+        eventId = newEvent.id;
+        // Platform statuses are already created by the server for new events
+      }
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "platform-statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/platform-statuses-batch"] });
+      
+      onSuccess?.();
+    } catch (error: any) {
+      const errorMessage = error?.message || "Произошла ошибка при сохранении события";
+      toast({
+        title: "Ошибка",
+        description: errorMessage,
+        variant: "destructive",
       });
-      eventId = initialData.id;
-      // Platform statuses for the new version are created by the server with default values
-      // (черновик / ожидает_проверки). User can change them later in the Health tab.
-    } else {
-      const newEvent = await createMutation.mutateAsync(data);
-      eventId = newEvent.id;
-      // Platform statuses are already created by the server for new events
     }
-    
-    // Invalidate queries to refresh data
-    queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/events", eventId, "platform-statuses"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/events/platform-statuses-batch"] });
-    
-    onSuccess?.();
   };
 
   return (
