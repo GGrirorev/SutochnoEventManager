@@ -304,12 +304,16 @@ export class DatabaseStorage implements IStorage {
     
     // Batch fetch version info to avoid N+1 queries in VersionBadge
     if (result.length > 0) {
-      const versionConditions = result.map(e => 
-        and(
-          eq(eventVersions.eventId, e.id),
-          eq(eventVersions.version, e.currentVersion || 1)
-        )
-      );
+      // Build (eventId, version) pairs for efficient IN clause
+      const eventVersionPairs = result.map(e => ({
+        eventId: e.id,
+        version: e.currentVersion ?? 1
+      }));
+      
+      // Use raw SQL with VALUES clause for efficient tuple matching
+      const valuesList = eventVersionPairs
+        .map(p => `(${p.eventId}, ${p.version})`)
+        .join(', ');
       
       const versionAuthorUsers = alias(users, "version_author_users");
       const versionsData = await db.select({
@@ -320,7 +324,7 @@ export class DatabaseStorage implements IStorage {
       })
         .from(eventVersions)
         .leftJoin(versionAuthorUsers, eq(eventVersions.authorId, versionAuthorUsers.id))
-        .where(or(...versionConditions));
+        .where(sql`(${eventVersions.eventId}, ${eventVersions.version}) IN (${sql.raw(valuesList)})`);
       
       const versionsMap = new Map(versionsData.map(v => [v.eventId, v]));
       
