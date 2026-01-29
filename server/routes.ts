@@ -261,6 +261,44 @@ export async function registerRoutes(
       res.status(500).json({ message: "Failed to create category" });
     }
   });
+
+  app.put("/api/categories/:id", requireAuth, requirePermission("canEditEvents"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+      const existing = await storage.getCategoryById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      const { name, description } = req.body;
+      const updates: { name?: string; description?: string } = {};
+      if (name !== undefined) updates.name = name.trim();
+      if (description !== undefined) updates.description = description?.trim() || null;
+      const updated = await storage.updateCategory(id, updates);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update category" });
+    }
+  });
+
+  app.delete("/api/categories/:id", requireAuth, requirePermission("canDeleteEvents"), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+      const existing = await storage.getCategoryById(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      await storage.deleteCategory(id);
+      res.json({ message: "Category deleted" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
   
   // Events - Read (requires auth + canViewEvents)
   app.get(api.events.list.path, requireAuth, requirePermission("canViewEvents"), async (req, res) => {
