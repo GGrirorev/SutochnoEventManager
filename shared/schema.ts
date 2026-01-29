@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, serial, timestamp, boolean, varchar, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean, varchar, jsonb, integer, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -160,7 +160,14 @@ export const events = pgTable("events", {
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_events_category_id").on(table.categoryId),
+  index("idx_events_action").on(table.action),
+  index("idx_events_owner_id").on(table.ownerId),
+  index("idx_events_author_id").on(table.authorId),
+  index("idx_events_created_at").on(table.createdAt),
+  uniqueIndex("idx_events_category_action").on(table.categoryId, table.action),
+]);
 
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
@@ -168,7 +175,10 @@ export const comments = pgTable("comments", {
   content: text("content").notNull(),
   author: text("author").notNull().default("Аноним"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_comments_event_id").on(table.eventId),
+  index("idx_comments_created_at").on(table.createdAt),
+]);
 
 export const insertCommentSchema = createInsertSchema(comments).omit({ 
   id: true, 
@@ -189,7 +199,14 @@ export const eventPlatformStatuses = pgTable("event_platform_statuses", {
   validationStatus: text("validation_status", { enum: VALIDATION_STATUS }).notNull().default("ожидает_проверки"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_eps_event_id").on(table.eventId),
+  index("idx_eps_version_number").on(table.versionNumber),
+  index("idx_eps_platform").on(table.platform),
+  index("idx_eps_implementation_status").on(table.implementationStatus),
+  index("idx_eps_validation_status").on(table.validationStatus),
+  uniqueIndex("idx_eps_event_platform_version").on(table.eventId, table.platform, table.versionNumber),
+]);
 
 export const insertEventPlatformStatusSchema = createInsertSchema(eventPlatformStatuses).omit({
   id: true,
@@ -212,7 +229,11 @@ export const statusHistory = pgTable("status_history", {
   comment: text("comment"),
   jiraLink: text("jira_link"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_sh_event_platform_status_id").on(table.eventPlatformStatusId),
+  index("idx_sh_created_at").on(table.createdAt),
+  index("idx_sh_status_type").on(table.statusType),
+]);
 
 export const insertStatusHistorySchema = createInsertSchema(statusHistory).omit({
   id: true,
@@ -289,7 +310,12 @@ export const eventVersions = pgTable("event_versions", {
   changeDescription: text("change_description"), // What changed in this version
   authorId: integer("author_id"), // ID of user who created this version
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_ev_event_id").on(table.eventId),
+  index("idx_ev_author_id").on(table.authorId),
+  index("idx_ev_created_at").on(table.createdAt),
+  uniqueIndex("idx_ev_event_version").on(table.eventId, table.version),
+]);
 
 export const insertEventVersionSchema = createInsertSchema(eventVersions).omit({
   id: true,
@@ -344,7 +370,10 @@ export const userLoginLogs = pgTable("user_login_logs", {
   loginAt: timestamp("login_at").defaultNow().notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-});
+}, (table) => [
+  index("idx_ull_user_id").on(table.userId),
+  index("idx_ull_login_at").on(table.loginAt),
+]);
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -401,7 +430,12 @@ export const eventAlerts = pgTable("event_alerts", {
   resolvedBy: text("resolved_by"),
   resolvedAt: timestamp("resolved_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_alerts_event_id").on(table.eventId),
+  index("idx_alerts_created_at").on(table.createdAt),
+  index("idx_alerts_is_resolved").on(table.isResolved),
+  index("idx_alerts_checked_at").on(table.checkedAt),
+]);
 
 export const insertEventAlertSchema = createInsertSchema(eventAlerts).omit({
   id: true,
