@@ -276,9 +276,18 @@ export default function EventsList() {
   const [valStatusFilter, setValStatusFilter] = useState<string>(initialParams.validationStatus);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   
-  // Sync filters to URL
+  // Sync filters to URL (preserve existing open/edit params)
   useEffect(() => {
+    const currentParams = new URLSearchParams(window.location.search);
     const params = new URLSearchParams();
+    
+    // Preserve open/edit params if they exist
+    const openParam = currentParams.get("open");
+    const editParam = currentParams.get("edit");
+    if (openParam) params.set("open", openParam);
+    if (editParam) params.set("edit", editParam);
+    
+    // Add filter params
     if (search) params.set("search", search);
     if (categoryFilter !== "all") params.set("category", categoryFilter);
     if (platformFilter !== "all") params.set("platform", platformFilter);

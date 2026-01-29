@@ -184,6 +184,18 @@ export class DatabaseStorage implements IStorage {
     const limit = filters?.limit ?? 50;
     const offset = filters?.offset ?? 0;
 
+    // Build status join condition - include platform constraint if platform filter is set
+    const statusJoinCondition = filters?.platform
+      ? and(
+          eq(eventPlatformStatuses.eventId, events.id),
+          eq(eventPlatformStatuses.versionNumber, events.currentVersion),
+          eq(eventPlatformStatuses.platform, filters.platform)
+        )
+      : and(
+          eq(eventPlatformStatuses.eventId, events.id),
+          eq(eventPlatformStatuses.versionNumber, events.currentVersion)
+        );
+
     // Build count query with optional status join
     let countQuery = db
       .select({ count: sql<number>`count(DISTINCT ${events.id})::int` })
@@ -193,10 +205,7 @@ export class DatabaseStorage implements IStorage {
     if (needStatusJoin) {
       countQuery = countQuery.leftJoin(
         eventPlatformStatuses,
-        and(
-          eq(eventPlatformStatuses.eventId, events.id),
-          eq(eventPlatformStatuses.versionNumber, events.currentVersion)
-        )
+        statusJoinCondition
       ) as typeof countQuery;
     }
     
@@ -236,10 +245,7 @@ export class DatabaseStorage implements IStorage {
     if (needStatusJoin) {
       mainQuery = mainQuery.leftJoin(
         eventPlatformStatuses,
-        and(
-          eq(eventPlatformStatuses.eventId, events.id),
-          eq(eventPlatformStatuses.versionNumber, events.currentVersion)
-        )
+        statusJoinCondition
       ) as typeof mainQuery;
     }
     
