@@ -85,7 +85,8 @@ import {
   History,
   ChevronDown,
   Pencil,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 import { EventForm } from "@/components/EventForm";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -583,10 +584,34 @@ export default function EventsList() {
                 placeholder="Поиск по Event Action или описанию..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 border-none bg-muted/50 focus-visible:ring-1"
+                className={`pl-9 pr-9 border-none focus-visible:ring-1 ${search ? 'bg-primary/10 ring-1 ring-primary/30' : 'bg-muted/50'}`}
                 data-testid="input-search"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 transition-colors"
+                  data-testid="button-clear-search"
+                >
+                  <X className="w-3 h-3 text-muted-foreground" />
+                </button>
+              )}
             </div>
+            {search && (
+              <Badge variant="secondary" className="h-9 px-3 gap-1.5 shrink-0">
+                <Search className="w-3.5 h-3.5" />
+                <span className="max-w-[150px] truncate">{search}</span>
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="ml-1 hover:bg-muted-foreground/20 rounded-full p-0.5"
+                  data-testid="button-clear-search-tag"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
             
             <Button 
               variant="outline" 
