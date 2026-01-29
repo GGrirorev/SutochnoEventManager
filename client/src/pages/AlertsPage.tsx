@@ -46,12 +46,15 @@ import {
   AlertCheckProgress
 } from "@/plugins/alerts";
 
+type AlertWithOwner = EventAlert & { ownerId: number | null; ownerName: string | null };
+
 export default function AlertsPage() {
   const { data: user } = useCurrentUser();
-  const [deleteAlert, setDeleteAlert] = useState<EventAlert | null>(null);
+  const [deleteAlert, setDeleteAlert] = useState<AlertWithOwner | null>(null);
   const [viewEventId, setViewEventId] = useState<number | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
@@ -102,14 +105,22 @@ export default function AlertsPage() {
     setShowBulkDelete(false);
   };
   
-  // Get unique categories and platforms for filters
+  // Get unique categories, platforms and owners for filters
   const categories = Array.from(new Set(allAlerts.map(a => a.eventCategory))).sort();
   const platforms = Array.from(new Set(allAlerts.map(a => a.platform)));
+  const owners = Array.from(
+    new Map(
+      allAlerts
+        .filter(a => a.ownerId && a.ownerName)
+        .map(a => [a.ownerId, { id: a.ownerId!, name: a.ownerName! }])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
   
   // Apply filters
-  const alerts = allAlerts.filter(alert => {
+  const alerts = (allAlerts as AlertWithOwner[]).filter(alert => {
     if (categoryFilter !== "all" && alert.eventCategory !== categoryFilter) return false;
     if (platformFilter !== "all" && alert.platform !== platformFilter) return false;
+    if (ownerFilter !== "all" && String(alert.ownerId) !== ownerFilter) return false;
     return true;
   });
 
@@ -191,12 +202,27 @@ export default function AlertsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Ответственный:</span>
+                <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                  <SelectTrigger className="w-[180px]" data-testid="select-owner-filter">
+                    <SelectValue placeholder="Все ответственные" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все ответственные</SelectItem>
+                    {owners.map(owner => (
+                      <SelectItem key={owner.id} value={String(owner.id)}>{owner.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              {(categoryFilter !== "all" || platformFilter !== "all") && (
+              {(categoryFilter !== "all" || platformFilter !== "all" || ownerFilter !== "all") && (
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => { setCategoryFilter("all"); setPlatformFilter("all"); }}
+                  onClick={() => { setCategoryFilter("all"); setPlatformFilter("all"); setOwnerFilter("all"); }}
                   data-testid="button-clear-filters"
                 >
                   Сбросить фильтры

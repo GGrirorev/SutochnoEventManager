@@ -217,11 +217,13 @@ export function useAlertSettings() {
   return { settings, isLoading, saveMutation };
 }
 
+type AlertWithOwner = EventAlert & { ownerId: number | null; ownerName: string | null };
+
 export function useAlerts() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const { data: alertsData, isLoading, refetch } = useQuery<{ alerts: EventAlert[]; total: number }>({
+  const { data: alertsData, isLoading, refetch } = useQuery<{ alerts: AlertWithOwner[]; total: number }>({
     queryKey: ["/api/alerts"]
   });
 

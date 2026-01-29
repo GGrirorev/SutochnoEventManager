@@ -128,7 +128,7 @@ export interface IStorage {
   getOrCreateCategory(name: string): Promise<EventCategory>;
   
   // Alert operations
-  getAlerts(limit?: number, offset?: number): Promise<{ alerts: EventAlert[]; total: number }>;
+  getAlerts(limit?: number, offset?: number): Promise<{ alerts: (EventAlert & { ownerId: number | null; ownerName: string | null })[]; total: number }>;
   createAlert(alert: InsertEventAlert): Promise<EventAlert>;
   deleteAlert(id: number): Promise<void>;
   getEventsForMonitoring(): Promise<{ id: number; category: string; action: string; platforms: string[] }[]>;
@@ -959,20 +959,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Alert operations
-  async getAlerts(limit = 100, offset = 0): Promise<{ alerts: EventAlert[]; total: number }> {
+  async getAlerts(limit = 100, offset = 0): Promise<{ alerts: (EventAlert & { ownerId: number | null; ownerName: string | null })[]; total: number }> {
     const [countResult] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(eventAlerts);
     
     const total = countResult?.count ?? 0;
     
-    const alerts = await db.select()
+    const alertsWithOwner = await db
+      .select({
+        id: eventAlerts.id,
+        eventId: eventAlerts.eventId,
+        platform: eventAlerts.platform,
+        eventCategory: eventAlerts.eventCategory,
+        eventAction: eventAlerts.eventAction,
+        yesterdayCount: eventAlerts.yesterdayCount,
+        dayBeforeCount: eventAlerts.dayBeforeCount,
+        dropPercent: eventAlerts.dropPercent,
+        checkedAt: eventAlerts.checkedAt,
+        isResolved: eventAlerts.isResolved,
+        resolvedBy: eventAlerts.resolvedBy,
+        resolvedAt: eventAlerts.resolvedAt,
+        createdAt: eventAlerts.createdAt,
+        ownerId: events.ownerId,
+        ownerName: users.name,
+      })
       .from(eventAlerts)
+      .leftJoin(events, eq(eventAlerts.eventId, events.id))
+      .leftJoin(users, eq(events.ownerId, users.id))
       .orderBy(desc(eventAlerts.createdAt))
       .limit(limit)
       .offset(offset);
     
-    return { alerts, total };
+    return { alerts: alertsWithOwner, total };
   }
 
   async createAlert(alert: InsertEventAlert): Promise<EventAlert> {
